@@ -1,0 +1,17 @@
+Olá,
+
+Uma nova observação foi adicionada ao chamado "%%SUBJECT%%" que atualmente está atribuído a você.
+
+Observação por %%NAME%%:
+
+%%MESSAGE%%
+
+
+Você pode gerenciar este chamado aqui:
+%%TRACK_URL%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

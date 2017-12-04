@@ -1,0 +1,12 @@
+Prezado(a) %%NAME%%,
+
+Nossa equipe acabou de responder ao seu chamado "%%SUBJECT%%".
+
+Você pode visualizar o chamado aqui:
+%%TRACK_URL%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

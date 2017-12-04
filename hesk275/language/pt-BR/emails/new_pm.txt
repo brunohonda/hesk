@@ -1,0 +1,14 @@
+Olá,
+
+Você recebeu uma nova mensagem privada de %%NAME%% com o seguinte assunto:
+
+%%SUBJECT%%
+
+Você pode visualizar sua nova mensagem clicando no link a seguir:
+%%TRACK_URL%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

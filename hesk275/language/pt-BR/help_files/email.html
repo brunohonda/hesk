@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt" lang="pt">
+<head>
+<title>Ajuda interativa para as configurações do Hesk</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="help_style.css" type="text/css" rel="stylesheet" />
+</head>
+<body>
+
+<!-- next: 68 -->
+
+<h3>Ajuda interativa para as configurações do Hesk</h3>
+
+<p>&nbsp;</p>
+
+<a name="55"></a><p class="title">Enviar e-mails usando</p>
+<p>Select wether HESK should send emails usign PHP mail() function or using a manually setup SMTP server.</p>
+
+<p>PHP mail() should work on most setups, if it doesn't you may try setting up a SMTP server instead.</p>
+
+<p>Available SMTP variables:</p>
+
+<p>
+<b>Endereço SMTP</b> - endereço do seu servidor SMTP, geralmente <i>localhost</i> ou <i>mail.seudominio.com.br</i><br />
+<b>Porta SMTP</b> - porta do seu servidor SMTP, geralmente 587, 465 ou 25<br />
+<b>Tempo de espera do SMTP</b> - tempo de espera do SMTP em segundos<br />
+<b>Protocolo SSL</b> - habilite se seu servidor SMTP exige o protocolo SSL<br />
+<b>Protocolo TLS</b> - habilite se seu servidor SMTP exige o protocolo TLS<br />
+<b>Usuário SMTP</b> - usuário do seu servidor SMTP (se necessário)<br />
+<b>Senha SMTP</b> - senha do seu servidor SMTP (se necessário)<br />
+</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="54"></a><p class="title">Filar por e-mail</p>
+
+<p>Habilita a fila por e-mail (criação de chamados por e-mail).</p>
+
+<p>Esta opção apenas habilita o recurso de fila no HESK, para completar a configuração da fila por e-mail verifique o arquivo readme.html.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="59"></a><p class="title">Busca em POP3</p>
+
+<p>Esta configuração habilita ou desabilita a Busca em POP3 - criação de chamados por e-mail ao conectar-se a uma conta de e-mail usando conexão POP3.</p>
+
+<p>Para instruções sobre como configurar a Busca em POP3 consulte o arquivo readme.html.</p>
+
+<p>Variáveis disponíveis:</p>
+
+<p><b>Tempo de espera da tarefa</b> - número de minutos a aguardar para uma busca em POP3 já existente ser
+concluída. Nenhum serviço de busca será iniciado até que o tempo de espera seja atingido.
+Defina como <b>0</b> para desabilitar o tempo de espera e sempre iniciar um novo serviço de busca.</p>
+
+<p>
+<b>Servidor POP3</b> - endereço do seu servidor POP3, geralmente <i>mail.exemplo.com.br</i><br />
+<b>Porta POP3</b> - porta do servidor POP3, geralmente 110. Gmail por exemplo usa 995<br />
+<b>Protocolo TLS</b> - habilite se seu servidor exige o protocolo TLS<br />
+<b>Manter uma cópia</b> - se habilitado o HESK <b>não</b> vai remover mensagens do servidor POP3<br />
+<b>Usuário POP3</b> - usuário do seu servidor POP3<br />
+<b>Senha POP3</b> - senha do seu servidor POP3<br />
+</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="67"></a><p class="title">Busca em IMAP</p>
+
+<p>Esta configuração habilita ou desabilita a Busca em IMAP - criação de chamados por e-mail ao conectar-se a uma conta de e-mail usando conexão IMAP.</p>
+
+<p>Para instruções sobre como configurar a Busca em IMAP consulte o arquivo readme.html.</p>
+
+<p>Variáveis disponíveis:</p>
+
+<p><b>Tempo de espera da tarefa</b> - número de minutos a aguardar para uma busca em IMAP já existente ser
+concluída. Nenhum serviço de busca será iniciado até que o tempo de espera seja atingido.
+Defina como <b>0</b> para desabilitar o tempo de espera e sempre iniciar um novo serviço de busca.</p>
+
+<p>
+<b>Servidor IMAP</b> - endereço do seu servidor IMAP, geralmente <i>mail.exemplo.com.br</i><br />
+<b>Porta IMAP</b> - porta do servidor IMAP, geralmente 143 para sem criptografia e 993 para SSL/TLS<br />
+<b>Criptografia</b> - defina se é obrigatório a criptografia no IMAP<br />
+<b>Manter uma cópia</b> - se habilitado o HESK <b>não</b> vai remover mensagens do servidor IMAP<br />
+<b>Usuário IMAP</b> - usuário do seu servidor IMAP<br />
+<b>Senha IMAP</b> - senha do seu servidor IMAP<br />
+</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="60"></a><p class="title">Repetição de e-mails</p>
+
+<p>Configurações para ajudar a detectar repetições de e-mails criadas por respostas automáticas ou e-mails não entregues.</p>
+
+<p>Qualquer número de e-mails maior que o <b>Máximo de envios</b> de um endereço de e-mail dentro do <b>Intervalo de tempo</b>
+em segundos será ignorado pela fila por e-mail.</p>
+
+<p>Defina <b>Máximo de envios</b> em <b>0</b> para desabilitar a detecção de repetições.</p>
+
+<p>Observe que este recurso somente será usado se a Fila por e-mail ou a Busca em POP3 estiverem habilitadas.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="62"></a><p class="title">Detectar erros de e-mail</p>
+
+<p>Este recurso tentará detectar erros de digitação comuns nos domínios dos endereços de e-mail e sugerir a versão correta.</p>
+
+<p>Por exemplo, se um cliente digitar usuario@<span style="color:red"><b>gmial.com</b></span> o HESK irá detectar o erro e sugerir
+usuario@<span style="color:green"><b>gmail.com</b></span> como alternativa.</p>
+
+<p>O HESK irá comparar os domínios dos e-mails aos domínios da lista de <i>Provedores de e-mail</i>.</p>
+
+<p>&nbsp;</p>
+
+<a name="63"></a><p class="title">Provedores de e-mail</p>
+
+<p>Uma lista de provedores de e-mail comuns que seus clientes usam. O HESK usará esta lista para tentar detectar erros na digitação dos endereços de e-mail.</p>
+
+<p>Digite um domínio por linha, <u>sem</u> o sinal de @.</p>
+
+<p>Você pode digitar qualquer número de domínios comuns, mas tente não exagerar - informe apenas os mais comuns.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="65"></a><p class="title">Notificar cliente quando</p>
+
+<p>Selecione quando o HESK deve enviar um e-mail de notificação aos clientes:</p>
+
+<ul>
+<li><b>quando o cliente envia um novo chamado</b><br /><br />
+Observação: se o chamado for enviado por e-mail (busca por e-mail ou busca em POP3), o HESK pode
+pular o envio de notificação de novo chamado ao cliente se o assunto do e-mail possuir
+uma das tags listadas na caixa de texto (uma tag por linha).<br /><br />Você pode usar isto para impedir
+respostas automáticas a e-mails detectados como possível SPAM pelo filtro de SPAM do seu servidor.<br />&nbsp;
+</li>
+<li><b>quando um chamado é marcado como Resolvido</b> (sem resposta)</li>
+</ul>
+
+<p>&nbsp;</p>
+
+<p>Observe que as preferências de notificação são definidas individualmente por chamado quando a equipe responde a um chamado ou quando a equipe envia um chamado pela interface administrativa.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="61"></a><p class="title">Remover citações nas respostas</p>
+
+<p>Este recurso remove as citações nas respostas de todos os e-mails dos clientes antes deles serem convertidos em chamados usando a Fila por e-mail ou a Busca em POP3.</p>
+
+<p>Todos os e-mails enviados aos clientes vão começar com esta linha:</p>
+
+<p>------ Responda acima desta linha ------</p>
+
+<p>Qualquer texto abaixo desta linha será removido quando um e-mail for importado como resposta a um chamado.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="66"></a><p class="title">Exigir mensagem</p>
+
+<p>Se habilitado, e-mails da fila por e-mail ou da busca em POP3 serão ignorados se não possuírem uma mensagem.</p>
+
+<p>Se desabilitado até e-mails sem mensagem serão convertidos em chamados.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="64"></a><p class="title">Arquivos incorporados</p>
+
+<p>Habilite se você deseja que o HESK salve arquivos incorporados ao e-mail (por exemplo imagens incorporadas) como anexos ao importar chamados através da Fila por e-mail ou da Busca em POP3.</p>
+
+<p>Arquivos acima do limite máximo de anexos permitidos serão ignorados.</p>
+
+<p>Observe que com o HESK arquivos anexados tem prioridade sobre arquivos incorporados. Por exemplo, se você permitir 2 arquivos anexos e receber um e-mail com 1 arquivo anexado e 3 imagens incorporadas, o HESK salvará o arquivo anexado e a primeira imagem incorporada, o resto será igonrado.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="57"></a><p class="title">Múltiplos e-mails</p>
+<p>Se um cliente tentar digitar vários e-mails (separados por vírgula) no campo E-mail ao enviar um chamado o HESK somente usará o primeiro e-mail por padrão e vai ignorar os outros e-mails.</p>
+
+<p>Para permitir aos clientes digitar múltiplos e-mails habilite este recurso ao selecionar a caixa.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="50"></a><p class="title">Confirmar e-mail</p>
+<p>Se selecionado o formulário &quot;Enviar chamado&quot; exibirá um campo
+&quot;Confirmar e-mail&quot; forçando o cliente a digitar o endereço de e-mail duas vezes.
+Isto ajuda a evitar erros de digitação nos endereços de e-mail.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="58"></a><p class="title">Somente abertos</p>
+<p>Se selecionado o e-mail &quot;Esqueci o código de identificação do chamado&quot; (e-mail enviado para lembrar os clientes de seus códigos de identificação de chamados)
+irá apenas listar chamados abertos e ignorar os resolvidos.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+</body>
+
+</html>

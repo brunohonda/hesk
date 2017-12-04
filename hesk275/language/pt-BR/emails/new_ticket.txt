@@ -1,0 +1,18 @@
+Prezado(a) %%NAME%%,
+
+Seu chamado "%%SUBJECT%%" foi enviado.
+
+Nós respondemos a todos os chamados assim que possível, geralmente dentro de 24 à 48 horas. Se supormos que seu chamado levará mais tempo, nós o(a) notificaremos lhe enviando um e-mail.
+
+Código de identificação do chamado: %%TRACK_ID%%
+
+Você pode visualizar o status do seu chamado aqui:
+%%TRACK_URL%%
+
+Você receberá uma notificação por e-mail quando nossa equipe responder ao seu chamado.
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

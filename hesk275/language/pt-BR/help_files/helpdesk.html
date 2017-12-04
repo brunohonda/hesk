@@ -1,0 +1,624 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt" lang="pt">
+<head>
+<title>Ajuda interativa para as configurações do Hesk</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="help_style.css" type="text/css" rel="stylesheet" />
+</head>
+<body>
+
+<!-- next: 78 -->
+
+<h3>Ajuda interativa para as configurações do Hesk</h3>
+
+<p>&nbsp;</p>
+
+<span class="section">&raquo; Configurações da central de suporte</span>
+
+<a name="6"></a><p class="title">Título da central de suporte</p>
+<p>Título da sua central de suporte, por exemplo &quot;Central de suporte da minha empresa&quot;</p>
+
+<a name="7"></a><p class="title">URL do Hesk</p>
+<p>URL da pasta onde seu Hesk será instalado. NÃO adicione uma barra / à URL!<br />
+<span class="correct">CORRETO:</span> http://www.exemplo.com.br/suporte<br />
+<span class="wrong">ERRADO:</span> http://www.exemplo.com.br/suporte/ (não termine a URL com uma / )</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="61"></a><p class="title">Pasta de administração</p>
+<p>Nome da pasta onde os arquivos de administração estão localizados.</p>
+
+<p>A pasta precisa existir dentro da pasta principal do HESK. Na maioria dos sistemas os nomes diferenciam MaIúScUlAs E mInÚsCuLaS (CaSe SeNSiTiVe).</p>
+
+<p>Caracteres permitidos (outros serão removidos): a-z A-Z 0-9 _ -</p>
+
+<p>Padrão: <i>admin</i></p>
+
+<a name="62"></a><p class="title">Pasta de anexos</p>
+<p>Nome da pasta onde os anexos serão armazenados.</p>
+
+<p>A pasta precisa existir dentro da pasta principal do HESK e ser gravável pelo PHP. Na maioria dos sistemas os nomes diferenciam MaIúScUlAs E mInÚsCuLaS (CaSe SeNSiTiVe).</p>
+
+<p>Caracteres permitidos (outros serão removidos): a-z A-Z 0-9 _ -</p>
+
+<p>Padrão: <i>attachments</i></p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="77"></a><p class="title">Pasta de cache</p>
+<p>Nome da pasta onde o cache e arquivos temporários serão salvos.</p>
+
+<p>A pasta precisa existir dentro da pasta principal do HESK e ser gravável pelo PHP. Na maioria dos sistemas os nomes diferenciam MaIúScUlAs E mInÚsCuLaS (CaSe SeNSiTiVe).</p>
+
+<p>Caracteres permitidos (outros serão removidos): a-z A-Z 0-9 _ -</p>
+
+<p>Padrão: <i>cache</i></p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="10"></a><p class="title">Listagens por página</p>
+<p>O número padrão de chamados listados por página no painel administrativo. Use apenas números.</p>
+
+<a name="11"></a><p class="title">Tamanho da fonte de impressão</p>
+<p>Tamanho da fonte nas páginas de &quot;Versão para impressão&quot; dos chamados</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="15"></a><p class="title">Fechar chamados automaticamente</p>
+<p>Se um chamado não tem atividade <i>do cliente</i> por X dias é fechado automaticamente. Defina como 0 para desabilitar o fechamento automático.</p>
+
+<a name="58"></a><p class="title">Máximo abertos</p>
+<p>Um número máximo de chamados abertos que um cliente pode ter. Quando este limite é alcançado o cliente não poderá enviar novos chamados
+até que os existentes sejam resolvidos. Afeta apenas chamados enviados pelo formulário on-line.</p>
+
+<p>Defina como <b>0</b> para desabilitar o limite máximo de chamados abertos.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="59"></a><p class="title">Ordem da resposta</p>
+<p>Escolha se deseja que as respostas mais recentes apareçam no topo ou no inferior da página do chamado.</p>
+
+<a name="60"></a><p class="title">Formulário de resposta</p>
+<p>Escolha se deseja que o formulário Adicionar uma resposta apareça no topo ou no inferior da página do chamado.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="44"></a><p class="title">Permitir login automático</p>
+<p>Se definido como SIM a equipe terá uma opção para logar automaticamente em suas contas sempre que abrirem o painel administrativo do HESK em seus computadores.
+Se desabilitado o HESK será apenas capaz de lembrar usuários, não senhas.</p>
+
+<a name="51"></a><p class="title">Atribuição automática de chamados</p>
+<p>Os chamados serão automaticamente atribuídos a um membro da equipe quando enviados.</p>
+
+<p>Diversos fatores são levados em conta ao atribuir chamados automaticamente, como a categoria do chamado
+e o número de chamados abertos atribuídos atualmente.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="73"></a><p class="title">Require email</p>
+
+<p>Do you require customers to enter their email address when submitting a ticket?</p>
+
+<p>
+OFF = do not require an email address<br />
+ON = require an email address<br />
+</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="70"></a><p class="title">Require owner</p>
+<p>If set to ON tickets will need to be assigned before staff can reply to them.</p>
+
+<p>This helps prevent multiple staff working on the same ticket by mistake as it forces them
+to assign the ticket to themselves before starting to work on it.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="72"></a><p class="title">Exigir assunto</p>
+
+<p>Os clientes podem digitar um assunto para o chamado ou ele pode ser gerado automaticamente.</p>
+
+<p>
+DESLIGADO = não exigir um assunto para o chamado<br />
+LIGADO = exigir um assunto para o chamado<br />
+Oculto no formulário do cliente = oculta o campo &quot;Assunto&quot; do formulário do cliente*
+</p>
+
+<p>* os clientes ainda poderão ver o assunto gerado automaticamente</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="74"></a><p class="title">Exigir mensagem</p>
+
+<p>Exigir que os clientes escrevam uma mensagem ao enviar um novo chamado?</p>
+
+<p>
+DESLIGADO = não exigir uma mensagem<br />
+LIGADO = a mensagem é obrigatória<br />
+Ocultar no formulário do cliente = oculta o campo &quot;Mensagem&quot; no formulário do cliente*
+</p>
+
+<p>* se um membro da equipe editar um chamado e escrever uma mensagem os clientes poderão vê-la</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="67"></a><p class="title">Resolvido pelo cliente</p>
+<p>Escolha se os clientes podem marcar chamados como resolvidos.</p>
+
+<p>Se desabilitado os chamados somente serão resolvidos pela equipe e automaticamente por inatividade.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="16"></a><p class="title">Reabrir chamados</p>
+<p>Defina como LIGADO para permitir aos clientes reabrir um chamado uma vez que foi fechado. Quando definido como DESLIGADO uma vez fechados os clientes terão de abrir um novo chamado.</p>
+
+<a name="17"></a><p class="title">Avaliação de resposta</p>
+<p>Se definido como LIGADO os clientes poderão marcar as respostas da equipe como <i>Útil</i> ou <i>Não foi útil</i>. Este feedback dos clientes será usado para avaliar a equipe.</p>
+
+<a name="45"></a><p class="title">Prioridade do cliente</p>
+<p>Se definido como LIGADO os clientes poderão definir a prioridade/urgência para seus chamados variando de Baixa à Alta. Se definido como DESLIGADO todos os chamados serão enviados com a prioridade padrão (Baixa) e apenas a equipe poderá alterar o nível de prioridade para um maior.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="49"></a><p class="title">Identificação sequencial</p>
+<p>Se habilitado todos os chamados também exibirão um número de identificação sequencial. Isto deve permitir
+uma comunicação mais fácil entre cliente-equipe sobre um chamado (dizendo <i>identificação do chamado 45</i> ao invés
+de <i>identificação do chamado GHS-G5E-A6T8</i>). Entretanto, apenas
+a equipe poderá ver os chamados pela numeração sequencial.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="66"></a><p class="title">Tempo dedicado</p>
+<p>Acompanhe o tempo dedicado em um chamado.</p>
+
+<p>Quando habilitado o formulário administrativo de resposta de chamado exibirá um contador para acompanhamento do tempo dedicado trabalhando no chamado.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="68"></a><p class="title">Aviso de SPAM</p>
+<p>Quando o cliente envia um novo chamado a mensagem de sucesso incluirá um aviso dizendo
+que o cliente deve verificar entro da pasta de SPAM se o e-mail de confirmação não chegar.</p>
+
+<p>O aviso não será exibido quando desabilitado OU se <i>Notificar cliente quando: Eles enviam um novo chamado</i> estiver desabilitado.</p>
+
+<p>A mensagem de aviso pode ser alterada no <a href="https://www.hesk.com/knowledgebase/index.php?article=34" target="_blank">arquivo de idioma do HESK</a>.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="14"></a><p class="title">Listar usuários</p>
+<p>Se definido como LIGADO os usuários da equipe serão listados em uma caixa de seleção na página de login administrativa e eles terão apenas de digitar suas senhas. Configuração recomendada: DESLIGADO (a equipe terá de digitar
+o usuário e a senha para entrar)</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="12"></a><p class="title">Modo de depuração</p>
+<p>LIGA/DESLIGA o modo de depuração. No uso normal o modo de depuração deve estar DESLIGADO. Altere para LIGADO apenas se você esa tendo problemas e o Hesk não está funcionando adequadamente. Não se esqueça de voltar para DESLIGADO quando Hesk estiver funcionando normalmente novamente.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="63"></a><p class="title">Short links</p>
+<p>Se LIGADO os links do site maiores que 70 caracteres serão encurtados na exibição.</p>
+
+<p>Por exemplo, um link como este:<br />
+http://www.algum-exemplo-grande.com.br/sub-pasta/outra-pasta/mais-uma-outra/isto-eh-um-nome-bem-grande.html?esta_eh_uma_longa_consulta=e_isto_eh_um_valor_grande</p>
+
+<p>Seria exibido como:<br />
+http://www.algum-exemplo-grande.com.br/sub-pasta/outra-pas ... valor_grande</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="65"></a><p class="title">- - Clique para selecionar - -</p>
+<p>Se selecionado &quot;- - Clique para selecionar --&quot; será a seleção padrão
+para a categoria e/ou prioridade do chamado ao enviar um novo chamado.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="71"></a><p class="title">Limite de seleção de categoria</p>
+<p>Usado ao enviar novos chamados.</p>
+
+<p>Se o número de categorias (departamentos) da central de suporte for menor ou igual a esta configuração,
+a categoria do chamado será selecionada clicando em um link.</p>
+
+<p>Se o número de categorias for maior que este limite, uma caixa de seleção será usada para selecionar a categoria do chamado.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="13"></a><p class="title">Usar imagem anti-SPAM</p>
+<p>Alterna o uso de imagem de segurança anti-SPAM (captcha).</p>
+
+<table border="0">
+<tr>
+<td valign="top"><i>Valor</i></td>
+<td><i>Significado</i></td>
+</tr>
+<tr>
+<td valign="top" style="white-space:nowrap;"><b>DESLIGADO</b></td>
+<td>imagens anti-SPAM desabilitadas</td>
+</tr>
+<tr>
+<td valign="top" style="white-space:nowrap;"><b>LIGADO - Clientes</b> &nbsp;</td>
+<td>somente os clientes serão obrigados a resolver a imagem</td>
+</tr>
+<tr>
+<td valign="top" style="white-space:nowrap;"><b>LIGADO - Todos</b></td>
+<td>clientes e equipe serão obrigados a resolvê-la</td>
+</tr>
+</table>
+
+&nbsp;
+
+<table border="0">
+<tr>
+<td colspan="2"><i>Tipo de imagem</i></td>
+</tr>
+<tr>
+<td valign="top" style="white-space:nowrap;"><b>Imagem simples</b> &nbsp;</td>
+<td>uma imagem muito básica gerada pelo PHP (necessária a biblioteca GD)<br /><span class="wrong">Uma imagem simples não é eficaz contra robôs avançados,
+considere usar perguntas anti-SPAM ou ReCaptcha como alternativas!</span></td>
+</tr>
+<tr>
+<td valign="top" style="white-space:nowrap;"><b>ReCaptcha</b> &nbsp;</td>
+<td>use um serviço gratuito do Google (<a href="https://www.google.com/recaptcha/intro/" target="_blank">necessário cadastro</a>)</td>
+</tr>
+</table>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="64"></a><p class="title">ReCaptcha</p>
+<p>ReCaptcha é um serviço anti-bot gratuito do Google.</p>
+
+<p>Para usar o ReCaptcha você precisará:</p>
+
+<ol>
+<li><a href="https://www.google.com/recaptcha" target="_blank">Cadastrar-se no ReCaptcha</a></li>
+<li>Clicar em <b>Get reCAPTCHA</b></li>
+<li>Informe os detalhes do seu site no formulário <b>Register a new site</b></li>
+<li>Copie a <b>Site key</b> nas configurações do HESK</li>
+<li>Copie a <b>Secret key</b> nas configurações do HESK</li>
+<li>Salve as configurações do HESK</li>
+<li>Tente enviar um novo chamado através da interface do cliente para verificar se o reCAPTCHA está funcionando.</li>
+</ol>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="42"></a><p class="title">Usar pergunta anti-SPAM</p>
+<p>Alterna o uso da pergunta de segurança anti-SPAM. Esta é uma maneira muito simples e ainda assim efetiva de combater spammers
+(exceto se eles decidirem atacar seu site especificamente, mas deve bloquear todos os
+spambots navegando pela internet).
+A ideia é criar uma pergunta <b>única</b> que apenas humanos possam responder. Você pode
+usar código HTML na pergunta. As respostas não diferenciam MaIúScUlaS De MiNúScUlaS (não são CaSe SeNSiTiVe). Alguns exemplos:</p>
+
+<table border="0">
+<tr>
+<td><b>-&gt; Pergunta</b></td>
+<td><b>-&gt; Resposta</b></td>
+</tr>
+<tr>
+<td>Qual a cor da água?</td>
+<td>Azul</td>
+</tr>
+<tr>
+<td>Qual é o próximo número após o quatro? (use apenas números)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Digite o código de acesso <b>ABCDE</b> aqui:</td>
+<td>ABCDE</td>
+</tr>
+<tr>
+<td>Código de acesso: (encontre-o no inferior de nossa <a href="#" onclick="Javascript:return false">página de links</a>)</td>
+<td>Somecode</td>
+</tr>
+</table>
+
+<p>Atenção! <b>NÃO</b> use estes exemplos, use uma pergunta única que será usada apenas em seu site!</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="47"></a><p class="title">Limite de tentativas de login &amp; Tempo de banimento (minutos)</p>
+<p>Este recurso limita ataques de força bruta tanto para entrar no HESK quanto para visualizar chamados.</p>
+
+<p>Após o número de <i>Limite de tentativas de login</i> ao visualizar um chamado ou entrar no HESK o endereço IP será banido por <i>Tempo de banimento (minutos)</i>.</p>
+
+<p>Para desabilitar o limite de tentativas falhas de login, defina o valor em <b>0</b> (NÃO recomendado!).</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="69"></a><p class="title">Redefinir senha</p>
+<p>Se habilitado os usuários poderão redefinir suas senhas esquecidas por e-mail.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="46"></a><p class="title">Visualizar chamados</p>
+<p>Se habilitado (marcado), os clientes precisarão inserir seu endereço de e-mail e o código de identificação do chamado para ver o conteúdo de um chamado.
+Se desabilitado, somente o código de identificação do chamado será suficiente.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="76"></a><p class="title">Frames</p>
+<p>Habilite para impedir o HESK de carregar em frames em sites de terceiros. Isto ajuda a combater tentativas de &quot;clickjacking&quot;.</p>
+
+<p>Quando habilitado o HESK enviará um cabeçalho HTTP <b>X-Frame-Options: SAMEORIGIN</b> ao navegador.</p>
+
+<p>Se você deseja exibir o HESK dentro de um frame em um site em um domínio diferente do qual o HESK está instalado desabilite este recurso.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="75"></a><p class="title">SSL</p>
+<p>Você pode forçar o HESK a usar conexões seguras (https versus http).</p>
+
+<p>Para gerenciar esta configuração primeiro abra manualmente o arquivo <b>admin_settings.php</b> no seu navegador usando https://, por exemplo:</p>
+
+<p>https://exemplo.com.br/hesk/admin/manage_settings.php</p>
+
+<p>Isto é para assegurar que o SSL está configurado adequadamente e funcionando no servidor antes de configurar o HESK para forçar seu uso.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<span class="section">&raquo; Anexos</span>
+
+<a name="37"></a><p class="title">Usar anexos</p>
+<p>Selecione SIM para habilitar anexo de arquivos. Se habilitado os clientes e a equipe de suporte terão a opção de anexar arquivos aos chamados.</p>
+<p><b>OBSERVAÇÃO:</b> Se e como os anexos de arquivos funcionarão dependerá das configurações do seu servidor, por favor consulte o readme.html para considerações e possíveis limitações de anexos de arquivos em seu servidor.</p>
+
+<a name="38"></a><p class="title">Número por post</p>
+<p>Número de arquivos anexos permitidos por post. O limite ideal é entre 1 a 4. Esta configuração só está disponível se &quot;Usar anexos&quot; está definido como SIM.<</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+
+<a name="39"></a><p class="title">Tamanho máximo do arquivo</p>
+<p>Tamanho máximo de arquivos anexados. Observe que o tamanho máximo de envio de arquivo é limitado pelas configurações do seu servidor, por favor consulte o readme.html para maiores informações sobre limites de anexo de arquivos. Esta configuração só está disponível se &quot;Usar anexos&quot; está definido como SIM.</p>
+
+<a name="40"></a><p class="title">Tipos de arquivos permitidos</p>
+<p>Extensões de arquivos permitidas para anexar arquivos. Para adicionar mais extensões use o mesmo formato <b>.ext</b> e os separe com uma vírgula. Esta configuração só está disponível se &quot;Usar anexos&quot; está definido como SIM.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Fechar janela</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+</body>
+
+</html>

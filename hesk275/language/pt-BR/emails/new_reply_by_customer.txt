@@ -1,0 +1,12 @@
+Olá,
+
+Um cliente acabou de responder ao chamado "%%SUBJECT%%".
+
+Você pode gerenciar este chamado aqui:
+%%TRACK_URL%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

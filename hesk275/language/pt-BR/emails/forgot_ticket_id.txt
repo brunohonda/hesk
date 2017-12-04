@@ -1,0 +1,11 @@
+Prezado(a) %%NAME%%,
+
+Este e-mail contém uma lista de chamados enviados com seu endereço de e-mail. Número de chamados encontrados: %%NUM%%
+
+%%LIST_TICKETS%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

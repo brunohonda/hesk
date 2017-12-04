@@ -1,0 +1,14 @@
+Prezado(a) %%NAME%%,
+
+Seu chamado "%%SUBJECT%%" foi atualizado para o status Fechado/Resolvido.
+
+Código de identificação do chamado: %%TRACK_ID%%
+
+Você pode ver o status do seu chamado aqui:
+%%TRACK_URL%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

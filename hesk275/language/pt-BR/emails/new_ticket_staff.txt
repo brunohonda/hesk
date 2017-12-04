@@ -1,0 +1,15 @@
+Olá,
+
+Um novo chamado foi enviado. Detalhes do chamado:
+
+Assunto do chamado: %%SUBJECT%%
+Código de identificação: %%TRACK_ID%%
+
+Você pode gerenciar este chamado aqui:
+%%TRACK_URL%%
+
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%
