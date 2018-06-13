@@ -8,7 +8,3 @@ VOLUME /var/www/html/
 
 COPY ./php.custom.ini /usr/local/etc/php/conf.d/php.custom.ini
 COPY ./hesk/ /var/www/html/
-
-TAG brunoah/hesk
-TAG brunoah/hesk:latest
-TAG brunoah/hesk:2.8.1
