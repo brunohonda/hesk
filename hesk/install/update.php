@@ -881,7 +881,7 @@ function hesk_iUpdateTables()
 
 
 			// Update number of staff replies
-			$res2 = hesk_dbQuery("SELECT COUNT(*) as `cnt`, `staffid` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`=".intval($ticket['id'])." GROUP BY CASE WHEN `staffid` = 0 THEN 0 ELSE 1 END ASC");
+			$res2 = hesk_dbQuery("SELECT COUNT(*) as `cnt`, (CASE WHEN `staffid` = 0 THEN 0 ELSE 1 END) AS `staffcnt` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`=".intval($ticket['id'])." GROUP BY `staffcnt` ASC");
 
 			$total			= 0;
 			$staffreplies	= 0;
@@ -889,7 +889,7 @@ function hesk_iUpdateTables()
 			while ( $row = hesk_dbFetchAssoc($res2) )
 			{
 				$total += $row['cnt'];
-				$staffreplies += ($row['staffid'] ? $row['cnt'] : 0);
+				$staffreplies += ($row['staffcnt'] ? $row['cnt'] : 0);
 			}
 
 			if ( $total > 0 )
@@ -1172,6 +1172,15 @@ function hesk_iUpdateTables()
 
 		$update_all_next = 1;
     } // END version 2.7 to 2.8
+
+    // Updating 2.8 to 2.8.2
+    if ($update_all_next || $hesk_settings['update_from'] == '2.8')
+    {
+        // Modify service_messages table
+        hesk_dbQuery("ALTER TABLE `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` ADD `language` VARCHAR(50) NULL DEFAULT NULL AFTER `message`");
+
+        $update_all_next = 1;
+    } // END version 2.8 to 2.8.2
 
 	// Insert the "HESK updated to latest version" mail for the administrator
 	if ( file_exists(HESK_PATH.'hesk_license.php') )
@@ -1471,6 +1480,17 @@ function hesk_defaultSettings()
 function hesk_iDetectVersion()
 {
 	global $hesk_settings, $hesklang;
+
+    // Version 2.8.2 tables installed?
+    $res = hesk_dbQuery("SHOW TABLES FROM `".hesk_dbEscape($hesk_settings['db_name'])."` LIKE '".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages'");
+    if (hesk_dbNumRows($res))
+    {
+        $res = hesk_dbQuery("SHOW COLUMNS FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` LIKE 'language'");
+        if (hesk_dbNumRows($res))
+        {
+            return '2.8.2';
+        }
+    }
 
     // Version 2.8 tables installed?
     $res = hesk_dbQuery("SHOW COLUMNS FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` LIKE 'assignedby'");

@@ -176,4 +176,4 @@ while ($reply = hesk_dbFetchAssoc($res))
 }
 
 // Print "end of ticket" message
-echo '<span style="page-break-after: always;">' . $hesklang['end_ticket'] . "</span>";
+echo '<div style="page-break-after: always;">' . $hesklang['end_ticket'] . "</div>";

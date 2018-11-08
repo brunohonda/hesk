@@ -372,7 +372,7 @@ function hesk_mb_strlen($in)
 
 function hesk_mb_strtolower($in)
 {
-	return function_exists('mb_strtolower') ? mb_strtolower($in) : strtolower($in);
+	return function_exists('mb_strtolower') ? mb_strtolower($in, 'UTF-8') : strtolower($in);
 } // END hesk_mb_strtolower()
 
 

@@ -1119,7 +1119,7 @@ function print_start()
     }
 
 	// Service messages
-	$res = hesk_dbQuery('SELECT `title`, `message`, `style` FROM `'.hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` WHERE `type`='0' ORDER BY `order` ASC");
+	$res = hesk_dbQuery('SELECT `title`, `message`, `style` FROM `'.hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` WHERE `type`='0' AND (`language` IS NULL OR `language` LIKE '".hesk_dbEscape($hesk_settings['language'])."') ORDER BY `order` ASC");
 	while ($sm=hesk_dbFetchAssoc($res))
 	{
 		hesk_service_message($sm);

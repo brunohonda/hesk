@@ -522,6 +522,7 @@ CREATE TABLE `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` (
   `author` smallint(5) unsigned NOT NULL,
   `title` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `message` mediumtext COLLATE utf8_unicode_ci NOT NULL,
+  `language` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,
   `style` enum('0','1','2','3','4') COLLATE utf8_unicode_ci NOT NULL DEFAULT '0',
   `type` enum('0','1') COLLATE utf8_unicode_ci NOT NULL DEFAULT '0',
   `order` smallint(5) unsigned NOT NULL DEFAULT '0',

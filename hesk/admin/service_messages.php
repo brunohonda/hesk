@@ -31,6 +31,9 @@ hesk_checkPermission('can_service_msg');
 define('LOAD_TABS',1);
 define('WYSIWYG',1);
 
+// Do we need to show the language options?
+$hesk_settings['show_language'] = (count($hesk_settings['languages']) > 1);
+
 // What should we do?
 if ( $action = hesk_REQUEST('a') )
 {
@@ -188,6 +191,28 @@ if ( isset($_SESSION['preview_sm']) )
 		<label><input type="radio" name="type" value="1" <?php if (isset($_SESSION['new_sm']['type']) && $_SESSION['new_sm']['type'] == 1) {echo 'checked="checked"';} ?> /> <i><?php echo $hesklang['sm_draft']; ?></i></label><br />&nbsp;
 		</td>
 		</tr>
+        <?php
+        if ($hesk_settings['show_language'])
+        {
+            ?>
+    		<tr>
+    		<td valign="top"><b><?php echo $hesklang['lgs']; ?>:</b></td>
+    		<td><select name="language" id="language">
+            <option value=""><?php echo $hesklang['all']; ?></option>
+            <?php
+            foreach ($hesk_settings['languages'] as $lang => $v)
+            {
+                echo '<option '.(isset($_SESSION['new_sm']['language']) && $_SESSION['new_sm']['language'] == $lang ? 'selected="selected"' : '').'>'.$lang.'</option>';
+            }
+            ?>
+            </select></td>
+    		</tr>
+    		<tr>
+    		<td cellspan="2">&nbsp;</td>
+    		</tr>
+            <?php
+        }
+        ?>
 		<tr>
 		<td><b><?php echo $hesklang['sm_mtitle']; ?>:</b></td>
 		<td><input type="text" name="title" size="70" maxlength="255" <?php if (isset($_SESSION['new_sm']['title'])) {echo 'value="'.$_SESSION['new_sm']['title'].'"';} ?> /></td>
@@ -253,6 +278,14 @@ else
 	<table border="0" cellspacing="1" cellpadding="3" class="white" width="100%">
 	<tr>
 	<th class="admin_white"><b><i><?php echo $hesklang['sm_mtitle']; ?></i></b></th>
+    <?php
+    if ($hesk_settings['show_language'])
+    {
+        ?>
+        <th class="admin_white"><b><i><?php echo $hesklang['lgs']; ?></i></b></th>
+        <?php
+    }
+    ?>
 	<th class="admin_white"><b><i><?php echo $hesklang['sm_author']; ?></i></b></th>
 	<th class="admin_white"><b><i><?php echo $hesklang['sm_type']; ?></i></b></th>
 	<th class="admin_white" style="width:120px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
@@ -297,6 +330,14 @@ else
 				<?php echo $sm['title']; ?></b>
 				</div>
 			</td>
+            <?php
+            if ($hesk_settings['show_language'])
+            {
+                ?>
+                <td class="<?php echo $color; ?>" style="text-align:left; white-space:nowrap;"><?php echo strlen($sm['language']) ? $sm['language'] : $hesklang['all']; ?></td>
+                <?php
+            }
+            ?>
 			<td class="<?php echo $color; ?>" style="text-align:center; white-space:nowrap;"><?php echo (isset($admins[$sm['author']]) ? $admins[$sm['author']] : $hesklang['e_udel']); ?></td>
 			<td class="<?php echo $color; ?>" style="text-align:center; white-space:nowrap;"><?php echo $type; ?></td>
 			<td class="<?php echo $color; ?>" style="text-align:center; white-space:nowrap;">
@@ -551,6 +592,11 @@ function new_sm()
 	}
 
     $type  = empty($_POST['type']) ? 0 : 1;
+    $language = hesk_input( hesk_POST('language') );
+    if ( ! isset($hesk_settings['languages'][$language]))
+    {
+        $language = '';
+    }
     $title = hesk_input( hesk_POST('title') ) or $hesk_error_buffer[] = $hesklang['sm_e_title'];
 	$message = hesk_getHTML( hesk_POST('message') );
 
@@ -565,6 +611,7 @@ function new_sm()
 		$_SESSION['new_sm'] = array(
 		'style' => $style,
 		'type' => $type,
+        'language' => $language,
 		'title' => $title,
 		'message' => hesk_input( hesk_POST('message') ),
 		);
@@ -588,6 +635,7 @@ function new_sm()
 		$_SESSION['new_sm'] = array(
 		'style' => $style,
 		'type' => $type,
+        'language' => $language,
 		'title' => $title,
 		'message' => $message,
 		);
@@ -602,10 +650,11 @@ function new_sm()
 	$my_order = intval($row[0]) + 10;
 
     // Insert service message into database
-	hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` (`author`,`title`,`message`,`style`,`type`,`order`) VALUES (
+	hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` (`author`,`title`,`message`,`language`,`style`,`type`,`order`) VALUES (
     '".intval($_SESSION['id'])."',
     '".hesk_dbEscape($title)."',
     '".hesk_dbEscape($message)."',
+    ".(strlen($language) ? "'".hesk_dbEscape($language)."'" : 'NULL').",
     '{$style}',
     '{$type}',
     '{$my_order}'

@@ -15,7 +15,7 @@
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 // We will be installing this HESK version:
-define('HESK_NEW_VERSION','2.8.1');
+define('HESK_NEW_VERSION','2.8.2');
 define('REQUIRE_PHP_VERSION','5.3.0');
 define('REQUIRE_MYSQL_VERSION','5.0.7');
 
@@ -979,7 +979,7 @@ function hesk_iFooter()
 	</table>
     </div>
 
-	<p style="text-align:center"><span class="smaller">&nbsp;<br />Powered by <a href="https://www.hesk.com" class="smaller" title="Free PHP Help Desk Software">Help Desk Software</a> <b>HESK</b>, brought to you by <a href="https://www.sysaid.com/?utm_source=Hesk&utm_medium=cpc&utm_campaign=HeskProduct_To_HP">SysAid</a></span></p>
+	<p style="text-align:center"><span class="smaller">&nbsp;<br />Powered by <a href="https://www.hesk.com" class="smaller" title="Free PHP Help Desk Software">Help Desk Software</a> <b>HESK</b>, in partnership with <a href="https://www.sysaid.com/?utm_source=Hesk&utm_medium=cpc&utm_campaign=HeskProduct_To_HP">SysAid Technologies</a></span></p>
 	</td>
 	</tr>
 	</table>

@@ -15,7 +15,7 @@
 <tr>
 <td width="50%" style="text-align:left;vertical-align:top">
  <ul class="nobullets">
- <li>Version: 2.8.1 from 18th May 2018</li>
+ <li>Version: 2.8.2 from 5th July 2018</li>
  <li>Developed by: Klemen Stirn</li>
  <li><a href="https://www.hesk.com">Help Desk Software HESK</a></li>
  <li><a href="https://www.phpjunkyard.com">Free PHP Scripts</a></li>
@@ -34,9 +34,19 @@
 
 <h2>HESK CHANGELOG</h2>
 
+<p><b>Changes in 2.8.2</b> - 5th July 2018<br />
+- service messages can be set to display for a specific language only<br />
+- fix: use div instead of span in print template for better browser compatibility<br />
+- fix: double escaping in hesk_dbLike function may cause failed lookups<br />
+- fix: some queries don't work in MySQL ONLY_FULL_GROUP_BY mode<br />
+- fix: POP3 fetching EOF detection unreliable in newer PHP versions<br />
+- fix: Message-ID header missing host name over CLI<br />
+- fix: force hesk_mb_strtolower function to use UTF-8<br />
+</p>
+
 <p><b>Changes in 2.8.1</b> - 18th May 2018<br />
 - fix: update assignedby column when doing bulk assignments<br />
-- fix: add a unique Message-ID header to outgoing emails<br /> 
+- fix: add a unique Message-ID header to outgoing emails<br />
 </p>
 
 <p><b>Changes in 2.8.0</b> - 14th May 2018<br />

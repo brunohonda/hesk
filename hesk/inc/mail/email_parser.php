@@ -371,11 +371,8 @@ function save_forward_mail($tmpfilepath, $eml_file)
 
 	// open the stdin as a file handle or input file
     $fp = $eml_file ? fopen($eml_file, "r") : fopen("php://stdin", "r");
-	while (!feof($fp))
-	{
-		fwrite($tmpfp, fgets($fp,4096));
-	}
-	fclose($fp);
+    $fileContent = @stream_get_contents($fp);
+    fwrite($tmpfp, $fileContent);
 
 	fclose($tmpfp);
 }
