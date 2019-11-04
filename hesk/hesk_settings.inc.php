@@ -1,5 +1,5 @@
 <?php
-// Settings file for HESK 2.8.2
+// Settings file for HESK 2.8.4
 
 // ==> GENERAL
 
@@ -195,7 +195,7 @@ $hesk_settings['check_updates']=1;
 #############################
 #     DO NOT EDIT BELOW     #
 #############################
-$hesk_settings['hesk_version']='2.8.2';
+$hesk_settings['hesk_version']='2.8.4';
 if ($hesk_settings['debug_mode'])
 {
     error_reporting(E_ALL);

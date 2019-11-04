@@ -547,11 +547,11 @@ hesk_dbQuery("
 CREATE TABLE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` (
   `id` mediumint(8) unsigned NOT NULL AUTO_INCREMENT,
   `trackid` varchar(13) COLLATE utf8_unicode_ci NOT NULL,
-  `name` varchar(50) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `email` varchar(1000) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `category` smallint(5) unsigned NOT NULL DEFAULT '1',
   `priority` enum('0','1','2','3') COLLATE utf8_unicode_ci NOT NULL DEFAULT '3',
-  `subject` varchar(70) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `message` mediumtext COLLATE utf8_unicode_ci NOT NULL,
   `dt` timestamp NOT NULL DEFAULT '2000-01-01 00:00:00',
   `lastchange` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

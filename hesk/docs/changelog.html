@@ -15,7 +15,7 @@
 <tr>
 <td width="50%" style="text-align:left;vertical-align:top">
  <ul class="nobullets">
- <li>Version: 2.8.2 from 5th July 2018</li>
+ <li>Version: 2.8.4 from 17th August 2019</li>
  <li>Developed by: Klemen Stirn</li>
  <li><a href="https://www.hesk.com">Help Desk Software HESK</a></li>
  <li><a href="https://www.phpjunkyard.com">Free PHP Scripts</a></li>
@@ -33,6 +33,23 @@
 </table>
 
 <h2>HESK CHANGELOG</h2>
+
+<p><b>Changes in 2.8.4</b> - 17th August 2019<br />
+- fix: modified the HTMLPurifier library to be compatible with PHP 5.3<br />
+</p>
+
+<p><b>Changes in 2.8.3</b> - 16th August 2019<br />
+- fix: break long words when bulk printing tickets<br />
+- fix: HTML-encoded chars can cause MySQL truncate error<br />
+- fix: parse links with single quotes in HTML email to ticket<br />
+- fix: wrong option for staff re-send notification of an assigned ticket<br />
+- fix: in email to ticket inline attachments with no message are not imported correctly<br />
+- fix: descriptive error message when post_max_size is exceeded for customer interface<br />
+- fix: link to embedded image tags rather than deleting them<br />
+- fix: no image in service messages list for style &quot;None&quot;<br >
+- fix: pagination does not work when searching for tickets by owner<br />
+- fix: workaround for a Microsoft DKIM verification bug<br />
+</p>
 
 <p><b>Changes in 2.8.2</b> - 5th July 2018<br />
 - service messages can be set to display for a specific language only<br />

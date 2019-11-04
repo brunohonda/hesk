@@ -1182,6 +1182,17 @@ function hesk_iUpdateTables()
         $update_all_next = 1;
     } // END version 2.8 to 2.8.2
 
+    // Updating 2.8.2 to 2.8.3
+    if ($update_all_next || $hesk_settings['update_from'] == '2.8.2')
+    {
+        // Modify tickets table
+        hesk_dbQuery("ALTER TABLE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` CHANGE `name` `name` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '', CHANGE `subject` `subject` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT ''");
+
+        $update_all_next = 1;
+    } // END version 2.8.2 to 2.8.3
+
+    // 2.8.4 no changes
+
 	// Insert the "HESK updated to latest version" mail for the administrator
 	if ( file_exists(HESK_PATH.'hesk_license.php') )
 	{
@@ -1480,6 +1491,14 @@ function hesk_defaultSettings()
 function hesk_iDetectVersion()
 {
 	global $hesk_settings, $hesklang;
+
+    // Version 2.8.3 tables installed?
+    $res = hesk_dbQuery("SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '".hesk_dbEscape($hesk_settings['db_pfix'])."tickets' AND table_schema = '".hesk_dbEscape($hesk_settings['db_name'])."' AND column_name = 'name' LIMIT 0, 1");
+    $row = hesk_dbFetchRow($res);
+    if ($row[0] == 255)
+    {
+        return '2.8.3';
+    }
 
     // Version 2.8.2 tables installed?
     $res = hesk_dbQuery("SHOW TABLES FROM `".hesk_dbEscape($hesk_settings['db_name'])."` LIKE '".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages'");

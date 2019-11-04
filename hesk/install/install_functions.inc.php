@@ -15,7 +15,7 @@
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 // We will be installing this HESK version:
-define('HESK_NEW_VERSION','2.8.2');
+define('HESK_NEW_VERSION','2.8.4');
 define('REQUIRE_PHP_VERSION','5.3.0');
 define('REQUIRE_MYSQL_VERSION','5.0.7');
 
@@ -862,7 +862,7 @@ function hesk_iStart()
 	<input type="submit" onclick="javascript:this.value='Working, please wait...'" value="I ACCEPT (Click to continue) &raquo;" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
 	</p>
 
-    <p><img src="https://www.hesk.com/images/space.gif" width="10" height="10" alt="" border="0" style="display:none" />&nbsp;</p>
+    <p><img src="https://www.hesk.com/images/space.gif" width="10" height="10" alt="" border="0" />&nbsp;</p>
 
 </td>
 </tr>

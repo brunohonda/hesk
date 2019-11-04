@@ -326,7 +326,14 @@ else
 		<tr>
 			<td class="<?php echo $color; ?>" style="text-align:left; padding:5px;" width="50%">
 				<div class="<?php echo $sm_style; ?>">
+                <?php
+                if ($sm_style != 'none')
+                {
+                ?>
 				<img src="<?php echo HESK_PATH; ?>img/<?php echo $sm_style; ?>.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
+                <?php
+                }
+                ?>
 				<?php echo $sm['title']; ?></b>
 				</div>
 			</td>

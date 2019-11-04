@@ -304,6 +304,7 @@ function hesk_mail($to,$subject,$message)
 		$headers.= "Return-Path: $hesk_settings[webmaster_mail]\n";
 		$headers.= "Date: " . date(DATE_RFC2822) . "\n";
         $headers.= "Message-ID: " . hesk_generateMessageID() . "\n";
+        $headers.= "MIME-Version: 1.0\n";
 		$headers.= "Content-Type: text/plain; charset=" . $hesklang['ENCODING'];
 
 		// Send using PHP mail() function
@@ -338,6 +339,7 @@ function hesk_mail($to,$subject,$message)
 				"Subject: " . $subject,
 				"Date: " . date(DATE_RFC2822),
                 "Message-ID: " . hesk_generateMessageID(),
+                "MIME-Version: 1.0",
                 "Content-Type: text/plain; charset=" . $hesklang['ENCODING']
 			), $message))
     {

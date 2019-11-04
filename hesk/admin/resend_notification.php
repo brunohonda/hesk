@@ -134,7 +134,7 @@ hesk_notifyCustomer();
 // Notify staff?
 if ($ticket['owner'])
 {
-    hesk_notifyAssignedStaff(false, 'ticket_assigned_to_you', 'notify_reply_my');
+    hesk_notifyAssignedStaff(false, 'ticket_assigned_to_you');
 }
 else
 {

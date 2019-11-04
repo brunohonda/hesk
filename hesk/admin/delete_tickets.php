@@ -505,6 +505,8 @@ elseif ($_POST['a']=='print')
         color : black;
         font-family : Verdana, Geneva, Arial, Helvetica, sans-serif;
         font-size : <?php echo $hesk_settings['print_font_size']; ?>px;
+        word-wrap: break-word;
+        word-break: break-word;
     }
     table
     {
