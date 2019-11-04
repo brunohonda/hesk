@@ -1,6 +1,5 @@
-FROM php:7.2-apache
-
-MAINTAINER Bruno Honda <bruno.honda@live.com>
+FROM php
+LABEL maintainer="Bruno Honda <bruno.honda@live.com>"
 
 RUN apt-get update && docker-php-ext-install mysqli
 
