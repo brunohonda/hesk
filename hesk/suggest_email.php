@@ -34,9 +34,9 @@ header("Pragma: no-cache");
 $address = hesk_REQUEST('e') or die('');
 $email_field = hesk_REQUEST('ef') or die('');
 $display_div = hesk_REQUEST('dd') or die('');
-$pad_div = hesk_REQUEST('pd') ? 1 : 0;
 $div = 1;
 
+$suggestions = array();
 // Do we allow multiple emails? If yes, check all
 if ($hesk_settings['multi_eml'] || hesk_REQUEST('am'))
 {
@@ -51,7 +51,7 @@ if ($hesk_settings['multi_eml'] || hesk_REQUEST('am'))
 	{
 		if ( ($suggest = hesk_emailTypo($address)) !== false )
 		{
-			hesk_emailTypoShow($address, $suggest, $div);
+			$suggestions[] = hesk_emailTypoShow($address, $suggest, $div);
 			$div++;
 		}
 	}
@@ -59,46 +59,25 @@ if ($hesk_settings['multi_eml'] || hesk_REQUEST('am'))
 // If multiple emails are not allowed, check just first one
 elseif ( ($suggest = hesk_emailTypo($address)) !== false )
 {
-	hesk_emailTypoShow($address, $suggest);
+	$suggestions[] = hesk_emailTypoShow($address, $suggest);
 }
 
+print json_encode($suggestions);
 exit();
 
 
 function hesk_emailTypoShow($address, $suggest, $div = '')
 {
-	global $hesk_settings, $hesklang, $email_field, $display_div, $pad_div;
-	?>
-	<div id="emailtypo<?php echo $display_div.$div; ?>" style="display:block">
-    	<?php
-        if ($pad_div)
-        {
-        ?>
-		<table border="0" width="100%">
-		<tr>
-		<td width="150">&nbsp;</td>
-		<td width="80%">
-        <?php
-        }
-        ?>
-			<div class="notice">
-			<?php echo sprintf($hesklang['didum'], str_replace('@', '@<b>', $suggest . '</b>') ); ?><br /><br />
-			<a href="javascript:void(0);" onclick="var eml=document.getElementById('<?php echo $email_field; ?>').value;document.getElementById('<?php echo $email_field; ?>').value=eml.replace(/<?php echo preg_quote($address, '/'); ?>/gi, '<?php echo addslashes($suggest); ?>' );document.getElementById('emailtypo<?php echo $display_div.$div; ?>').style.display='none';"><?php echo $hesklang['yfix']; ?></a>
-			|
-			<a href="javascript:void(0);" onclick="document.getElementById('emailtypo<?php echo $display_div.$div; ?>').style.display='none';"><?php echo $hesklang['nole']; ?></a>
-			</div>
-		<?php
-        if ($pad_div)
-        {
-        ?>
-		</td>
-		</tr>
-		</table>
-        <?php
-        }
-        ?>
-	</div>
-	<?php
+	global $hesk_settings, $hesklang, $email_field, $display_div;
+
+	return array(
+        'id' => "emailtypo{$display_div}{$div}",
+        'suggestText' => sprintf($hesklang['didum'], str_replace('@', '@<b>', $suggest . '</b>')),
+        'formattedSuggestedEmail' => addslashes($suggest),
+        'originalAddress' => preg_quote($address, '/'),
+        'noResponseText' => $hesklang['nole'],
+        'yesResponseText' => $hesklang['yfix']
+    );
 } // END hesk_emailTypoShow()
 
 

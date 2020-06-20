@@ -13,19 +13,33 @@
 
 /* Check if this is a valid include */
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
+
+// We'll use this later
+$onload='';
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html lang="<?php echo $hesk_settings['languages'][$hesk_settings['language']]['folder'] ?>">
 <head>
 	<title><?php echo (isset($hesk_settings['tmp_title']) ? $hesk_settings['tmp_title'] : $hesk_settings['hesk_title']); ?></title>
-	<meta http-equiv="Content-Type" content="text/html;charset=<?php echo $hesklang['ENCODING']; ?>" />
-	<link href="<?php echo HESK_PATH; ?>hesk_style.css?<?php echo $hesk_settings['hesk_version']; ?>" type="text/css" rel="stylesheet" />
-	<script language="Javascript" type="text/javascript" src="<?php echo HESK_PATH; ?>hesk_javascript.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+	<meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width,minimum-scale=1.0,maximum-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo HESK_PATH; ?>img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo HESK_PATH; ?>img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo HESK_PATH; ?>img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="<?php echo HESK_PATH; ?>img/favicon/site.webmanifest">
+    <link rel="mask-icon" href="<?php echo HESK_PATH; ?>img/favicon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="<?php echo HESK_PATH; ?>img/favicon/favicon.ico">
+    <meta name="msapplication-TileColor" content="#2d89ef">
+    <meta name="msapplication-config" content="<?php echo HESK_PATH; ?>img/favicon/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" media="all" href="<?php echo HESK_PATH; ?>css/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.css?<?php echo $hesk_settings['hesk_version']; ?>">
+    <script src="<?php echo HESK_PATH; ?>js/jquery-3.4.1.min.js"></script>
+	<script type="text/javascript" src="<?php echo HESK_PATH; ?>js/hesk_javascript<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+    <script src="<?php echo HESK_PATH; ?>js/selectize.min.js"></script>
 
     <?php
-	/* Prepare Javascript that browser should load on page load */
-    $onload = "javascript:var i=new Image();i.src='" . HESK_PATH . "img/orangebtnover.gif';var i2=new Image();i2.src='" . HESK_PATH . "img/greenbtnover.gif';";
-
 	/* Tickets shouldn't be indexed by search engines */
 	if (defined('HESK_NO_ROBOTS'))
 	{
@@ -34,36 +48,28 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 		<?php
 	}
 
-	/* If page requires calendar include calendar Javascript and CSS */
-	if (defined('CALENDAR'))
-	{
-		?>
-		<script language="Javascript" type="text/javascript" src="<?php echo HESK_PATH; ?>inc/calendar/tcal.php"></script>
-		<link href="<?php echo HESK_PATH; ?>inc/calendar/tcal.css" type="text/css" rel="stylesheet" />
-		<?php
-	}
-
 	/* If page requires WYSIWYG editor include TinyMCE Javascript */
 	if (defined('WYSIWYG') && $hesk_settings['kb_wysiwyg'])
 	{
 		?>
-		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tiny_mce/3.5.12/tiny_mce.js"></script>
+		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tiny_mce/5.2.0/tinymce.min.js"></script>
 		<?php
 	}
 
-	/* If page requires tabs load tabs Javascript and CSS */
-	if (defined('LOAD_TABS'))
-	{
-		?>
-		<link href="<?php echo HESK_PATH; ?>inc/tabs/tabber.css" type="text/css" rel="stylesheet" />
-		<?php
-	}
+    /* If page styles <code> blocks */
+    if (defined('STYLE_CODE'))
+    {
+        ?>
+        <script type="text/javascript" src="<?php echo HESK_PATH; ?>js/prism.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+        <link rel="stylesheet" media="all" href="<?php echo HESK_PATH; ?>css/prism.css?<?php echo $hesk_settings['hesk_version']; ?>">
+        <?php
+    }
 
 	/* If page requires timer load Javascript */
 	if (defined('TIMER'))
 	{
 		?>
-		<script language="Javascript" type="text/javascript" src="<?php echo HESK_PATH; ?>inc/timer/hesk_timer.js"></script>
+		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/timer/hesk_timer.js"></script>
 		<?php
 
         /* Need to load default time or a custom one? */
@@ -149,18 +155,66 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 		<?php
 	}
 
-    // Include custom head code
-    include(HESK_PATH . 'head.txt');
+    // Timeago
+    if (defined('TIMEAGO'))
+    {
+        ?>
+        <script type="text/javascript" src="<?php echo HESK_PATH; ?>js/timeago/jquery.timeago.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+        <?php
+        // Load language file if not English
+        if ($hesklang['TIMEAGO_LANG_FILE'] != 'jquery.timeago.en.js')
+        {
+            ?>
+            <script type="text/javascript" src="<?php echo HESK_PATH; ?>js/timeago/locales/<?php echo $hesklang['TIMEAGO_LANG_FILE']; ?>?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+            <?php
+        }
+        ?>
+        <script type="text/javascript">
+        jQuery(document).ready(function() {
+            $("time.timeago").timeago();
+        });
+        </script>
+        <?php
+    }
+
+    // Back to top button
+    if (defined('BACK2TOP'))
+    {
+        ?>
+        <script type="text/javascript">
+        jQuery(document).ready(function() {
+            var offset = 800;
+            var duration = 250;
+            jQuery(window).scroll(function() {
+                if (jQuery(this).scrollTop() > offset) {
+                    jQuery('.back-to-top').fadeIn(duration);
+                } else {
+                    jQuery('.back-to-top').fadeOut(duration);
+                }
+            });
+
+            jQuery('.back-to-top').click(function(event) {
+                event.preventDefault();
+                jQuery('html, body').animate({scrollTop: 0}, duration);
+                return false;
+            })
+        });
+        </script>
+        <?php
+    }
 	?>
+
+    <script type="text/javascript" src="<?php echo HESK_PATH; ?>js/zebra_tooltips.min.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+    <link rel="stylesheet" href="<?php echo HESK_PATH; ?>css/zebra_tooltips.css">
+    <script type="text/javascript">
+    $(document).ready(function() {
+        // show tooltips for any element that has a class named "tooltip"
+        // the content of the tooltip will be taken from the element's "title" attribute
+        new $.Zebra_Tooltips($('.tooltip'), {animation_offset: 0, animation_speed: 100, hide_delay: 0, show_delay: 0, vertical_alignment: 'above', vertical_offset: 5});
+    });
+    </script>
 
 </head>
 <body onload="<?php echo $onload; unset($onload); ?>">
 
-<?php
-include(HESK_PATH . 'header.txt');
-?>
-
-<div align="center">
-<table border="0" cellspacing="0" cellpadding="5" class="enclosing">
-<tr>
-<td>
+<div class="wrapper">

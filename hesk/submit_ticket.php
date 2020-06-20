@@ -16,6 +16,8 @@ define('HESK_PATH','./');
 
 // Get all the required files and functions
 require(HESK_PATH . 'hesk_settings.inc.php');
+// TODO pull this from settings
+define('TEMPLATE_PATH', HESK_PATH . "theme/{$hesk_settings['site_theme']}/");
 require(HESK_PATH . 'inc/common.inc.php');
 
 // Are we in maintenance mode?
@@ -209,7 +211,17 @@ $tmpvar['category'] = intval( hesk_POST('category') ) or $hesk_error_buffer['cat
 // Do we allow customer to select priority?
 if ($hesk_settings['cust_urgency'])
 {
-	$tmpvar['priority'] = intval( hesk_POST('priority') );
+    $valid_priorities = array(
+        'high' => 1,
+        'medium' => 2,
+        'low' => 3
+    );
+	$tmpvar['priority'] = hesk_POST('priority');
+
+	// 0 is an invalid option, so we'll set it to that to let the if block below process normally
+	$tmpvar['priority'] = key_exists($tmpvar['priority'], $valid_priorities) ?
+        $valid_priorities[$tmpvar['priority']] :
+        0;
 
 	// We don't allow customers select "Critical". If priority is not valid set it to "low".
 	if ($tmpvar['priority'] < 1 || $tmpvar['priority'] > 3)
@@ -531,53 +543,14 @@ hesk_cleanSessionVars('c_message');
 hesk_cleanSessionVars('c_question');
 hesk_cleanSessionVars('img_verified');
 
-// Print header
-require_once(HESK_PATH . 'inc/header.inc.php');
+$messages = hesk_get_messages();
 
-?>
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-<tr>
-<td width="3"><img src="img/headerleftsm.jpg" width="3" height="25" alt="" /></td>
-<td class="headersm"><?php hesk_showTopBar($hesklang['ticket_submitted']); ?></td>
-<td width="3"><img src="img/headerrightsm.jpg" width="3" height="25" alt="" /></td>
-</tr>
-</table>
+$hesk_settings['render_template'](TEMPLATE_PATH . 'customer/create-ticket/create-ticket-confirmation.php', array(
+    'trackingId' => $ticket['trackid'],
+    'emailProvided' => $email_available,
+    'messages' => $messages
+));
 
-<table width="100%" border="0" cellspacing="0" cellpadding="3">
-<tr>
-<td><span class="smaller"><a href="<?php echo $hesk_settings['site_url']; ?>" class="smaller"><?php echo $hesk_settings['site_title']; ?></a> &gt;
-<a href="<?php echo $hesk_settings['hesk_url']; ?>" class="smaller"><?php echo $hesk_settings['hesk_title']; ?></a>
-&gt; <?php echo $hesklang['ticket_submitted']; ?></span></td>
-</tr>
-</table>
-
-</td>
-</tr>
-<tr>
-<td>
-
-<p>&nbsp;</p>
-
-<?php
-// Show success message with link to ticket
-hesk_show_success(
-
-	$hesklang['ticket_submitted'] . '<br /><br />' .
-	$hesklang['ticket_submitted_success'] . ': <b>' . $ticket['trackid'] . '</b><br /><br /> ' .
-	( ! $email_available ? $hesklang['write_down'] . '<br /><br />' : '') .
-	($email_available && $hesk_settings['notify_new'] && $hesk_settings['spam_notice'] ? $hesklang['spam_inbox'] . '<br /><br />' : '') .
-	'<a href="' . $hesk_settings['hesk_url'] . '/ticket.php?track=' . $ticket['trackid'] . '">' . $hesklang['view_your_ticket'] . '</a>'
-
-);
-
-// Any other messages to display?
-hesk_handle_messages();
-?>
-
-<p>&nbsp;</p>
-
-<?php
-require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
 
 

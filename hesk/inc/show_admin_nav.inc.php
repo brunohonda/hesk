@@ -15,158 +15,489 @@
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');} 
 
 $num_mail = hesk_checkNewMail();
-$num_mail = $num_mail ? '<b>'.$num_mail.'</b>' : 0;
+
+// Name of the page that is being requested, without '.php' at the end
+$calling_script = basename($_SERVER['PHP_SELF'], '.php');
 ?>
+<!-- NEW DESIGN -->
+<aside class="main-menu">
+    <nav class="navbar">
+        <div class="navbar__header">
+            <button class="btn navbar__toggler" id="navbarToggler" type="button" aria-label="Toggle navigation">
+                <svg class="icon icon-menu">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-menu"></use>
+                </svg>
+            </button>
+            <a class="navbar__logo" href="admin_main.php">
+                <?php echo $hesklang['help_desk']; ?>
+            </a>
+        </div>
+        <div class="navbar__menu-wrap">
+            <ul class="navbar__list">
+                <li class="listitem <?php if ($calling_script === 'admin_main') { ?>current<?php } ?>">
+                    <div class="listitem__icon">
+                        <a href="admin_main.php">
+                            <svg class="icon icon-tickets">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tickets"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="admin_main.php" class="listitem__caption">
+                            <?php echo $hesklang['tickets']; ?>
+                        </a>
+                        <?php //<span class="badge listitem__notification">109</span> ?>
+                    </div>
+                </li>
+                <?php if (hesk_checkPermission('can_man_canned',0) &&
+                          hesk_checkPermission('can_man_ticket_tpl',0)) {
+                    $pages = array('manage_canned', 'manage_ticket_templates');
+                    $open_menu = in_array($calling_script, $pages) ? 'current submenu-is-opened' : '';
+                    ?>
+                <li class="listitem submenu <?php echo $open_menu; ?>">
+                    <div class="listitem__icon">
+                        <a href="#">
+                            <svg class="icon icon-templates">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-templates"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="#" class="listitem__caption"><?php echo $hesklang['nav_templates']; ?></a>
+                        <ul class="submenu__list">
+                            <li class="submenu__listitem <?php if ($calling_script === 'manage_canned') { ?>current<?php } ?>">
+                                <a href="manage_canned.php">
+                                    <?php echo $hesklang['responses']; ?>
+                                </a>
+                            </li>
+                            <li class="submenu__listitem <?php if ($calling_script === 'manage_ticket_templates') { ?>current<?php } ?>">
+                                <a href="manage_ticket_templates.php">
+                                    <?php echo $hesklang['tickets']; ?>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <?php } elseif (hesk_checkPermission('can_man_canned',0)) { ?>
+                    <li class="listitem <?php if ($calling_script === 'manage_canned') { ?>current<?php } ?>">
+                        <div class="listitem__icon">
+                            <a href="manage_canned.php">
+                                <svg class="icon icon-tickets">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-templates"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="listitem__menu">
+                            <a href="manage_canned.php" class="listitem__caption">
+                                <?php echo $hesklang['responses']; ?>
+                            </a>
+                        </div>
+                    </li>
+                <?php } elseif (hesk_checkPermission('can_man_ticket_tpl',0)) { ?>
+                    <li class="listitem <?php if ($calling_script === 'manage_ticket_templates') { ?>current<?php } ?>">
+                        <div class="listitem__icon">
+                            <a href="manage_ticket_templates.php">
+                                <svg class="icon icon-tickets">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-templates"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="listitem__menu">
+                            <a href="manage_ticket_templates.php" class="listitem__caption">
+                                <?php echo $hesklang['tickets']; ?>
+                            </a>
+                        </div>
+                    </li>
+                <?php
+                }
 
-<div align="center">
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
+                if ($hesk_settings['kb_enable'] && hesk_checkPermission('can_man_kb',0)) {
+                    $pages = array('manage_knowledgebase', 'knowledgebase_private');
+                    $current = in_array($calling_script, $pages) ? 'current' : '';
+                    ?>
+                    <li class="listitem <?php echo $current; ?>">
+                        <div class="listitem__icon">
+                            <a href="manage_knowledgebase.php">
+                                <svg class="icon icon-knowledge">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-knowledge"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="listitem__menu">
+                            <a href="manage_knowledgebase.php" class="listitem__caption">
+                                <?php echo $hesklang['menu_kb']; ?>
+                            </a>
+                        </div>
+                    </li>
+                    <?php
+                } elseif ($hesk_settings['kb_enable']) {
+                    ?>
+                    <li class="listitem <?php if ($calling_script === 'knowledgebase_private') { ?>current<?php } ?>">
+                        <div class="listitem__icon">
+                            <a href="knowledgebase_private.php">
+                                <svg class="icon icon-knowledge">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-knowledge"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="listitem__menu">
+                            <a href="knowledgebase_private.php" class="listitem__caption">
+                                <?php echo $hesklang['menu_kb']; ?>
+                            </a>
+                        </div>
+                    </li>
+                    <?php
+                }
 
-	<tr>
-	<td style="width:4px; height:4px"><img src="../img/header_up_left.png" width="4" height="4" alt="" /></td>
-	<td style="background-image:url(../img/header_top.png); background-repeat:repeat-x; background-position:top; height:4px"></td>
-	<td style="width:4px; height:4px"><img src="../img/header_up_right.png" width="4" height="4" alt="" /></td>
-	</tr>
+                if (hesk_checkPermission('can_man_cat',0)) { ?>
+                <li class="listitem <?php if ($calling_script === 'manage_categories') { ?>current<?php } ?>">
+                    <div class="listitem__icon">
+                        <a href="manage_categories.php">
+                            <svg class="icon icon-categories">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-categories"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="manage_categories.php" class="listitem__caption">
+                            <?php echo $hesklang['menu_cat']; ?>
+                        </a>
+                    </div>
+                </li>
+                <?php } ?>
+                <li class="separator"></li>
+                <?php if (hesk_checkPermission('can_man_users',0)) { ?>
+                <li class="listitem <?php if ($calling_script === 'manage_users') { ?>current<?php } ?>">
+                    <div class="listitem__icon">
+                        <a href="manage_users.php">
+                            <svg class="icon icon-team">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-team"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="manage_users.php" class="listitem__caption">
+                            <?php echo $hesklang['team']; ?>
+                        </a>
+                    </div>
+                </li>
+                <?php
+                }
 
-	<tr>
-	<td style="width:4px; background-image:url(../img/header_left.png); background-repeat:repeat-y; background-position:left;"></td>
-	<td>
+                //Reports
+                if (hesk_checkPermission('can_run_reports',0)) {
+                    $pages = array('reports', 'export', 'module_statistics');
+                    $open_menu = in_array($calling_script, $pages) ? 'current submenu-is-opened' : '';
+                ?>
+                <li class="listitem submenu <?php echo $open_menu; ?>">
+                    <div class="listitem__icon">
+                        <a href="#">
+                            <svg class="icon icon-reports">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-reports"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="separator"></div>
+                    <div class="listitem__menu">
+                        <a href="#" class="listitem__caption"><?php echo $hesklang['reports']; ?></a>
+                        <ul class="submenu__list">
+                            <li class="submenu__listitem <?php if ($calling_script === 'reports') { ?>current<?php } ?>">
+                                <a href="reports.php">
+                                    <?php echo $hesklang['reports_tab']; ?>
+                                </a>
+                            </li>
+                            <?php
+                            if (hesk_checkPermission('can_export',0)) {
+                                ?>
+                                <li class="submenu__listitem <?php if ($calling_script === 'export') { ?>current<?php } ?>">
+                                    <a href="export.php">
+                                        <?php echo $hesklang['export']; ?>
+                                    </a>
+                                </li>
+                                <?php
+                            }
+                            ?>
+                            <li class="submenu__listitem <?php if ($calling_script === 'module_statistics') { ?>current<?php } ?>">
+                                <a href="module_statistics.php">
+                                    <?php echo $hesklang['statistics']['tab']; ?>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <?php
+                } elseif (hesk_checkPermission('can_export',0)) {
+                    ?>
+                    <li class="listitem <?php if ($calling_script === 'export') { ?>current<?php } ?>">
+                        <div class="listitem__icon">
+                            <a href="export.php">
+                                <svg class="icon icon-team">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-team"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="listitem__menu">
+                            <a href="export.php" class="listitem__caption">
+                                <?php echo $hesklang['export']; ?>
+                            </a>
+                        </div>
+                    </li>
+                    <?php
+                }
 
-    <!-- START MENU LINKS -->
+                if (hesk_checkPermission('can_ban_emails',0) ||
+                    hesk_checkPermission('can_ban_ips',0) ||
+                    hesk_checkPermission('can_service_msg',0) ||
+                    hesk_checkPermission('can_email_tpl',0) ||
+                    hesk_checkPermission('can_man_settings',0)) {
+                    $pages = array('banned_emails', 'banned_ips', 'service_messages', 'email_templates', 'custom_fields', 'custom_statuses');
+                    $open_menu = in_array($calling_script, $pages) ? 'current submenu-is-opened' : '';
+                ?>
+                <li class="separator"></li>
+                <li class="listitem submenu <?php echo $open_menu; ?>">
+                    <div class="listitem__icon">
+                        <a href="#">
+                            <svg class="icon icon-tools">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tools"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="#" class="listitem__caption">
+                            <?php echo $hesklang['tools']; ?>
+                        </a>
+                        <ul class="submenu__list">
+                            <?php if (hesk_checkPermission('can_ban_emails',0)) {
+                                ?>
+                                <li class="submenu__listitem <?php if ($calling_script === 'banned_emails') { ?>current<?php } ?>">
+                                    <a href="banned_emails.php">
+                                        <?php echo $hesklang['banemail']; ?>
+                                    </a>
+                                </li>
+                                <?php
+                            }
 
-		<table border="0" class="header" cellspacing="0" cellpadding="3">
-		<tr>
-		<td align="left">
+                            if (hesk_checkPermission('can_ban_ips',0)) {
+                                ?>
+                                <li class="submenu__listitem <?php if ($calling_script === 'banned_ips') { ?>current<?php } ?>">
+                                    <a href="banned_ips.php">
+                                        <?php echo $hesklang['banip']; ?>
+                                    </a>
+                                </li>
+                                <?php
+                            }
 
-		<table border="0" align="left" cellpadding="0" cellspacing="0">
-		<tr>
+                            if (hesk_checkPermission('can_service_msg',0)) {
+                                ?>
+                                <li class="submenu__listitem <?php if ($calling_script === 'service_messages') { ?>current<?php } ?>">
+                                    <a href="service_messages.php">
+                                        <?php echo $hesklang['sm_title']; ?>
+                                    </a>
+                                </li>
+                                <?php
+                            }
 
-			<td><a href="admin_main.php"><img src="../img/ico_home.gif" width="26" height="26" border="0" alt="<?php echo $hesklang['main_page']; ?>" title="<?php echo $hesklang['main_page']; ?>" /><br /><?php echo $hesklang['main_page']; ?></a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
+                            if (hesk_checkPermission('can_email_tpl',0)) {
+                                ?>
+                                <li class="submenu__listitem <?php if ($calling_script === 'email_templates') { ?>current<?php } ?>">
+                                    <a href="email_templates.php">
+                                        <?php echo $hesklang['et_title']; ?>
+                                    </a>
+                                </li>
+                                <?php
+                            }
 
-		<?php
-		if (hesk_checkPermission('can_man_users',0))
-		{
-			echo '
-			<td><a href="manage_users.php"><img src="../img/ico_users.gif" width="26" height="26" border="0" alt="'.$hesklang['menu_users'].'" title="'.$hesklang['menu_users'].'" /><br />'.$hesklang['menu_users'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-            ';
-		}
-		if (hesk_checkPermission('can_man_cat',0))
-		{
-			echo '
-			<td><a href="manage_categories.php"><img src="../img/ico_categories.gif" width="26" height="26" border="0" alt="'.$hesklang['menu_cat'].'" title="'.$hesklang['menu_cat'].'" /><br />'.$hesklang['menu_cat'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		if (hesk_checkPermission('can_man_canned',0))
-		{
-			echo '
-			<td><a href="manage_canned.php"><img src="../img/ico_canned.gif" width="26" height="26" border="0" alt="'.$hesklang['menu_can'].'" title="'.$hesklang['menu_can'].'" /><br />'.$hesklang['menu_can'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		elseif (hesk_checkPermission('can_man_ticket_tpl',0))
-		{
-			echo '
-			<td><a href="manage_ticket_templates.php"><img src="../img/ico_canned.gif" width="26" height="26" border="0" alt="'.$hesklang['menu_can'].'" title="'.$hesklang['menu_can'].'" /><br />'.$hesklang['menu_can'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		if ($hesk_settings['kb_enable'])
-		{
-        	if (hesk_checkPermission('can_man_kb',0))
-            {
-			echo '
-			<td><a href="manage_knowledgebase.php"><img src="../img/ico_kb.gif" width="26" height="26" border="0" alt="'.$hesklang['menu_kb'].'" title="'.$hesklang['menu_kb'].'" /><br />'.$hesklang['menu_kb'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-            }
-            else
-            {
-			echo '
-			<td><a href="knowledgebase_private.php"><img src="../img/ico_kb.gif" width="26" height="26" border="0" alt="'.$hesklang['menu_kb'].'" title="'.$hesklang['menu_kb'].'" /><br />'.$hesklang['menu_kb'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-            }
-		}
-		if (hesk_checkPermission('can_run_reports',0))
-		{
-			echo '
-			<td><a href="reports.php"><img src="../img/ico_reports.gif" width="26" height="26" border="0" alt="'.$hesklang['reports'].'"  title="'.$hesklang['reports'].'" /><br />'.$hesklang['reports'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		elseif (hesk_checkPermission('can_export',0))
-		{
-			echo '
-			<td><a href="export.php"><img src="../img/ico_reports.gif" width="26" height="26" border="0" alt="'.$hesklang['reports'].'"  title="'.$hesklang['reports'].'" /><br />'.$hesklang['reports'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		if (hesk_checkPermission('can_ban_emails',0))
-		{
-			echo '
-			<td><a href="banned_emails.php"><img src="../img/ico_tools.png" width="26" height="26" border="0" alt="'.$hesklang['tools'].'"  title="'.$hesklang['tools'].'" /><br />'.$hesklang['tools'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		elseif (hesk_checkPermission('can_ban_ips',0))
-		{
-			echo '
-			<td><a href="banned_ips.php"><img src="../img/ico_tools.png" width="26" height="26" border="0" alt="'.$hesklang['tools'].'"  title="'.$hesklang['tools'].'" /><br />'.$hesklang['tools'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		elseif (hesk_checkPermission('can_service_msg',0))
-		{
-			echo '
-			<td><a href="service_messages.php"><img src="../img/ico_tools.png" width="26" height="26" border="0" alt="'.$hesklang['tools'].'"  title="'.$hesklang['tools'].'" /><br />'.$hesklang['tools'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		elseif (hesk_checkPermission('can_email_tpl',0))
-		{
-			echo '
-			<td><a href="email_templates.php"><img src="../img/ico_tools.png" width="26" height="26" border="0" alt="'.$hesklang['tools'].'"  title="'.$hesklang['tools'].'" /><br />'.$hesklang['tools'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		if (hesk_checkPermission('can_man_settings',0))
-		{
-			echo '
-			<td><a href="admin_settings.php"><img src="../img/ico_settings.gif" width="26" height="26" border="0" alt="'.$hesklang['settings'].'"  title="'.$hesklang['settings'].'" /><br />'.$hesklang['settings'].'</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			';
-		}
-		?>
+                            if (hesk_checkPermission('can_man_settings',0)) {
+                                ?>
+                                <li class="submenu__listitem <?php if ($calling_script === 'custom_fields') { ?>current<?php } ?>">
+                                    <a href="custom_fields.php">
+                                        <?php echo $hesklang['tab_4']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'custom_statuses') { ?>current<?php } ?>">
+                                    <a href="custom_statuses.php">
+                                        <?php echo $hesklang['statuses']; ?>
+                                    </a>
+                                </li>
+                                <?php
+                            }
+                            ?>
+                        </ul>
+                    </div>
+                </li>
+                <?php
+                }
 
-			<td><a href="profile.php"><img src="../img/ico_profile.gif" width="26" height="26" border="0" alt="<?php echo $hesklang['menu_profile']; ?>" title="<?php echo $hesklang['menu_profile']; ?>" /><br /><?php echo $hesklang['menu_profile']; ?></a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			<td><a href="mail.php"><img src="../img/ico_mail.gif" width="26" height="26" border="0" alt="<?php echo $hesklang['menu_msg']; ?>" title="<?php echo $hesklang['menu_msg']; ?>" /><br /><?php echo $hesklang['menu_msg']; ?> (<?php echo $num_mail; unset($num_mail); ?>)</a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			<td>&nbsp;&nbsp;&nbsp;</td>
-			<td><a href="index.php?a=logout&amp;token=<?php echo hesk_token_echo(); ?>"><img src="../img/ico_logout.gif" width="26" height="26" border="0" alt="<?php echo $hesklang['logout']; ?>" title="<?php echo $hesklang['logout']; ?>" /><br /><?php echo $hesklang['logout']; ?></a><br /><img src="../img/blank.gif" width="50" height="1" alt="" /></td>
-			</tr>
-			</table>
+                if (hesk_checkPermission('can_man_settings',0)) {
+                    $pages = array('admin_settings_general', 'admin_settings_help_desk', 'admin_settings_knowledgebase',
+                        'admin_settings_email', 'admin_settings_ticket_list', 'admin_settings_misc');
+                    $open_menu = in_array($calling_script, $pages) ? 'current submenu-is-opened' : '';
+                    ?>
+                    <li class="listitem submenu <?php echo $open_menu; ?>">
+                        <div class="listitem__icon">
+                            <a href="#">
+                                <svg class="icon icon-settings">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-settings"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="listitem__menu">
+                            <a href="#" class="listitem__caption">
+                                <?php echo $hesklang['settings']; ?>
+                            </a>
+                            <ul class="submenu__list">
+                                <li class="submenu__listitem <?php if ($calling_script === 'admin_settings_general') { ?>current<?php } ?>">
+                                    <a href="admin_settings_general.php">
+                                        <?php echo $hesklang['tab_1']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'admin_settings_help_desk') { ?>current<?php } ?>">
+                                    <a href="admin_settings_help_desk.php">
+                                        <?php echo $hesklang['tab_2']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'admin_settings_knowledgebase') { ?>current<?php } ?>">
+                                    <a href="admin_settings_knowledgebase.php">
+                                        <?php echo $hesklang['tab_3']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'admin_settings_email') { ?>current<?php } ?>">
+                                    <a href="admin_settings_email.php">
+                                        <?php echo $hesklang['tab_6']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'admin_settings_ticket_list') { ?>current<?php } ?>">
+                                    <a href="admin_settings_ticket_list.php">
+                                        <?php echo $hesklang['tab_7']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'admin_settings_misc') { ?>current<?php } ?>">
+                                    <a href="admin_settings_misc.php">
+                                        <?php echo $hesklang['tab_5']; ?>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    <?php
+                }
+                ?>
+                <li class="separator mobile"></li>
+                <li class="listitem mobile <?php if ($calling_script === 'mail') { ?>current<?php } ?>">
+                    <div class="listitem__icon">
+                        <a href="mail.php">
+                            <svg class="icon icon-mail">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-mail"></use>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="mail.php" class="listitem__caption">
+                            <?php echo $hesklang['menu_msg']; ?>
+                        </a>
+                        <?php if ($num_mail > 0): ?>
+                        <span class="badge listitem__notification">
+                            <?php echo $num_mail; ?>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li class="listitem mobile <?php if ($calling_script === 'profile') { ?>current<?php } ?>">
+                    <div class="listitem__icon">
+                        <a href="profile.php" class="mobile_ava">
+                            <?php
+                            $letter = substr($_SESSION['name'], 0, 1);
 
-		</td>
-		</tr>
-		</table>
+                            echo hesk_mb_strtoupper($letter);
+                            ?>
+                        </a>
+                    </div>
+                    <div class="listitem__menu">
+                        <a href="profile.php" class="listitem__caption">
+                            <?php echo $hesklang['profile']; ?>
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</aside>
+<main class="main">
+    <!-- begin header -->
+    <header class="header">
+        <div class="header__left">
+        </div>
+        <div class="header__right" style="border-left: none">
+            <a href="new_ticket.php" class="btn btn-full" ripple="ripple">
+                <?php echo $hesklang['create_new_ticket']; ?>
+            </a>
+            <div class="profile">
+                <div class="profile__item profile__item--mail">
+                    <a href="mail.php" class="btn btn-empty tooltip" title="<?php echo $hesklang['m_h']; ?>">
+                        <div class="profile__item_rel">
+                            <svg class="icon icon-mail">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-mail"></use>
+                            </svg>
+                            <?php if ($num_mail > 0): ?>
+                            <div class="badge"><?php echo $num_mail; ?></div>
+                            <?php
+                            endif;
+                            unset($num_mail);
+                            ?>
+                        </div>
+                    </a>
+                </div>
+                <div class="profile__item profile__user out-close">
+                    <div class="user__ava" data-action="show-profile">
+                        <?php
+                        $letter = substr($_SESSION['name'], 0, 1);
 
-    <!-- END MENU LINKS -->
-
-	</td>
-	<td style="width:4px; background-image: url(../img/header_right.png); background-repeat:repeat-y; background-position:right;"></td>
-	</tr>
-
-	<tr>
-	<td style="width:4px; height:4px"><img src="../img/header_bottom_left.png" width="4" height="4" alt="" /></td>
-	<td style="background-image:url(../img/header_bottom.png); background-repeat:repeat-x; background-position:bottom; height:4px"></td>
-	<td style="width:4px; height:4px"><img src="../img/header_bottom_right.png" width="4" height="4" alt="" /></td>
-	</tr>
-
-</table>
-</div>
-
+                        echo hesk_mb_strtoupper($letter);
+                        ?>
+                    </div>
+                    <div class="user__name" data-action="show-profile">
+                        <p>
+                            <span><?php echo $_SESSION['name']; ?></span>
+                            <svg class="icon icon-chevron-down">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                            </svg>
+                        </p>
+                    </div>
+                    <section class="profile__menu">
+                        <div class="profile--view">
+                            <a href="profile.php" class="btn btn-border" ripple="ripple"><?php echo $hesklang['view_profile']; ?></a>
+                        </div>
+                        <div class="profile--logout">
+                            <a href="index.php?a=logout&token=<?php hesk_token_echo(); ?>">
+                                <svg class="icon icon-log-out">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-log-out"></use>
+                                </svg>
+                                <span><?php echo $hesklang['logout']; ?></span>
+                            </a>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+        <div class="header__mobile">
+            <button class="btn btn-empty header__menu" data-action="toggle-menu">
+                <svg class="icon icon-menu-mobile">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-menu-mobile"></use>
+                </svg>
+                <svg class="icon icon-close-mobile">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close-mobile"></use>
+                </svg>
+            </button>
+            <a class="navbar__logo" href="admin_main.php"><?php echo $hesklang['help_desk']; ?></a>
+            <div class="header__mobile_actions">
+                <a href="new_ticket.php" class="btn btn-empty" data-action="create-ticket">
+                    <svg class="icon icon-add">
+                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-add"></use>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
 <?php
 // Show a notice if we are in maintenance mode
 if ( hesk_check_maintenance(false) )

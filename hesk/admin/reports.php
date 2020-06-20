@@ -208,111 +208,130 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print main manage users page */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-?>
 
-</td>
-</tr>
-<tr>
-<td>
-
-<?php
 /* This will handle error, success and notice messages */
 hesk_handle_messages();
 ?>
-
-<!-- TABS -->
-<div id="tab1" class="tabberlive" style="margin-top:0px">
-
-	<ul class="tabbernav">
-		<li class="tabberactive"><a title="<?php echo $hesklang['reports_tab']; ?>" href="javascript:void(null);" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['reports_intro']); ?>')"><?php echo $hesklang['reports_tab']; ?> [?]</a></li>
-		<?php
-		// Show a link to export.php if user has permission to do so
-		if ( hesk_checkPermission('can_export',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['export'] . '" href="export.php">' . $hesklang['export'] . '</a></li>';
-		}
-		?>
-	</ul>
-
-	<div class="tabbertab">
-
-	&nbsp;
-
-	<!-- ** START REPORTS FORM ** -->
-
-<form action="reports.php" method="get" name="form1">
-
-<table border="0" cellpadding="3" cellspacing="0" width="100%">
-<tr>
-<td width="20%" class="alignTop"><b><?php echo $hesklang['dtrg']; ?></b>: &nbsp; </td>
-<td width="80%">
-    <!-- START DATE -->
-        <input type="radio" name="w" value="0" id="w0" <?php echo $selected['w'][0]; ?> />
-		<select name="time" onclick="document.getElementById('w0').checked = true" onfocus="document.getElementById('w0').checked = true" style="margin-top:5px;margin-bottom:5px;">
-			<option value="1" <?php echo $selected['time'][1]; ?>><?php echo $hesklang['r1']; ?> (<?php echo $hesklang['d'.date('w')]; ?>)</option>
-			<option value="2" <?php echo $selected['time'][2]; ?>><?php echo $hesklang['r2']; ?> (<?php echo $hesklang['d'.date('w',mktime(0, 0, 0, date('m'), date('d')-1, date('Y')))]; ?>)</option>
-			<option value="3" <?php echo $selected['time'][3]; ?>><?php echo $hesklang['r3']; ?> (<?php echo $hesklang['m'.date('n')]; ?>)</option>
-			<option value="4" <?php echo $selected['time'][4]; ?>><?php echo $hesklang['r4']; ?> (<?php echo $hesklang['m'.date('n',mktime(0, 0, 0, date('m')-1, 1, date('Y')))]; ?>)</option>
-			<option value="5" <?php echo $selected['time'][5]; ?>><?php echo $hesklang['r5']; ?></option>
-			<option value="6" <?php echo $selected['time'][6]; ?>><?php echo $hesklang['r6']; ?></option>
-			<option value="7" <?php echo $selected['time'][7]; ?>><?php echo $hesklang['r7']; ?></option>
-			<option value="8" <?php echo $selected['time'][8]; ?>><?php echo $hesklang['r8']; ?></option>
-			<option value="9" <?php echo $selected['time'][9]; ?>><?php echo $hesklang['r9']; ?></option>
-			<option value="10" <?php echo $selected['time'][10]; ?>><?php echo $hesklang['r10']; ?> (<?php echo date('Y'); ?>)</option>
-			<option value="11" <?php echo $selected['time'][11]; ?>><?php echo $hesklang['r11']; ?> (<?php echo date('Y',mktime(0, 0, 0, date('m'), date('d'), date('Y')-1)); ?>)</option>
-			<option value="12" <?php echo $selected['time'][12]; ?>><?php echo $hesklang['r12']; ?></option>
-		</select>
-
-        <br />
-
-        <input type="radio" name="w" value="1" id="w1" <?php echo $selected['w'][1]; ?> />
-		<?php echo $hesklang['from']; ?> <input type="text" name="datefrom" value="<?php echo $input_datefrom; ?>" id="datefrom" class="tcal" size="10" onclick="document.getElementById('w1').checked = true" onfocus="document.getElementById('w1').checked = true;this.focus;" />
-        <?php echo $hesklang['to']; ?> <input type="text" name="dateto" value="<?php echo $input_dateto; ?>" id="dateto" class="tcal" size="10" onclick="document.getElementById('w1').checked = true" onfocus="document.getElementById('w1').checked = true; this.focus;" />
-    <!-- END DATE -->
-
-</td>
-</tr>
-<tr>
-<td width="20%" class="borderTop alignTop"><b><?php echo $hesklang['crt']; ?></b>: &nbsp; </td>
-<td width="80%" class="borderTop">
-    <!-- START TYPE -->
-		<select name="type" style="margin-top:5px;margin-bottom:5px;">
-			<option value="1" <?php echo $selected['type'][1]; ?>><?php echo $hesklang['t1']; ?></option>
-			<option value="2" <?php echo $selected['type'][2]; ?>><?php echo $hesklang['t2']; ?></option>
-			<option value="3" <?php echo $selected['type'][3]; ?>><?php echo $hesklang['t3']; ?></option>
-            <option value="4" <?php echo $selected['type'][4]; ?>><?php echo $hesklang['t4']; ?></option>
-		</select>
-    <!-- END TYPE -->
-
-</td>
-</tr>
-</table>
-
-<p><input type="submit" value="<?php echo $hesklang['dire']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-<input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" /></p>
-
-</form>
-
-	<!-- ** END REPORTS FORM ** -->
-
-	</div>
-
-</div>
-<!-- TABS -->
-
-<p>&nbsp;</p>
+<div class="main__content reports">
+    <form action="reports.php" method="get" name="form1">
+        <div class="reports__head">
+            <h2>
+                <?php echo $hesklang['reports_tab']; ?>
+                <div class="tooltype right out-close">
+                    <svg class="icon icon-info">
+                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                    </svg>
+                    <div class="tooltype__content">
+                        <div class="tooltype__wrapper">
+                            <?php echo $hesklang['reports_intro']; ?>
+                        </div>
+                    </div>
+                </div>
+            </h2>
+        </div>
+        <div class="reports__range">
+            <h4><?php echo $hesklang['dtrg']; ?></h4>
+            <div class="reports__range_form form">
+                <div class="radio-list">
+                    <div class="radio-custom">
+                        <input type="radio" name="w" value="0" id="w0" <?php echo $selected['w'][0]; ?>>
+                        <label for="w0">&nbsp;</label>
+                        <div class="dropdown-select center out-close">
+                            <select name="time" onclick="document.getElementById('w0').checked = true" onchange="document.getElementById('w0').checked = true" style="margin-top:5px;margin-bottom:5px;">
+                                <option value="1" <?php echo $selected['time'][1]; ?>><?php echo $hesklang['r1']; ?> (<?php echo $hesklang['d'.date('w')]; ?>)</option>
+                                <option value="2" <?php echo $selected['time'][2]; ?>><?php echo $hesklang['r2']; ?> (<?php echo $hesklang['d'.date('w',mktime(0, 0, 0, date('m'), date('d')-1, date('Y')))]; ?>)</option>
+                                <option value="3" <?php echo $selected['time'][3]; ?>><?php echo $hesklang['r3']; ?> (<?php echo $hesklang['m'.date('n')]; ?>)</option>
+                                <option value="4" <?php echo $selected['time'][4]; ?>><?php echo $hesklang['r4']; ?> (<?php echo $hesklang['m'.date('n',mktime(0, 0, 0, date('m')-1, 1, date('Y')))]; ?>)</option>
+                                <option value="5" <?php echo $selected['time'][5]; ?>><?php echo $hesklang['r5']; ?></option>
+                                <option value="6" <?php echo $selected['time'][6]; ?>><?php echo $hesklang['r6']; ?></option>
+                                <option value="7" <?php echo $selected['time'][7]; ?>><?php echo $hesklang['r7']; ?></option>
+                                <option value="8" <?php echo $selected['time'][8]; ?>><?php echo $hesklang['r8']; ?></option>
+                                <option value="9" <?php echo $selected['time'][9]; ?>><?php echo $hesklang['r9']; ?></option>
+                                <option value="10" <?php echo $selected['time'][10]; ?>><?php echo $hesklang['r10']; ?> (<?php echo date('Y'); ?>)</option>
+                                <option value="11" <?php echo $selected['time'][11]; ?>><?php echo $hesklang['r11']; ?> (<?php echo date('Y',mktime(0, 0, 0, date('m'), date('d'), date('Y')-1)); ?>)</option>
+                                <option value="12" <?php echo $selected['time'][12]; ?>><?php echo $hesklang['r12']; ?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" name="w" value="1" id="w1" <?php echo $selected['w'][1]; ?>>
+                        <label for="w1">&nbsp;</label>
+                        <?php echo $hesklang['from']; ?>
+                        <section class="param calendar" style="margin-left: 10px; margin-right: 10px">
+                            <div class="calendar--button">
+                                <button type="button" onclick="document.getElementById('w1').checked = true">
+                                    <svg class="icon icon-calendar">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
+                                    </svg>
+                                </button>
+                                <input name="datefrom"
+                                       id="datefrom"
+                                    <?php if ($input_datefrom) {echo 'value="'.$input_datefrom.'"';} ?>
+                                       type="text" class="datepicker">
+                            </div>
+                            <div class="calendar--value" <?php echo ($input_datefrom ? 'style="display: block"' : ''); ?>>
+                                <span><?php echo $input_datefrom; ?></span>
+                                <i class="close">
+                                    <svg class="icon icon-close">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                                    </svg>
+                                </i>
+                            </div>
+                        </section>
+                        <?php echo $hesklang['to']; ?>
+                        <section class="param calendar" style="margin-left: 10px;">
+                            <div class="calendar--button">
+                                <button type="button" onclick="document.getElementById('w1').checked = true">
+                                    <svg class="icon icon-calendar">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
+                                    </svg>
+                                </button>
+                                <input name="dateto"
+                                       id="dateto"
+                                    <?php if ($input_dateto) {echo 'value="'.$input_dateto.'"';} ?>
+                                       type="text" class="datepicker">
+                            </div>
+                            <div class="calendar--value" <?php echo ($input_dateto ? 'style="display: block"' : ''); ?>>
+                                <span><?php echo $input_dateto; ?></span>
+                                <i class="close">
+                                    <svg class="icon icon-close">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                                    </svg>
+                                </i>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="reports__type">
+            <h4><?php echo $hesklang['crt']; ?></h4>
+            <div class="dropdown-select center out-close">
+                <select name="type">
+                    <option value="1" <?php echo $selected['type'][1]; ?>><?php echo $hesklang['t1']; ?></option>
+                    <option value="2" <?php echo $selected['type'][2]; ?>><?php echo $hesklang['t2']; ?></option>
+                    <option value="3" <?php echo $selected['type'][3]; ?>><?php echo $hesklang['t3']; ?></option>
+                    <option value="4" <?php echo $selected['type'][4]; ?>><?php echo $hesklang['t4']; ?></option>
+                </select>
+            </div>
+        </div>
+        <div class="reports__type">
+            <button class="btn btn-full" ripple="ripple"><?php echo $hesklang['dire']; ?></button>
+        </div>
+        <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
+    </form>
 
 <?php
 if ($date_from == $date_to)
 {
 	?>
-	<p><b><?php echo hesk_dateToString($date_from,0); ?></b></p>
+	<h2 style="margin-top: 20px; margin-bottom: 20px"><?php echo hesk_dateToString($date_from,0); ?></h2>
 	<?php
 }
 else
 {
 	?>
-	<p><b><?php echo hesk_dateToString($date_from,0); ?></b> - <b><?php echo hesk_dateToString($date_to,0); ?></b></p>
+	<h2 style="margin-top: 20px; margin-bottom: 20px"><?php echo hesk_dateToString($date_from,0); ?> - <?php echo hesk_dateToString($date_to,0); ?></h2>
 	<?php
 }
 
@@ -440,28 +459,31 @@ function hesk_ticketsByCategory()
 	}
 
 	?>
-	    <table width="100%" cellpadding="5" style="text-align:justify;border-collapse:collapse;padding:10px;">
-	      <tr style="border-bottom:1px solid #000000;">
-	        <td><?php echo $hesklang['category']; ?></td>
-	        <td><?php echo $hesklang['tickets']; ?></td>
-	        <td><?php echo $hesklang['topen']; ?></td>
-	        <td><?php echo $hesklang['closed']; ?></td>
-	        <td><?php echo $hesklang['replies'] . ' (' . $hesklang['all'] .')'; ?></td>
-	        <td><?php echo $hesklang['replies'] . ' (' . $hesklang['staff'] .')'; ?></td>
-			<?php
-			if ($hesk_settings['time_worked'])
-			{
-				echo '<td>'.$hesklang['ts'].'</td>';
-			}
-			?>
-	      </tr>
+    <div class="reports__table">
+	    <table id="default-table" class="table sindu-table sindu_origin_table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['category']; ?></th>
+                <th><?php echo $hesklang['tickets']; ?></th>
+                <th><?php echo $hesklang['topen']; ?></th>
+                <th><?php echo $hesklang['closed']; ?></th>
+                <th><?php echo $hesklang['replies'] . ' (' . $hesklang['all'] .')'; ?></th>
+                <th><?php echo $hesklang['replies'] . ' (' . $hesklang['staff'] .')'; ?></th>
+                <?php
+                if ($hesk_settings['time_worked'])
+                {
+                    echo '<th>'.$hesklang['ts'].'</th>';
+                }
+                ?>
+            </tr>
+            </thead>
 
 	<?php
 	$num_tickets = count($tickets);
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr style="border-bottom:1px solid #000000;">
+	      <tr>
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['num_tickets']; ?></b></td>
 	        <td><b><?php echo $totals['num_tickets'] - $totals['resolved']; ?></b></td>
@@ -478,13 +500,10 @@ function hesk_ticketsByCategory()
 	<?php
 	}
 
-	$cls = '';
 	foreach ($tickets as $k => $d)
 	{
-		$cls = $cls ? '' : 'style="background:#EEEEE8;"';
-
 	    ?>
-	      <tr <?php echo $cls; ?>>
+	      <tr>
 	        <td><?php echo $cat[$k]; ?></td>
 	        <td><?php echo $d['num_tickets']; ?></td>
 	        <td><?php echo $d['num_tickets']-$d['resolved']; ?></td>
@@ -501,7 +520,7 @@ function hesk_ticketsByCategory()
 	    <?php
 	}
 	?>
-	      <tr style="border-top:1px solid #000000;">
+	      <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['num_tickets']; ?></b></td>
 	        <td><b><?php echo $totals['num_tickets'] - $totals['resolved']; ?></b></td>
@@ -516,8 +535,7 @@ function hesk_ticketsByCategory()
 			?>
 	      </tr>
 	    </table>
-
-	    <p>&nbsp;</p>
+    </div>
     <?php
 } // END hesk_ticketsByCategory
 
@@ -642,29 +660,32 @@ function hesk_ticketsByUser()
 		$totals['openedby'] += $row['cnt'];
 	}
 	?>
-	    <table width="100%" cellpadding="5" style="text-align:justify;border-collapse:collapse;padding:10px;">
-	      <tr style="border-bottom:1px solid #000000;">
-	        <td><?php echo $hesklang['user']; ?></td>
-	        <td><?php echo $hesklang['numsub']; ?></td>
-	        <td><?php echo $hesklang['ticass']; ?></td>
-	        <td><?php echo $hesklang['topen']; ?></td>
-	        <td><?php echo $hesklang['closed']; ?></td>
-	        <td><?php echo $hesklang['ticall']; ?></td>
-	        <td><?php echo $hesklang['replies']; ?></td>
-			<?php
-			if ($hesk_settings['time_worked'])
-			{
-				echo '<td>'.$hesklang['ts'].'</td>';
-			}
-			?>
-	      </tr>
+    <div class="reports__table">
+	    <table id="default-table" class="table sindu-table sindu_origin_table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['user']; ?></th>
+                <th><?php echo $hesklang['numsub']; ?></th>
+                <th><?php echo $hesklang['ticass']; ?></th>
+                <th><?php echo $hesklang['topen']; ?></th>
+                <th><?php echo $hesklang['closed']; ?></th>
+                <th><?php echo $hesklang['ticall']; ?></th>
+                <th><?php echo $hesklang['replies']; ?></th>
+                <?php
+                if ($hesk_settings['time_worked'])
+                {
+                    echo '<th>'.$hesklang['ts'].'</th>';
+                }
+                ?>
+            </tr>
+            </thead>
 
 	<?php
 	$num_tickets = count($tickets);
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr style="border-bottom:1px solid #000000;">
+	      <tr>
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
             <td><b><?php echo $totals['openedby']; ?></b></td>
 	        <td><b><?php echo $totals['asstickets']; ?></b></td>
@@ -682,13 +703,10 @@ function hesk_ticketsByUser()
 	<?php
 	}
 
-	$cls = '';
 	foreach ($tickets as $k => $d)
 	{
-		$cls = $cls ? '' : 'style="background:#EEEEE8;"';
-
 	    ?>
-	      <tr <?php echo $cls; ?>>
+	      <tr>
 	        <td><?php echo $admins[$k]; ?></td>
             <td><?php echo $d['openedby']; ?></td>
 	        <td><?php echo $d['asstickets']; ?></td>
@@ -706,7 +724,7 @@ function hesk_ticketsByUser()
 	    <?php
 	}
 	?>
-	      <tr style="border-top:1px solid #000000;">
+	      <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
             <td><b><?php echo $totals['openedby']; ?></b></td>
 	        <td><b><?php echo $totals['asstickets']; ?></b></td>
@@ -722,8 +740,7 @@ function hesk_ticketsByUser()
 			?>
 	      </tr>
 	    </table>
-
-	    <p>&nbsp;</p>
+    </div>
     <?php
 } // END hesk_ticketsByUser
 
@@ -779,26 +796,29 @@ function hesk_ticketsByMonth()
 	$totals['worked'] = $hesk_settings['time_worked'] ? hesk_SecondsToHHMMSS($totals['worked']) : 0;
 
 	?>
-	    <table width="100%" cellpadding="5" style="text-align:justify;border-collapse:collapse;padding:10px;">
-	      <tr style="border-bottom:1px solid #000000;">
-	        <td><?php echo $hesklang['month']; ?></td>
-	        <td><?php echo $hesklang['atik']; ?></td>
-	        <td><?php echo $hesklang['topen']; ?></td>
-	        <td><?php echo $hesklang['closed']; ?></td>
-			<?php
-			if ($hesk_settings['time_worked'])
-			{
-				echo '<td>'.$hesklang['ts'].'</td>';
-			}
-			?>
-	      </tr>
+    <div class="reports__table">
+	    <table id="default-table" class="table sindu-table sindu_origin_table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['month']; ?></th>
+                <th><?php echo $hesklang['atik']; ?></th>
+                <th><?php echo $hesklang['topen']; ?></th>
+                <th><?php echo $hesklang['closed']; ?></th>
+                <?php
+                if ($hesk_settings['time_worked'])
+                {
+                    echo '<th>'.$hesklang['ts'].'</th>';
+                }
+                ?>
+            </tr>
+            </thead>
 
 	<?php
 	$num_tickets = count($tickets);
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr style="border-bottom:1px solid #000000;">
+	      <tr>
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['all']; ?></b></td>
 	        <td><b><?php echo $totals['all']-$totals['resolved']; ?></b></td>
@@ -813,13 +833,10 @@ function hesk_ticketsByMonth()
 	<?php
 	}
 
-	$cls = '';
 	foreach ($tickets as $k => $d)
 	{
-		$cls = $cls ? '' : 'style="background:#EEEEE8;"';
-
 	    ?>
-	      <tr <?php echo $cls; ?>>
+	      <tr>
 	        <td><?php echo hesk_dateToString($k,0,0,1); ?></td>
 	        <td><?php echo $d['all']; ?></td>
 	        <td><?php echo $d['all']-$d['resolved']; ?></td>
@@ -834,7 +851,7 @@ function hesk_ticketsByMonth()
 	    <?php
 	}
 	?>
-	      <tr style="border-top:1px solid #000000;">
+	      <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['all']; ?></b></td>
 	        <td><b><?php echo $totals['all']-$totals['resolved']; ?></b></td>
@@ -847,8 +864,7 @@ function hesk_ticketsByMonth()
 			?>
 	      </tr>
 	    </table>
-
-	    <p>&nbsp;</p>
+    </div>
     <?php
 } // END hesk_ticketsByMonth
 
@@ -902,26 +918,29 @@ function hesk_ticketsByDay()
 	$totals['worked'] = $hesk_settings['time_worked'] ? hesk_SecondsToHHMMSS($totals['worked']) : 0;
 
 	?>
-	    <table width="100%" cellpadding="5" style="text-align:justify;border-collapse:collapse;padding:10px;">
-	      <tr style="border-bottom:1px solid #000000;">
-	        <td><?php echo $hesklang['date']; ?></td>
-	        <td><?php echo $hesklang['atik']; ?></td>
-	        <td><?php echo $hesklang['topen']; ?></td>
-	        <td><?php echo $hesklang['closed']; ?></td>
-			<?php
-			if ($hesk_settings['time_worked'])
-			{
-				echo '<td>'.$hesklang['ts'].'</td>';
-			}
-			?>
-	      </tr>
+    <div class="reports__table">
+	    <table id="default-table" class="table sindu-table sindu_origin_table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['date']; ?></th>
+                <th><?php echo $hesklang['atik']; ?></th>
+                <th><?php echo $hesklang['topen']; ?></th>
+                <th><?php echo $hesklang['closed']; ?></th>
+                <?php
+                if ($hesk_settings['time_worked'])
+                {
+                    echo '<th>'.$hesklang['ts'].'</th>';
+                }
+                ?>
+            </tr>
+            </thead>
 
 	<?php
 	$num_tickets = count($tickets);
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr style="border-bottom:1px solid #000000;">
+	      <tr>
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['all']; ?></b></td>
 	        <td><b><?php echo $totals['all']-$totals['resolved']; ?></b></td>
@@ -936,13 +955,10 @@ function hesk_ticketsByDay()
 	<?php
 	}
 
-	$cls = '';
 	foreach ($tickets as $k => $d)
 	{
-		$cls = $cls ? '' : 'style="background:#EEEEE8;"';
-
 	    ?>
-	      <tr <?php echo $cls; ?>>
+	      <tr>
 	        <td><?php echo hesk_dateToString($k); ?></td>
 	        <td><?php echo $d['all']; ?></td>
 	        <td><?php echo $d['all']-$d['resolved']; ?></td>
@@ -957,7 +973,7 @@ function hesk_ticketsByDay()
 	    <?php
 	}
 	?>
-	      <tr style="border-top:1px solid #000000;">
+	      <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['all']; ?></b></td>
 	        <td><b><?php echo $totals['all']-$totals['resolved']; ?></b></td>
@@ -970,8 +986,8 @@ function hesk_ticketsByDay()
 			?>
 	      </tr>
 	    </table>
-
-	    <p>&nbsp;</p>
+    </div>
     <?php
 } // END hesk_ticketsByDay
 ?>
+</div>

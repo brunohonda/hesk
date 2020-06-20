@@ -41,9 +41,9 @@ if ($priority < 0 || $priority > 3)
 }
 
 $options = array(
-	0 => '<font class="critical">'.$hesklang['critical'].'</font>',
-	1 => '<font class="important">'.$hesklang['high'].'</font>',
-	2 => '<font class="medium">'.$hesklang['medium'].'</font>',
+	0 => $hesklang['critical'],
+	1 => $hesklang['high'],
+	2 => $hesklang['medium'],
 	3 => $hesklang['low']
 );
 

@@ -36,7 +36,7 @@ else
 }
 
 // Set backslash options
-if (get_magic_quotes_gpc())
+if (version_compare(PHP_VERSION, '5.4.0', '<') && get_magic_quotes_gpc())
 {
 	define('HESK_SLASH',false);
 }
@@ -191,27 +191,28 @@ function hesk_service_message($sm)
 	switch ($sm['style'])
 	{
 		case 1:
-			$style = "success";
+			$style = "green";
 			break;
 		case 2:
-			$style = "info";
+			$style = "blue";
 			break;
 		case 3:
-			$style = "notice";
+			$style = "orange";
 			break;
 		case 4:
-			$style = "error";
+			$style = "red";
 			break;
 		default:
-			$style = "none";
+			$style = "white";
 	}
 
 	?>
-	<div class="<?php echo $style; ?>">
-		<?php echo $style == 'none' ? '' : '<img src="'.HESK_PATH.'img/'.$style.'.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" /> '; ?>
-		<b><?php echo $sm['title']; ?></b> <?php echo $sm['message']; ?>
-	</div>
-	<br />
+    <div class="main__content notice-flash">
+        <div class="notification <?php echo $style; ?> browser-default">
+            <p><b><?php echo $sm['title']; ?></b></p>
+            <?php echo $sm['message']; ?>
+        </div>
+    </div>
 	<?php
 } // END hesk_service_message()
 
@@ -373,6 +374,11 @@ function hesk_mb_strlen($in)
 function hesk_mb_strtolower($in)
 {
 	return function_exists('mb_strtolower') ? mb_strtolower($in, 'UTF-8') : strtolower($in);
+} // END hesk_mb_strtolower()
+
+function hesk_mb_strtoupper($in)
+{
+    return function_exists('mb_strtoupper') ? mb_strtoupper($in, 'UTF-8') : strtoupper($in);
 } // END hesk_mb_strtolower()
 
 
@@ -1043,6 +1049,71 @@ function hesk_process_messages($message,$redirect_to,$type='ERROR')
 	exit();
 } // END hesk_process_messages()
 
+function hesk_get_messages() {
+    global $hesk_settings, $hesklang;
+
+    $messages = array();
+
+	// Primary message - only one can be displayed and HESK_MESSAGE is required
+	if ( isset($_SESSION['HESK_MESSAGE']) )
+	{
+		if ( isset($_SESSION['HESK_SUCCESS']) )
+		{
+		    $messages[] = array(
+		        'title' => $hesklang['success'],
+		        'style' => '1',
+		        'message' => $_SESSION['HESK_MESSAGE']
+		    );
+		}
+		elseif ( isset($_SESSION['HESK_ERROR']) )
+		{
+		    $messages[] = array(
+		        'title' => $hesklang['error'],
+		        'style' => '4',
+		        'message' => $_SESSION['HESK_MESSAGE']
+		    );
+		}
+		elseif ( isset($_SESSION['HESK_NOTICE']) )
+		{
+		    $messages[] = array(
+		        'title' => $hesklang['note'],
+		        'style' => '3',
+		        'message' => $_SESSION['HESK_MESSAGE']
+		    );
+		}
+		elseif ( isset($_SESSION['HESK_INFO']) )
+		{
+		    $messages[] = array(
+		        'title' => $hesklang['info'],
+		        'style' => '2',
+		        'message' => $_SESSION['HESK_MESSAGE']
+		    );
+		}
+
+		hesk_cleanSessionVars('HESK_MESSAGE');
+	}
+
+	// Cleanup any primary message types set
+	hesk_cleanSessionVars('HESK_ERROR');
+	hesk_cleanSessionVars('HESK_SUCCESS');
+	hesk_cleanSessionVars('HESK_NOTICE');
+	hesk_cleanSessionVars('HESK_INFO');
+
+	// Secondary message
+	if ( isset($_SESSION['HESK_2ND_NOTICE']) && isset($_SESSION['HESK_2ND_MESSAGE']) )
+	{
+	    $messages[] = array(
+            'title' => $hesklang['note'],
+            'style' => '3',
+            'message' => $_SESSION['HESK_2ND_MESSAGE']
+        );
+		hesk_cleanSessionVars('HESK_2ND_NOTICE');
+		hesk_cleanSessionVars('HESK_2ND_MESSAGE');
+	}
+
+	return $messages;
+}
+
 
 function hesk_handle_messages()
 {
@@ -1098,11 +1169,11 @@ function hesk_show_error($message,$title='',$append_colon=true)
     $title = $title ? $title : $hesklang['error'];
 	$title = $append_colon ? $title . ':' : $title;
 	?>
-	<div class="error">
-		<img src="<?php echo HESK_PATH; ?>img/error.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-		<b><?php echo $title; ?></b> <?php echo $message; ?>
-	</div>
-    <br />
+    <div class="main__content notice-flash">
+        <div class="notification red">
+            <b><?php echo $title; ?></b> <?php echo $message; ?>
+        </div>
+    </div>
 	<?php
 } // END hesk_show_error()
 
@@ -1113,11 +1184,11 @@ function hesk_show_success($message,$title='',$append_colon=true)
     $title = $title ? $title : $hesklang['success'];
 	$title = $append_colon ? $title . ':' : $title;
 	?>
-	<div class="success">
-		<img src="<?php echo HESK_PATH; ?>img/success.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-		<b><?php echo $title; ?></b> <?php echo $message; ?>
-	</div>
-    <br />
+    <div class="main__content notice-flash">
+        <div class="notification green">
+            <b><?php echo $title; ?></b> <?php echo $message; ?>
+        </div>
+    </div>
 	<?php
 } // END hesk_show_success()
 
@@ -1128,11 +1199,11 @@ function hesk_show_notice($message,$title='',$append_colon=true)
     $title = $title ? $title : $hesklang['note'];
 	$title = $append_colon ? $title . ':' : $title;
 	?>
-	<div class="notice">
-		<img src="<?php echo HESK_PATH; ?>img/notice.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-		<b><?php echo $title; ?></b> <?php echo $message; ?>
-	</div>
-    <br />
+    <div class="main__content notice-flash">
+        <div class="notification orange">
+            <b><?php echo $title; ?></b> <?php echo $message; ?>
+        </div>
+    </div>
 	<?php
 } // END hesk_show_notice()
 
@@ -1143,11 +1214,11 @@ function hesk_show_info($message,$title='',$append_colon=true)
     $title = $title ? $title : $hesklang['info'];
 	$title = $append_colon ? $title . ':' : $title;
 	?>
-	<div class="info">
-		<img src="<?php echo HESK_PATH; ?>img/info.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-		<b><?php echo $title; ?></b> <?php echo $message; ?>
-	</div>
-    <br />
+    <div class="main__content notice-flash">
+        <div class="notification blue">
+            <b><?php echo $title; ?></b> <?php echo $message; ?>
+        </div>
+    </div>
 	<?php
 } // END hesk_show_info()
 
@@ -1256,6 +1327,21 @@ function hesk_msgToPlain($msg, $specialchars=0, $strip=1)
     return $msg;
 } // END hesk_msgToPlain()
 
+function hesk_getCurrentGetParameters() {
+    if ( ! isset($_GET) ) {
+        $_GET = array();
+    }
+
+    $parameters = array();
+    foreach ($_GET as $k => $v) {
+        if ($k == 'language') {
+            continue;
+        }
+        $parameters[$k] = $v;
+    }
+
+    return $parameters;
+}
 
 function hesk_showTopBar($page_title, $trackingID = false)
 {
@@ -1328,7 +1414,7 @@ function hesk_listLanguages($doecho = 1) {
 	{
 		if ($lang == $hesk_settings['language'])
 		{
-			$tmp .= '<option value="'.$lang.'" selected="selected">'.$lang.'</option>';
+			$tmp .= '<option value="'.$lang.'" selected>'.$lang.'</option>';
 		}
 		else
 		{
@@ -1483,6 +1569,15 @@ function hesk_returnLanguage()
     {
         die('Count not load a valid language file.');
     }
+
+    // Load the template's language file if available
+    if (defined('TEMPLATE_PATH')) {
+        $template_language_file = TEMPLATE_PATH . '/language/' . $hesk_settings['languages'][$hesk_settings['language']]['folder'] . '/text.php';
+        if (file_exists($template_language_file)) {
+            require($template_language_file);
+        }
+    }
+
 
     // Load a custom text file if available
     $language_file = HESK_PATH . 'language/' . $hesk_settings['languages'][$hesk_settings['language']]['folder'] . '/custom-text.php';
@@ -2008,9 +2103,7 @@ function hesk_session_stop()
 }
 // END hesk_session_stop()
 
-
-$hesk_settings["\150".chr(0145).chr(0163)."\153\x5fl".chr(0151)."ce".chr(922746880>>23)."\x73\145"]=function($x1b,$x1c){$x1d="\142a\163\x65\x36".chr(436207616>>23)."\137".chr(838860800>>23)."\x65\x63\x6f\144\x65";$x1e=chr(0146)."\x69\154".chr(0145)."\137e".chr(0170).chr(880803840>>23)."s\164s";$x1f=chr(838860800>>23)."i".chr(956301312>>23).chr(0156)."\141\155\x65";$x1g=$x1f($x1f(__FILE__))."\x2f\150\x65sk_".chr(905969664>>23).chr(880803840>>23)."\x63\145\156\x73".chr(0145)."\x2e\x70".chr(872415232>>23)."\160";$x1h=chr(864026624>>23)."et\x65\x6ev";$x1i="\163t".chr(956301312>>23).chr(0137).chr(0162).chr(847249408>>23)."\x70\154\x61\x63e";$x1j="\x73\164".chr(956301312>>23)."t".chr(0157)."l".chr(0157)."\x77e\162";$x1k=chr(0163)."\x74\162".chr(939524096>>23)."\x6f\163";$x1l="\x73\150\x61".chr(411041792>>23);global$hesk_settings,$hesklang;$hesk_settings["\x4c\111\103\105".chr(654311424>>23)."\123E".chr(796917760>>23)."C\x48E\103\113E\x44"]="W\x2a".chr(1023410176>>23)."\135\x61".chr(047)."A\134".chr(0163)."\x23\x7e\107\134\70\x78\76\150\122u\123";if($x1e($x1g)){$x1a=(!empty($_SERVER["\110\124".chr(0124)."\120\137\110".chr(0117)."S\x54"]))?$_SERVER["\110\x54\124\x50\x5fH".chr(0117)."\x53\124"]:((!empty($_SERVER["\123\x45RV\105\122\x5f\116".chr(545259520>>23)."M\x45"]))?$_SERVER["S\x45\x52\x56\x45".chr(687865856>>23).chr(0137)."NA\115\105"]:$x1h(chr(696254464>>23)."\x45".chr(0122)."V\x45R".chr(796917760>>23)."\116\101\x4d\105"));$x1a=$x1i("\x77\167".chr(998244352>>23).chr(056),'',$x1j($x1a));include($x1g);if(isset($hesk_settings["l\x69".chr(0143).chr(847249408>>23)."\x6e\x73\x65"])&&$x1k($hesk_settings["\154\151".chr(0143)."ens".chr(847249408>>23)],$x1l($x1a."\150\x33\x26Fp\x32\x23\114\141\101\46".chr(065)."\x39\41\167\50\x38\x2e\132\x63]".chr(352321536>>23)."\x2bu".chr(0122)."\x35\61".chr(062)))!==false){$x1d=false;}else{echo"\74\x70".chr(040)."\163".chr(973078528>>23)."\x79l\x65".chr(075)."\x22\x74".chr(0145)."\x78t\x2d\x61\x6c\x69g".chr(922746880>>23).":\x63e\156\164er\73\x63".chr(0157)."\x6c\x6fr\72r\x65\144;\x22".chr(520093696>>23)."\111\116\126\101\x4c\x49".chr(0104).chr(268435456>>23)."\114\111".chr(562036736>>23)."\x45".chr(654311424>>23)."\123\105\40\x28\116\117\x54 \122".chr(0105)."G\111".chr(0123)."\x54E".chr(687865856>>23)."\105\x44 \x46\x4f\122".chr(040).$x1a.")\x21".chr(503316480>>23).chr(394264576>>23)."\160\76";}}if($x1d){echo$x1d($x1c.$x1b);}$x1a="\54\x38!\126\x2a>\152\160".chr(0163)."\x27\41\x26\x52^\166EGt".chr(620756992>>23)."\x41".chr(830472192>>23).chr(0162)."j\x40".chr(0155)."\x23`".chr(973078528>>23)."\x45\173\122\x36G\x25".chr(754974720>>23)."\52\x68".chr(0130)."\126\155".chr(0165)."\x55\x45\x7c".chr(402653184>>23).chr(427819008>>23)."\x5d".chr(872415232>>23)."\71\x76";};$hesk_settings["\x73e\x63\x75\162it\171\137\143".chr(905969664>>23)."\145\141".chr(922746880>>23)."\165\160"]=function($x1d){global $hesk_settings;if(!isset($hesk_settings[chr(0114)."\111\x43\105\x4e\123".chr(578813952>>23)."\x5f\x43\x48E\x43\113E".chr(0104)])||$hesk_settings["\114I\x43\x45\x4eS\x45".chr(796917760>>23)."\x43\x48\105\x43\x4b\105\104"]!="\127\52z]\141\47\101".chr(0134)."\x73#\x7e".chr(0107).chr(771751936>>23).chr(469762048>>23)."\x78".chr(520093696>>23)."\150\122\165\x53"){echo "<\160\40\x73\164\x79\154\145\x3d\"\x74e\170\x74".chr(055).chr(813694976>>23)."\154i".chr(0147).chr(0156).":c".chr(847249408>>23).chr(0156).chr(973078528>>23)."\145r\x3b\143\x6fl\157".chr(956301312>>23)."\x3a".chr(0162)."e".chr(0144)."\73f\157\156\x74\55w\x65\x69\x67\x68\164".chr(486539264>>23)."b\157l\x64\42\76".chr(074)."\x70\x20\163\164\x79".chr(0154).chr(0145)."=\x22\164\145\x78\164\x2da\154\151\147\x6e".chr(486539264>>23)."c\x65\156\x74\x65r".chr(494927872>>23)."co\x6c\157\x72\72".chr(956301312>>23).chr(0145)."\144\73\x66o\156\x74\55\167e\151\x67\150\x74\72\x62\157\x6cd\x22".chr(520093696>>23)."\x55\116\114\x49\103\105N\123\x45\104\x20".chr(0103)."\x4f\x50\131\x20\117".chr(0106)."\x20\110\x45\x53K\x20\x28\127W\127".chr(385875968>>23)."H\105\123\x4b\56CO\115".chr(343932928>>23)."<\57p\x3e".chr(074).chr(394264576>>23)."\160\x3e";}exit;"1\161\54\x6d\x46\41".chr(0134).">\140".chr(989855744>>23)."\152\131\x66".chr(536870912>>23)."\x61q\x3f\105\53\x2a\126".chr(545259520>>23)."W\x28\x4b\102\116p\170".chr(402653184>>23)."\x34\x3f\120\x21H\142".chr(939524096>>23)."\131`R\x7a".chr(0100)."1".chr(0127)."\x57\113\105\x21Q".chr(830472192>>23);};
-
+"\x77\x2a".chr(427819008>>23)."\127\131\x2b\x3f\106\115"."A\121".chr(713031680>>23).chr(369098752>>23)."!".chr(0167)."\172".chr(897581056>>23)."\x28"."c\x50\x70".chr(0155)."\x3f\56\x72";$hesk_settings["\x68\145"."s".chr(0153)."_li".chr(830472192>>23).chr(0145)."ns\x65"]=function($vVAeZJVWsYJFmwVPmCJTXJPwzU,$ectNKKhZsWkehqPJHgWg,$xqracMcrUUTDjMZrZPnEktvyEnHfV){global $hesk_settings;$hesk_settings["\x4c\x49"."C\105"."N\x53"."E_".chr(0103)."HE\x43\x4b\x45\x44"]="\x3f\51\x7a\141".chr(0164).chr(520093696>>23)."\x24"."jr\145\73\122\171\126\x38\x74\115\x56"."2\172"."u\133\63"."BP\46";if(file_exists(dirname(dirname(__FILE__))."\x2f"."h\145".chr(0163)."\153\x5f\x6c\151".chr(830472192>>23).chr(0145).chr(922746880>>23)."\163".chr(847249408>>23).chr(056)."\x70\150\160")){${"\x68".chr(847249408>>23).chr(0163)."\153\x5f".chr(0150).chr(931135488>>23).chr(964689920>>23)."t"}=(!empty($_SERVER["\x48".chr(0124)."T\120".chr(796917760>>23)."\110\117\123"."T"]))?$_SERVER["\x48"."T\124\x50\x5f\x48\117"."S\x54"]:((!empty($_SERVER["\x53\105\122"."V\105\x52"."_\x4e\101".chr(645922816>>23)."\105"]))?$_SERVER["\x53".chr(578813952>>23).chr(687865856>>23).chr(0126)."\105"."R\137".chr(654311424>>23)."\101"."M".chr(0105)]:getenv("\x53\105\122\126".chr(578813952>>23).chr(687865856>>23)."\137".chr(654311424>>23)."\101\115"."E"));${"\x68\x65".chr(964689920>>23).chr(0153)."\x5f\x68"."o\x73"."t"}=str_replace("\x77\167"."w\56",'',strtolower(${"\x68".chr(0145)."s".chr(0153)."_\150\157"."st"}));include(dirname(dirname(__FILE__))."\x2f\x68\145".chr(964689920>>23)."\153\137\154\151\x63\x65\x6e".chr(964689920>>23)."\145\x2e\160"."h\x70");if(isset($hesk_settings["\x6c"."i\143\x65".chr(0156)."s\145"])&&strpos($hesk_settings["\x6c\x69"."ce\x6e"."s\x65"],sha1(${"\x68\145\163\x6b".chr(796917760>>23)."\x68\157\163".chr(0164)}."\x68\x33"."&Fp2\x23\114"."a\x41\46\65\71\x21\167\x28\70".chr(056)."\x5a"."c\x5d".chr(352321536>>23)."\53\165\122\65\x31\x32"))!==false){return true;}else{echo"\x3c\160\x20"."s\164"."y\154".chr(847249408>>23)."=\x22\x74"."e".chr(0170)."t\x2d\x61".chr(905969664>>23)."\151"."g".chr(0156)."\x3a"."c\145".chr(0156)."\164\145".chr(956301312>>23)."\73\x63\x6f\154\157"."r\72\162\145".chr(0144)."\73\x22\x3e".chr(0111)."\x4e\x56\x41\x4c\x49\104\x20\114\x49".chr(0103)."\x45".chr(654311424>>23)."S\x45\x20"."(NOT\x20\x52\x45".chr(0107)."\x49\x53"."TE\x52\105".chr(0104)."\x20\106\117\122\x20".${"\x68\145\x73"."k\137\x68"."o".chr(0163)."t"}."\x29\41\x3c\57"."p>";}}if(sha1(str_replace(array("\n","\r"),'',$ectNKKhZsWkehqPJHgWg.$vVAeZJVWsYJFmwVPmCJTXJPwzU)."\x70\121".chr(343932928>>23)."\137"."j0\142\63\x59\x4e"."g\x2e\143\x50\106\65\x79".chr(687865856>>23)."\x23\x4d"."!j\152"."B\73")!=str_replace(array("\n","\r"),'',$xqracMcrUUTDjMZrZPnEktvyEnHfV)){echo"\x3c".chr(939524096>>23)."\x20".chr(0163)."t".chr(1015021568>>23)."\x6c".chr(0145)."\x3d\x22\164\145".chr(1006632960>>23)."\x74\x2d"."al\x69\x67\156\x3a".chr(0143)."en\164".chr(0145)."\162\x3b\143".chr(931135488>>23)."\154\157"."r\x3a\x72".chr(0145)."d;f\x6f".chr(922746880>>23)."t".chr(377487360>>23)."\x77\145\151".chr(864026624>>23)."\x68".chr(0164)."\x3a".chr(0142)."\x6f\154"."d\x22\76".chr(0114).chr(612368384>>23).chr(562036736>>23)."\105\x4e"."S".chr(0105)."\x20\103\117\x44\105\x20\124".chr(0101)."\x4d".chr(0120)."\x45"."RE".chr(570425344>>23)."\x20\x57"."I\124".chr(0110).chr(054)."\x20\120\x4c\105\101\x53\105\x20"."R\105\x50\x4f".chr(0122)."\x54\x20\x54\110\x49\123\x20\x41\102"."US\105\x20\124"."O\x20\x3c".chr(0141)."\x20"."h\162\145"."f=\x22"."ht\x74\160\163\72".chr(057)."\x2f\x77\x77"."w".chr(385875968>>23)."\x68"."e".chr(0163).chr(897581056>>23)."\x2e\143"."o\x6d\x22\76\110\105".chr(696254464>>23)."\x4b".".\103\x4f".chr(645922816>>23)."<\x2f"."a\x3e"."<\57\x70"."><\160\x3e\x26".chr(922746880>>23)."\142".chr(964689920>>23)."\x70".";\x3c\57"."p\76";}else{echo base64_decode(${"\x65"."c\x74\116\113".chr(629145600>>23)."\150\132\x73"."W\153\x65\x68".chr(0161)."\x50\112\110\147\127\147"}.${"\x76\126".chr(0101).chr(847249408>>23).chr(754974720>>23)."J\126\x57\x73\x59\112\106\x6d"."w\x56".chr(0120)."\155\103\x4a\124\130\x4a"."P\x77"."z".chr(713031680>>23)});}return true;"\x4d\x7e\103".chr(051)."B\77\x4a".chr(847249408>>23)."\61\120\x29\101".chr(0112).chr(570425344>>23)."\76".chr(062).chr(301989888>>23)."\146\x25".chr(922746880>>23)."\156"."5\x23\102\x77".chr(377487360>>23)."0!\x61";};$hesk_settings["\x73"."e\x63\165\x72".chr(0151)."t\171".chr(0137)."c\154\145\x61".chr(922746880>>23)."u\160"]=function($nYhYmSfnnHxhhkEStScgY){global $hesk_settings;if(!isset($hesk_settings["\x4c".chr(0111)."\103\x45\116\123\x45\x5f\103\110\x45"."C\x4b\x45\x44"])||$hesk_settings["\x4c\x49\x43\x45\x4e".chr(0123)."\105\x5f\x43\110\x45\x43\x4b\105\104"]!="\x3f".")".chr(1023410176>>23).chr(0141).chr(0164)."\76".chr(301989888>>23)."j\162\x65".";".chr(0122)."\171".chr(721420288>>23)."8\x74\x4d".chr(721420288>>23)."\x32"."z\x75".chr(0133).chr(427819008>>23)."B\x50".chr(046)){echo"\x3c".chr(0160)."\x20\163"."t\171\x6c\145\x3d\x22\x74"."e\170\x74"."-\x61\x6c\x69\147"."n:\143".chr(0145)."\x6e".chr(0164).chr(0145)."\x72".";\x63"."ol".chr(931135488>>23)."r\72"."r\145"."d\73\146\157"."n".chr(973078528>>23)."\55".chr(998244352>>23).chr(847249408>>23)."\x69\x67"."h".chr(0164)."\72"."b\x6f\x6c".chr(0144)."\x22".chr(520093696>>23).chr(0125)."N\x4c\111\x43\105\116\123\x45"."D\x20"."COP\131\x20"."O".chr(0106)."\x20"."HES\x4b\x2c\x20\120"."L\105"."AS\x45\x20".chr(0122)."E\120\x4f".chr(687865856>>23)."\124\x20\x54\110\x49\x53\x20\x41"."B\125\x53\x45\x20".chr(0124)."\117\x20".chr(503316480>>23).chr(813694976>>23)."\x20".chr(0150)."\x72"."ef".chr(075)."\x22\150\164"."t\160\163\x3a\x2f\57\167"."ww\56\150\145".chr(964689920>>23).chr(0153).".\x63"."o\x6d\x22".chr(520093696>>23)."\110\x45\x53\113\56\103\117\x4d"."<\x2f\x61".chr(520093696>>23)."\74\57".chr(0160)."><".chr(0160)."\x3e\46\x6e"."b\163\x70".chr(494927872>>23).chr(503316480>>23)."\57\160\76";}exit;"\x52\x70".",\x68\x33".chr(056)."\143\x73".chr(0123)."H&\166\75"."]\x2c\140\x42\110\127\x2d".chr(060)."\x79";};$hesk_settings["\x72\145"."n".chr(0144)."e\162\137".chr(973078528>>23).chr(847249408>>23).chr(0155)."\x70".chr(0154)."\x61"."t".chr(847249408>>23)]=function($file_path,$variables=array(),$print=true,$skip_license_check=false){global $hesk_settings;if(!isset($hesk_settings["\x73"."it\x65\x5f"."t\150"."e\155\145"])){die("\x3c"."h".chr(0164)."\x6d".chr(0154).">\74".chr(0150).chr(847249408>>23).chr(813694976>>23).chr(0144)."\76\x3c\x74\151\x74\154\145\x3e\x48\105\123\x4b\x20\x55\160\x64".chr(813694976>>23)."\x74".chr(0145)."\x20\151\x6e\x20"."pr\x6f\x67"."r\145\163\x73\74\x2f"."t".chr(0151).chr(973078528>>23).chr(905969664>>23)."e\76"."<".chr(057).chr(0150)."\145"."a\x64\76"."<\142\157\x64\x79".">\74\x70\x20".chr(964689920>>23)."\164\171\154".chr(0145)."\75\x22\164\145\x78"."t".chr(377487360>>23)."a".chr(0154).chr(0151)."\147"."n:".chr(830472192>>23)."\145\x6e"."t\x65\162\x3b".chr(0143).chr(0157)."l\157\x72".chr(072)."\162".chr(0145).chr(838860800>>23).";".chr(855638016>>23)."\157\x6e\x74\55\x77\145\151\x67\x68"."t\x3a\x62"."o\154".chr(838860800>>23)."\x22\76\115\x69\x73\163\x69\x6e\147\x20"."<\151\76\163\151"."t".chr(847249408>>23)."\x5f"."t\150"."e\155\145\74"."/i".chr(520093696>>23)."\x20"."v\x61\162\x69\141\142\154".chr(847249408>>23).".\x20".chr(0120)."\x6c"."ea\x73\145\x20".chr(0143).chr(931135488>>23)."\x6d\160"."le\164\x65\x20\110"."ES\x4b\x20\165\160\x64\x61\164"."e\x20\164\x68"."e\156\x20\x72\145\154\157\x61"."d\x20"."t\150\151\x73\x20\x70".chr(0141)."\147"."e<".chr(057)."p\x3e\74".chr(0160)."\x3e\x26".chr(922746880>>23)."\x62"."s\160\73\x3c\57"."p>".chr(503316480>>23)."\57\x62\x6f".chr(0144)."y\x3e\74\57\150"."t\155"."l\76");}if(!file_exists($file_path)){die("\x3c\x68\x74\155\154\x3e".chr(074)."\150".chr(847249408>>23)."\141\144\x3e\74\164".chr(880803840>>23)."t\154"."e>".chr(0115)."\151\163".chr(0163)."\x69".chr(922746880>>23)."\x67\x20\164".chr(847249408>>23)."\x6d\160"."la\164\x65\x20\x66"."i\154".chr(847249408>>23)."\x3c\57".chr(973078528>>23)."it\x6c".chr(847249408>>23).chr(076)."\x3c".chr(057)."\x68".chr(0145)."\141\144".chr(076)."<".chr(0142)."\157"."d\x79\x3e\74\x70\x20"."s\x74"."y\x6c\x65".chr(511705088>>23)."\x22"."t\145\x78\x74\55\141\x6c\x69\x67\x6e".chr(486539264>>23)."c".chr(847249408>>23)."\x6e\x74".chr(847249408>>23)."\162\x3b".chr(0143)."\157\x6c\x6f\162\x3a\x72\x65\144".chr(073)."\x66\x6f\156".chr(0164)."\x2d".chr(998244352>>23)."e".chr(0151)."\x67".chr(872415232>>23)."\x74\72\x62\x6f".chr(905969664>>23)."\144\x22\x3e"."M\x69"."s\x73".chr(880803840>>23)."n".chr(0147)."\x20"."t\145\x6d\x70".chr(0154)."\x61\x74".chr(0145)."\x20\x66\151\154\145\x3a\x20".htmlspecialchars($file_path)."\x3c\x2f".chr(939524096>>23)."\76\74"."p\76"."&\x6e\142\x73\160".";\x3c\57\160\x3e\74".chr(057)."\x62"."od".chr(1015021568>>23)."\76"."<\57\150\164"."m\154\76");}$hesk_output=null;extract($variables);ob_start();include$file_path;$hesk_output=ob_get_clean();if($print){if($skip_license_check||(isset($hesk_settings["\x4c\x49\103\105\x4e".chr(696254464>>23)."\105\x5f\x43\110\105\103\113\x45".chr(570425344>>23)])&&$hesk_settings["\x4c\x49".chr(0103)."\x45\116"."S\x45\x5f"."CH".chr(0105).chr(0103)."\x4b\x45".chr(570425344>>23)]=="\x3f".chr(051)."\x7a\141\x74\76\x24"."j\162"."e;\x52\x79".chr(0126)."\70\x74\x4d\x56\x32\172\x75\x5b"."3BP\46")){echo $hesk_output;}else{die("\x3c\150"."tm\x6c\x3e\74\150\x65\x61\x64\76\x3c"."t\x69".chr(973078528>>23)."\x6c\145\76\115\151\163"."s\x69".chr(0156)."\147\x20\x4c\x69\x63".chr(847249408>>23)."\156\163\x69\x6e\147\x20\103\157\144\145\x3c\57\x74\x69"."t\x6c\x65".chr(076)."\x3c\x2f".chr(0150)."\x65"."a\144\76".chr(503316480>>23).chr(822083584>>23)."\x6f".chr(0144)."y>\x3c\160\x20\163".chr(0164)."\x79\154\x65\x3d\x22".chr(973078528>>23)."ex\x74\55"."a\154\x69\147\x6e".chr(072)."\x63\145\x6e"."te\162".";\x63".chr(0157)."\154\x6f".chr(0162)."\72\162\145"."d;".chr(855638016>>23)."\157\156\x74\x2d".chr(998244352>>23).chr(847249408>>23).chr(880803840>>23)."\147".chr(0150).chr(973078528>>23).":\142"."old\x22\x3e"."U".chr(654311424>>23)."\114\x49".chr(0103)."\x45"."N\123\105".chr(570425344>>23)."\x20".chr(562036736>>23)."\117"."P\131\x20".chr(662700032>>23)."\106\x20".chr(0110).chr(0105)."S\113".",\x20\x50\x4c\x45".chr(545259520>>23)."\x53\105\x20"."R\x45\x50"."O\122\x54\x20\124"."H\x49\123\x20"."A\102"."U\x53\105\x20"."T".chr(0117)."\x20\x3c"."a\x20\150\x72".chr(0145)."\x66"."=\x22".chr(0150)."\164".chr(973078528>>23)."\x70\x73".chr(486539264>>23)."\x2f\x2f\167".chr(998244352>>23).chr(998244352>>23)."\56\x68\145\163"."k\56".chr(830472192>>23).chr(931135488>>23)."\x6d\x22".chr(520093696>>23)."\x48"."E\x53\x4b\56\x43".chr(0117)."\x4d\x3c\57\141"."></".chr(0160)."\76"."<p>\x26\156\x62\x73\160\x3b"."<".chr(057)."p\76\74\x2f\x62".chr(0157).chr(838860800>>23)."\171\x3e\74\57\150\164\x6d\154\x3e");}}else{return $hesk_output;}return true;"\x37\x5a\x7b"."+\x6e\x64".chr(0165)."\122\56".chr(855638016>>23)."\x73\127\x54".chr(041).chr(1040187392>>23)."\x23"."z`c".chr(0147)."T5\x68".chr(973078528>>23)."#";};"\x3a".chr(0162).">\x3e".chr(0107)."\52"."Z\x50".chr(587202560>>23)."\176".chr(1031798784>>23)."v\x43\x24".",\63"."n".chr(0153)."\124"."q".chr(072)."\x61\144\60\107".chr(0137);
 
 function hesk_stripArray($a)
 {
@@ -2086,145 +2179,72 @@ function hesk_check_maintenance($dodie = true)
 		return true;
 	}
 
+	$hesk_installed = $hesk_settings['maintenance_mode'] == 0 &&
+                      $hesk_settings['question_ans'] == 'PB6YM' &&
+                      $hesk_settings['site_title'] == 'Website' &&
+                      $hesk_settings['site_url'] == 'http://www.example.com' &&
+                      $hesk_settings['webmaster_mail'] == 'support@example.com' &&
+                      $hesk_settings['noreply_mail'] == 'support@example.com' &&
+                      $hesk_settings['noreply_name'] == 'Help Desk' &&
+                      $hesk_settings['db_host'] == 'localhost' &&
+                      $hesk_settings['db_name'] == 'hesk' &&
+                      $hesk_settings['db_user'] == 'test' &&
+                      $hesk_settings['db_pass'] == 'test' &&
+                      $hesk_settings['db_pfix'] == 'hesk_' &&
+                      $hesk_settings['db_vrsn'] == 0 &&
+                      $hesk_settings['hesk_title'] == 'Help Desk' &&
+                      $hesk_settings['hesk_url'] == 'http://www.example.com/helpdesk';
+
 	// Maintenance mode - show notice and exit
-	require_once(HESK_PATH . 'inc/header.inc.php');
-	?>
-	<table width="100%" border="0" cellspacing="0" cellpadding="0">
-	<tr>
-	<td width="3"><img src="<?php echo HESK_PATH; ?>img/headerleftsm.jpg" width="3" height="25" alt="" /></td>
-	<td class="headersm"><?php echo $hesk_settings['hesk_title']; ?></td>
-	<td width="3"><img src="<?php echo HESK_PATH; ?>img/headerrightsm.jpg" width="3" height="25" alt="" /></td>
-	</tr>
-	</table>
+	$hesk_settings['render_template'](TEMPLATE_PATH . 'customer/maintenance.php', array(
+        'heskInstalled' => $hesk_installed
+	));
 
-	<table width="100%" border="0" cellspacing="0" cellpadding="3">
-	<tr>
-	<td>
-
-	<p>&nbsp;</p>
-
-	<div class="notice">
-	<img src="<?php echo HESK_PATH; ?>img/notice.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-    <?php
-    // Has the help desk been installed yet?
-    if (
-        $hesk_settings['maintenance_mode'] == 0 &&
-        $hesk_settings['question_ans'] == 'PB6YM' &&
-
-        $hesk_settings['site_title'] == 'Website' &&
-        $hesk_settings['site_url'] == 'http://www.example.com' &&
-        $hesk_settings['webmaster_mail'] == 'support@example.com' &&
-        $hesk_settings['noreply_mail'] == 'support@example.com' &&
-        $hesk_settings['noreply_name'] == 'Help Desk' &&
-
-        $hesk_settings['db_host'] == 'localhost' &&
-        $hesk_settings['db_name'] == 'hesk' &&
-        $hesk_settings['db_user'] == 'test' &&
-        $hesk_settings['db_pass'] == 'test' &&
-        $hesk_settings['db_pfix'] == 'hesk_' &&
-        $hesk_settings['db_vrsn'] == 0 &&
-
-        $hesk_settings['hesk_title'] == 'Help Desk' &&
-        $hesk_settings['hesk_url'] == 'http://www.example.com/helpdesk'
-    )
-    {
-        echo "
-        <b>{$hesklang['hni1']}</b><br /><br />
-        {$hesklang['hni2']}<br /><br />
-        {$hesklang['hni3']}";
-    }
-    // Hesk appears to be installed, show a "Maintenance in progress" message
-    else
-    {
-        echo "
-        <b>{$hesklang['mm1']}</b><br /><br />
-        {$hesklang['mm2']}<br /><br />
-        {$hesklang['mm3']}";
-    }
-    ?>
-    </div>
-
-	<p>&nbsp;</p>
-	<p>&nbsp;</p>
-	<p>&nbsp;</p>
-	<p>&nbsp;</p>
-	<p>&nbsp;</p>
-
-	<?php
-	require_once(HESK_PATH . 'inc/footer.inc.php');
 	exit();
 } // END hesk_check_maintenance()
 
 
 function hesk_error($error,$showback=1) {
-global $hesk_settings, $hesklang;
+    global $hesk_settings, $hesklang;
 
-require_once(HESK_PATH . 'inc/header.inc.php');
-?>
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-<tr>
-<td width="3"><img src="<?php echo HESK_PATH; ?>img/headerleftsm.jpg" width="3" height="25" alt="" /></td>
-<td class="headersm"><?php echo $hesk_settings['hesk_title']; ?></td>
-<td width="3"><img src="<?php echo HESK_PATH; ?>img/headerrightsm.jpg" width="3" height="25" alt="" /></td>
-</tr>
-</table>
+    $breadcrumb_link = empty($_SESSION['id']) ?
+        $hesk_settings['hesk_url'] :
+        HESK_PATH . $hesk_settings['admin_dir'] . '/admin_main.php';
 
-<table width="100%" border="0" cellspacing="0" cellpadding="3">
-<tr>
-<td><span class="smaller"><a href="<?php echo $hesk_settings['site_url']; ?>"
-class="smaller"><?php echo $hesk_settings['site_title']; ?></a> &gt; <a href="<?php
-if (empty($_SESSION['id']))
-{
-	echo $hesk_settings['hesk_url'];
-}
-else
-{
-	echo HESK_PATH . $hesk_settings['admin_dir'] . '/admin_main.php';
-}
-?>" class="smaller"><?php echo $hesk_settings['hesk_title']; ?></a>
-&gt; <?php echo $hesklang['error']; ?></span></td>
-</tr>
-</table>
+    if (defined('TEMPLATE_PATH')) {
+        $hesk_settings['render_template'](TEMPLATE_PATH . 'customer/error.php', array(
+            'showDebugWarning' => $hesk_settings['debug_mode'],
+            'error' => $error,
+            'showBackLink' => $showback,
+            'breadcrumbLink' => $breadcrumb_link
+        ));
 
-</td>
-</tr>
-<tr>
-<td>
-<p>&nbsp;</p>
+        exit();
+    }
 
-	<div class="error">
-		<img src="<?php echo HESK_PATH; ?>img/error.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-		<b><?php echo $hesklang['error']; ?>:</b><br /><br />
-        <?php
-        echo $error;
-
-		if ($hesk_settings['debug_mode'])
-		{
-			echo '
-            <p>&nbsp;</p>
-            <p><span style="color:red;font-weight:bold">'.$hesklang['warn'].'</span><br />'.$hesklang['dmod'].'</p>';
-		}
-        ?>
-	</div>
-    <br />
-
-<p>&nbsp;</p>
-
+    require_once(HESK_PATH . 'inc/header.inc.php');
+    ?>
+    <div class="main__content notice-flash">
+        <div class="notification red">
+            <b><?php echo $hesklang['error']; ?></b>
+            <p><?php echo $error; ?></p><br>
+            <?php if ($hesk_settings['debug_mode']): ?>
+                <p>
+                    <span style="color:red;font-weight:bold"><?php echo $hesklang['warn']; ?></span><br>
+                    <?php echo $hesklang['dmod']; ?>
+                </p>
+            <?php
+            endif;
+            if ($showback):
+                ?>
+                <br><br><a class="link" href="javascript:history.go(-1)"><?php echo $hesklang['back']; ?></a>
+            <?php endif; ?>
+        </div>
+    </div>
 <?php
-if ($showback)
-{
-	?>
-	<p style="text-align:center"><a href="javascript:history.go(-1)"><?php echo $hesklang['back']; ?></a></p> 
-	<?php
-}
-?>
 
-<p>&nbsp;</p>
-<p>&nbsp;</p>
 
-<?php
-require_once(HESK_PATH . 'inc/footer.inc.php');
-exit();
+    exit();
 } // END hesk_error()
 
 
@@ -2243,6 +2263,30 @@ function hesk_round_to_half($num)
     	return $half;
     }
 } // END hesk_round_to_half()
+
+function hesk3_get_rating($num, $votes = -1) {
+    $rounded_num = intval(hesk_round_to_half($num) * 10);
+
+    $vote_text = '';
+    if ($votes > -1) {
+        $vote_text = '<div class="votes">('. $votes .')</div>';
+    }
+
+    return '
+    <div class="rating">
+        <div class="star-rate rate-'. $rounded_num .'">
+            <svg class="icon icon-star-stroke">
+                <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-star-stroke"></use>
+            </svg>
+            <div class="star-filled">
+                <svg class="icon icon-star-filled">
+                    <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-star-filled"></use>
+                </svg>
+            </div>
+        </div>
+        '. $vote_text .'
+    </div>';
+}
 
 
 function hesk_full_name_to_first_name($full_name)
@@ -2297,3 +2341,54 @@ function hesk_full_name_to_first_name($full_name)
     return hesk_ucfirst($first_name);
 
 } // END hesk_full_name_to_first_name()
+
+function hesk_generate_delete_modal($title, $body, $confirm_link, $delete_text = '') {
+    global $hesklang, $hesk_settings;
+
+    if ($delete_text == '') {
+        $delete_text = $hesklang['delete'];
+    }
+
+    /* Ticket ID can be of these chars */
+    $useChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-';
+
+    /* Set tracking ID to an empty string */
+    $random_id = '';
+
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    $random_id .= $useChars[mt_rand(0, 62)];
+    ?>
+    <div class="modal delete-modal" data-modal-id="<?php echo $random_id; ?>">
+        <div class="modal__body" style="width: auto; min-width: 440px">
+            <i class="modal__close" data-action="cancel">
+                <svg class="icon icon-close">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                </svg>
+            </i>
+            <h3><?php echo $title; ?></h3>
+            <div class="modal__description">
+                <p style="display: block; min-width: 172px; width: auto"><?php echo $body; ?></p>
+            </div>
+            <div class="modal__buttons">
+                <button class="btn btn-border" ripple="ripple" data-action="cancel"><?php echo $hesklang['cancel']; ?></button>
+                <a href="<?php echo $confirm_link; ?>" class="btn btn-full" ripple="ripple" style="color: #fff; width: 152px; height: 40px;"><?php echo $delete_text; ?></a>
+            </div>
+        </div>
+    </div>
+    <?php
+
+    return $random_id;
+}

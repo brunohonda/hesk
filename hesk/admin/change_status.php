@@ -26,7 +26,6 @@ hesk_isLoggedIn();
 
 /* Check permissions for this feature */
 hesk_checkPermission('can_view_tickets');
-hesk_checkPermission('can_reply_tickets');
 
 /* A security check */
 hesk_token_check();
@@ -42,6 +41,12 @@ $status = intval( hesk_REQUEST('s') );
 if ( ! isset($hesk_settings['statuses'][$status]))
 {
 	hesk_process_messages($hesklang['instat'],'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'NOTICE');
+}
+
+// We need can_reply_tickets permission unless we are closing a ticket
+if ($status != 3)
+{
+    hesk_checkPermission('can_reply_tickets');
 }
 
 $locked = 0;

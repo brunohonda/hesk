@@ -87,49 +87,23 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 /* Print admin navigation */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 ?>
-
-</td>
-</tr>
-<tr>
-<td>
-
-<p><span class="smaller"><a href="admin_ticket.php?track=<?php echo $trackingID; ?>&amp;Refresh=<?php echo mt_rand(10000,99999); ?>" class="smaller"><?php echo $hesklang['ticket'].' '.$trackingID; ?></a> &gt;
-<?php echo $hesklang['ednote']; ?></span></p>
-
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-<tr>
-	<td width="7" height="7"><img src="../img/roundcornerslt.jpg" width="7" height="7" alt="" /></td>
-	<td class="roundcornerstop"></td>
-	<td><img src="../img/roundcornersrt.jpg" width="7" height="7" alt="" /></td>
-</tr>
-<tr>
-	<td class="roundcornersleft">&nbsp;</td>
-	<td>
-
-	<h3 align="center"><?php echo $hesklang['ednote']; ?></h3>
-
-	<form method="post" action="edit_note.php" name="form1">
-
-	<p style="text-align:center">&nbsp;<br /><?php echo $hesklang['message']; ?>:<br />
-	<textarea name="message" rows="12" cols="60"><?php echo $note['message']; ?></textarea></p>
-
-	<p style="text-align:center">
-	<input type="hidden" name="save" value="1" /><input type="hidden" name="track" value="<?php echo $trackingID; ?>" />
-    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-	<input type="hidden" name="note" value="<?php echo $noteID; ?>" />
-	<input type="submit" value="<?php echo $hesklang['save_changes']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" /></p>
-
-	</form>
-
-	</td>
-	<td class="roundcornersright">&nbsp;</td>
-</tr>
-<tr>
-	<td><img src="../img/roundcornerslb.jpg" width="7" height="7" alt="" /></td>
-	<td class="roundcornersbottom"></td>
-	<td width="7" height="7"><img src="../img/roundcornersrb.jpg" width="7" height="7" alt="" /></td>
-</tr>
-</table>
+<div class="main__content categories">
+    <div class="table-wrap">
+        <h3 style="font-size: 1.3rem; margin-top: 10px"><?php echo $hesklang['ednote']; ?></h3>
+        <form method="post" action="edit_note.php" name="form1" class="form">
+            <div class="form-group">
+                <label for="edit_message"><?php echo $hesklang['message']; ?></label>
+                <textarea style="height: inherit" name="message" class="form-control" rows="12" cols="60"><?php echo $note['message']; ?></textarea>
+            </div>
+            <div class="form-group">
+                <input type="hidden" name="save" value="1" /><input type="hidden" name="track" value="<?php echo $trackingID; ?>">
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
+                <input type="hidden" name="note" value="<?php echo $noteID; ?>">
+                <button type="submit" class="btn btn-full"><?php echo $hesklang['save_changes']; ?></button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <p style="text-align:center"><a href="javascript:history.go(-1)"><?php echo $hesklang['back']; ?></a></p>
 

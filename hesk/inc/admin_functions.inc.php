@@ -231,7 +231,7 @@ function hesk_mergeTickets($merge_these, $merge_into)
 	$total			= 0;
 	$staffreplies	= 0;
 
-	$res = hesk_dbQuery("SELECT COUNT(*) as `cnt`, (CASE WHEN `staffid` = 0 THEN 0 ELSE 1 END) AS `staffcnt` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`=".intval($ticket['id'])." GROUP BY `staffcnt` ASC");
+	$res = hesk_dbQuery("SELECT COUNT(*) as `cnt`, (CASE WHEN `staffid` = 0 THEN 0 ELSE 1 END) AS `staffcnt` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`=".intval($ticket['id'])." GROUP BY `staffcnt`");
 	while ( $row = hesk_dbFetchAssoc($res) )
 	{
 		$total += $row['cnt'];
@@ -649,8 +649,13 @@ function hesk_verifyGoto()
 	// Allowed files for redirect
 	$OK_urls = array(
 		'admin_main.php' => '',
-		'admin_settings.php' => '',
-		'admin_settings_save.php' => 'admin_settings.php',
+		'admin_settings_email.php' => '',
+		'admin_settings_general.php' => '',
+		'admin_settings_help_desk.php' => '',
+		'admin_settings_knowledgebase.php' => '',
+		'admin_settings_misc.php' => '',
+		'admin_settings_save.php' => 'admin_settings_general.php',
+		'admin_settings_ticket_list.php' => '',
 		'admin_ticket.php' => '',
 		'archive.php' => '',
 		'assign_owner.php' => '',
@@ -673,6 +678,7 @@ function hesk_verifyGoto()
 		'manage_knowledgebase.php' => '',
 		'manage_ticket_templates.php' => '',
 		'manage_users.php' => '',
+		'module_statistics.php' => '',
 		'new_ticket.php' => '',
 		'profile.php' => '',
 		'reports.php' => '',

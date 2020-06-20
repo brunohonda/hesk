@@ -508,10 +508,10 @@ function hesk_testIMAP($check_old_settings=false)
 function hesk_generate_SPAM_question()
 {
 	$useChars = 'AEUYBDGHJLMNPRSTVWXZ23456789';
-	$ac = $useChars{mt_rand(0,27)};
+	$ac = $useChars[mt_rand(0,27)];
 	for($i=1;$i<5;$i++)
 	{
-	    $ac .= $useChars{mt_rand(0,27)};
+	    $ac .= $useChars[mt_rand(0,27)];
 	}
 
     $animals = array('dog','cat','cow','pig','elephant','tiger','chicken','bird','fish','alligator','monkey','mouse','lion','turtle','crocodile','duck','gorilla','horse','penguin','dolphin','rabbit','sheep','snake','spider');

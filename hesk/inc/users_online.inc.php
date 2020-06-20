@@ -38,28 +38,19 @@ function hesk_printOnline()
 	global $hesk_settings, $hesklang;
 
 	echo '
-    &nbsp;<br />&nbsp;
-	<div class="online">
-
-	<table border="0">
-	<tr>
-	<td valign="top"><img src="../img/online_on.png" width="16" height="16" alt="'.$hesklang['onlinep'].'" title="'.$hesklang['onlinep'].'" style="vertical-align:text-bottom" /></td>
-	<td>
-	';
-	$i = '';
-	foreach ($hesk_settings['users_online'] as $tmp)
-	{
-		$i .= '<span class="online" ' . ($tmp['isadmin'] ? 'style="font-style:italic;"' : '') . '>';
-		$i .= ($tmp['id'] == $_SESSION['id']) ? $tmp['name'] : '<a href="mail.php?a=new&id='.$tmp['id'].'">' . $tmp['name'] . '</a>';
-		$i .= '</span>, ';
-	}
-	echo substr($i,0,-2);
-	echo '
-	</td>
-	</tr>
-	</table>
-
-	</div>';
+    <div class="users-online">
+        <svg class="icon icon-team" style="fill: #000">
+          <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-team"></use>
+        </svg> ';
+    $i = '';
+    foreach ($hesk_settings['users_online'] as $tmp)
+    {
+        $i .= '<span ' . ($tmp['isadmin'] ? 'style="font-style:italic;"' : '') . '>';
+        $i .= ($tmp['id'] == $_SESSION['id']) ? $tmp['name'] : '<a class="link" href="mail.php?a=new&id='.$tmp['id'].'">' . $tmp['name'] . '</a>';
+        $i .= '</span>, ';
+    }
+    echo substr($i,0,-2);
+    echo '</div>';
 
 } // END hesk_printOnline()
 

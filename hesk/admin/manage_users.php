@@ -185,23 +185,11 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 ?>
 
-</td>
-</tr>
-<tr>
-<td>
-
-<script language="Javascript" type="text/javascript"><!--
-function confirm_delete()
-{
-if (confirm('<?php echo addslashes($hesklang['sure_remove_user']); ?>')) {return true;}
-else {return false;}
-}
-//-->
-</script>
-
 <?php
 /* This will handle error, success and notice messages */
-hesk_handle_messages();
+if (!hesk_SESSION(array('userdata', 'errors'))) {
+    hesk_handle_messages();
+}
 
 // If POP3 fetching is active, no user should have the same email address
 if ($hesk_settings['pop3'] && hesk_validateEmail($hesk_settings['pop3_user'], 'ERR', 0))
@@ -239,191 +227,231 @@ if ($hesk_settings['imap'] && hesk_validateEmail($hesk_settings['imap_user'], 'E
     }
 }
 ?>
+<div class="main__content team">
+    <section class="team__head">
+        <h2>
+            <?php echo $hesklang['team']; ?>
+            <div class="tooltype right out-close">
+                <svg class="icon icon-info">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                </svg>
+                <div class="tooltype__content">
+                    <div class="tooltype__wrapper">
+                        <?php echo $hesklang['users_intro']; ?>
+                    </div>
+                </div>
+            </div>
+        </h2>
+        <button class="btn btn btn--blue-border" ripple="ripple" data-action="team-create"><?php echo $hesklang['new_team_member']; ?></button>
+    </section>
+    <div class="table-wrap">
+        <div class="table">
+            <table id="default-table" class="table sindu-table">
+                <thead>
+                <tr>
+                    <th><?php echo $hesklang['name']; ?></th>
+                    <th><?php echo $hesklang['email']; ?></th>
+                    <th><?php echo $hesklang['username']; ?></th>
+                    <th><?php echo $hesklang['role']; ?></th>
+                    <?php
+                    /* Is user rating enabled? */
+                    if ($hesk_settings['rating']) {
+                        ?>
+                        <th><?php echo $hesklang['rating']; ?></th>
+                        <?php
+                    }
 
-<h3 style="padding-bottom:5px"><?php echo $hesklang['manage_users']; ?> [<a href="javascript:void(0)" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['users_intro']); ?>')">?</a>]</h3>
+                    /* Is autoassign enabled? */
+                    if ($hesk_settings['autoassign']) {
+                        ?>
+                        <th><?php echo $hesklang['aass']; ?></th>
+                        <?php
+                    }
+                    ?>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php
+                $res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'users` ORDER BY `name` ASC');
 
-&nbsp;<br />
+                $cannot_manage = array();
 
-<div align="center">
-<table border="0" width="100%" cellspacing="1" cellpadding="3" class="white">
-<tr>
-<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['name']; ?></i></b></th>
-<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['email']; ?></i></b></th>
-<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['username']; ?></i></b></th>
-<th class="admin_white" style="text-align:center;white-space:nowrap;width:1px;"><b><i><?php echo $hesklang['administrator']; ?></i></b></th>
-<?php
-/* Is user rating enabled? */
-if ($hesk_settings['rating'])
-{
-	?>
-	<th class="admin_white" style="text-align:center;white-space:nowrap;width:1px;"><b><i><?php echo $hesklang['rating']; ?></i></b></th>
-	<?php
-}
-?>
-<th class="admin_white" style="width:100px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
-</tr>
+                while ($myuser = hesk_dbFetchAssoc($res)) {
 
-<?php
-$res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'users` ORDER BY `name` ASC');
+                    if (!compare_user_permissions($myuser['id'], $myuser['isadmin'], explode(',', $myuser['categories']) , explode(',', $myuser['heskprivileges']))) {
+                        $cannot_manage[$myuser['id']] = array('name' => $myuser['name'], 'user' => $myuser['user'], 'email' => $myuser['email']);
+                        continue;
+                    }
 
-$i=1;
-$cannot_manage = array();
+                    $table_row = '';
+                    if (isset($_SESSION['seluser']) && $myuser['id'] == $_SESSION['seluser']) {
+                        $table_row = 'class="ticket-new"';
+                        unset($_SESSION['seluser']);
+                    }
 
-while ($myuser = hesk_dbFetchAssoc($res))
-{
+                    /* User online? */
+                    if ($hesk_settings['online']) {
+                        if (isset($hesk_settings['users_online'][$myuser['id']])) {
+                            $myuser['name'] = '
+                                <svg class="icon icon-assign" style="fill: #000; margin-right: 10px;">
+                                  <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-assign"></use>
+                                </svg>' .
+                                $myuser['name'];
+                        }
+                        else
+                        {
+                            $myuser['name'] = '
+                                <svg class="icon icon-assign-no" style="fill: #C5CAD4; margin-right: 10px;">
+                                  <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-assign-no"></use>
+                                </svg>' .
+                                $myuser['name'];
+                        }
+                    }
 
-	if ( ! compare_user_permissions($myuser['id'], $myuser['isadmin'], explode(',', $myuser['categories']) , explode(',', $myuser['heskprivileges'])) )
-    {
-    	$cannot_manage[$myuser['id']] = array('name' => $myuser['name'], 'user' => $myuser['user'], 'email' => $myuser['email']);
-        continue;
-    }
+                    /* To edit yourself go to "Profile" page, not here. */
+                    if ($myuser['id'] == $_SESSION['id']) {
+                        $edit_code = '
+                            <a href="profile.php" class="edit tooltip" title="'.$hesklang['edit'].'">
+                                <svg class="icon icon-edit-ticket">
+                                    <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-edit-ticket"></use>
+                                </svg>
+                            </a>';
+                    } else {
+                        $edit_code = '
+                            <a href="manage_users.php?a=edit&amp;id='.$myuser['id'].'" class="edit tooltip" title="'.$hesklang['edit'].'">
+                                <svg class="icon icon-edit-ticket">
+                                    <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-edit-ticket"></use>
+                                </svg>
+                            </a>';
+                    }
 
-    if ( isset($_SESSION['seluser']) && $myuser['id'] == $_SESSION['seluser'])
-    {
-		$color = 'admin_green';
-		unset($_SESSION['seluser']);
-	}
-    else
-    {
-		$color = $i ? 'admin_white' : 'admin_gray';
-    }
+                    if ($myuser['isadmin']) {
+                        $myuser['isadmin'] = $hesklang['administrator'];
+                    } else {
+                        $myuser['isadmin'] = $hesklang['staff'];
+                    }
 
-	$tmp   = $i ? 'White' : 'Blue';
-    $style = 'class="option'.$tmp.'OFF" onmouseover="this.className=\'option'.$tmp.'ON\'" onmouseout="this.className=\'option'.$tmp.'OFF\'"';
-	$i	   = $i ? 0 : 1;
+                    /* Deleting user with ID 1 (default administrator) is not allowed */
+                    if ($myuser['id'] == 1) {
+                        $remove_code = '';
+                    } else {
+                        $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                            $hesklang['sure_remove_user'],
+                            'manage_users.php?a=remove&amp;id='.$myuser['id'].'&amp;token='.hesk_token_echo(0));
+                        $remove_code = '
+                        <a href="javascript:" data-modal="[data-modal-id=\''.$modal_id.'\']" 
+                            title="'.$hesklang['remove'].'"
+                            class="delete tooltip">
+                            <svg class="icon icon-delete">
+                                <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-delete"></use>
+                            </svg>
+                        </a>';
+                    }
 
-    /* User online? */
-	if ($hesk_settings['online'])
-	{
-    	if (isset($hesk_settings['users_online'][$myuser['id']]))
-        {
-			$myuser['name'] = '<img src="../img/online_on.png" width="16" height="16" alt="'.$hesklang['online'].'" title="'.$hesklang['online'].'" style="vertical-align:text-bottom" /> ' . $myuser['name'];
-        }
-        else
-        {
-			$myuser['name'] = '<img src="../img/online_off.png" width="16" height="16" alt="'.$hesklang['offline'].'" title="'.$hesklang['offline'].'" style="vertical-align:text-bottom" /> ' . $myuser['name'];
-        }
-	}
+                    /* Is auto assign enabled? */
+                    if ($hesk_settings['autoassign']) {
+                        if ($myuser['autoassign']) {
+                            $autoassign_code = '
+                                <label class="switch-checkbox">
+                                    <a class="tooltip" data-ztt_vertical_offset="-5" id="autoassign-'.$myuser['id'].'" href="manage_users.php?a=autoassign&amp;s=0&amp;id='.$myuser['id'].'&amp;token='.hesk_token_echo(0).'" title="'.$hesklang['aaon'].'">
+                                        <input type="checkbox" checked>
+                                        <div class="switch-checkbox__bullet">
+                                            <i>
+                                                <svg class="icon icon-close">
+                                                    <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-close"></use>
+                                                </svg>
+                                                <svg class="icon icon-tick">
+                                                    <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-tick"></use>
+                                                </svg>
+                                            </i>
+                                        </div>
+                                    </a>
+                                </label>
+                                ';
+                        } else {
+                            $autoassign_code = '
+                                <label class="switch-checkbox">
+                                    <a class="tooltip" data-ztt_vertical_offset="-5" id="autoassign-'.$myuser['id'].'"  href="manage_users.php?a=autoassign&amp;s=1&amp;id='.$myuser['id'].'&amp;token='.hesk_token_echo(0).'" title="'.$hesklang['aaoff'].'">
+                                        <input type="checkbox">
+                                        <div class="switch-checkbox__bullet">
+                                            <i>
+                                                <svg class="icon icon-close">
+                                                    <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-close"></use>
+                                                </svg>
+                                                <svg class="icon icon-tick">
+                                                    <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-tick"></use>
+                                                </svg>
+                                            </i>
+                                        </div>
+                                    </a>
+                                </label>';
+                        }
+                    } else {
+                        $autoassign_code = '';
+                    }
 
-	/* To edit yourself go to "Profile" page, not here. */
-    if ($myuser['id'] == $_SESSION['id'])
-    {
-    	$edit_code = '<a name="Edit '.$myuser['user'].'" href="profile.php"><img src="../img/edit.png" width="16" height="16" alt="'.$hesklang['edit'].'" title="'.$hesklang['edit'].'" '.$style.' /></a>';
-    }
-    else
-    {
-    	$edit_code = '<a name="Edit '.$myuser['user'].'" href="manage_users.php?a=edit&amp;id='.$myuser['id'].'"><img src="../img/edit.png" width="16" height="16" alt="'.$hesklang['edit'].'" title="'.$hesklang['edit'].'" '.$style.' /></a>';
-    }
-
-    if ($myuser['isadmin'])
-    {
-    	$myuser['isadmin'] = '<font class="open">'.$hesklang['yes'].'</font>';
-    }
-    else
-    {
-    	$myuser['isadmin'] = '<font class="resolved">'.$hesklang['no'].'</font>';
-    }
-
-    /* Deleting user with ID 1 (default administrator) is not allowed */
-    if ($myuser['id'] == 1)
-    {
-        $remove_code = ' <img src="../img/blank.gif" width="16" height="16" alt="" style="padding:3px;border:none;" />';
-    }
-    else
-    {
-        $remove_code = ' <a name="Delete '.$myuser['user'].'" href="manage_users.php?a=remove&amp;id='.$myuser['id'].'&amp;token='.hesk_token_echo(0).'" onclick="return confirm_delete();"><img src="../img/delete.png" width="16" height="16" alt="'.$hesklang['remove'].'" title="'.$hesklang['remove'].'" '.$style.' /></a>';
-    }
-
-	/* Is auto assign enabled? */
-	if ($hesk_settings['autoassign'])
-    {
-    	if ($myuser['autoassign'])
-        {
-			$autoassign_code = '<a name="Unassign '.$myuser['user'].'" href="manage_users.php?a=autoassign&amp;s=0&amp;id='.$myuser['id'].'&amp;token='.hesk_token_echo(0).'"><img src="../img/autoassign_on.png" width="16" height="16" alt="'.$hesklang['aaon'].'" title="'.$hesklang['aaon'].'" '.$style.' /></a>';
-        }
-        else
-        {
-			$autoassign_code = '<a name="Assign '.$myuser['user'].'" href="manage_users.php?a=autoassign&amp;s=1&amp;id='.$myuser['id'].'&amp;token='.hesk_token_echo(0).'"><img src="../img/autoassign_off.png" width="16" height="16" alt="'.$hesklang['aaoff'].'" title="'.$hesklang['aaoff'].'" '.$style.' /></a>';
-        }
-    }
-    else
-    {
-		$autoassign_code = '';
-    }
-
-echo <<<EOC
-<tr>
-<td class="$color">$myuser[name]</td>
-<td class="$color"><a href="mailto:$myuser[email]">$myuser[email]</a></td>
-<td class="$color">$myuser[user]</td>
-<td class="$color">$myuser[isadmin]</td>
+                    echo <<<EOC
+<tr $table_row>
+<td>$myuser[name]</td>
+<td><a href="mailto:$myuser[email]">$myuser[email]</a></td>
+<td>$myuser[user]</td>
+<td>$myuser[isadmin]</td>
 
 EOC;
 
-if ($hesk_settings['rating'])
-{
-	$alt = $myuser['rating'] ? sprintf($hesklang['rated'], sprintf("%01.1f", $myuser['rating']), ($myuser['ratingneg']+$myuser['ratingpos'])) : $hesklang['not_rated'];
-	echo '<td class="'.$color.'" style="text-align:center; white-space:nowrap;"><img src="../img/star_'.(hesk_round_to_half($myuser['rating'])*10).'.png" width="85" height="16" alt="'.$alt.'" title="'.$alt.'" border="0" style="vertical-align:text-bottom" />&nbsp;</td>';
-}
+                    if ($hesk_settings['rating']) {
+                        $alt = $myuser['rating'] ? sprintf($hesklang['rated'], sprintf("%01.1f", $myuser['rating']), ($myuser['ratingneg']+$myuser['ratingpos'])) : $hesklang['not_rated'];
+                        echo '<td style="text-align:center; white-space:nowrap;">
+                            '.hesk3_get_rating($myuser['rating']).'
+                        </td>';
+                    }
 
-echo <<<EOC
-<td class="$color" style="text-align:center">$autoassign_code $edit_code $remove_code</td>
+                    if ($hesk_settings['autoassign']) {
+                        echo '<td>' . $autoassign_code . '</td>';
+                    }
+
+                    echo <<<EOC
+<td class="nowrap buttons"><p>$edit_code $remove_code</p></td>
 </tr>
 
 EOC;
-} // End while
-?>
-</table>
+                } // End while
+                ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+<div class="right-bar team-create" <?php echo hesk_SESSION(array('userdata','errors')) ? 'style="display: block"' : ''; ?>>
+    <div class="right-bar__body form" data-step="1">
+        <h3>
+            <a href="manage_users.php?a=reset_form">
+                <svg class="icon icon-back">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
+                </svg>
+                <span><?php echo $hesklang['add_user']; ?></span>
+            </a>
+        </h3>
+        <?php
+        if (hesk_SESSION(array('userdata', 'errors'))) {
+            hesk_handle_messages();
+        }
+        ?>
+        <form name="form1" method="post" action="manage_users.php" class="form <?php echo hesk_SESSION(array('userdata','errors')) ? 'invalid' : ''; ?>">
+            <?php hesk_profile_tab('userdata', false); ?>
 
-<p>&nbsp;</p>
-
-<h3><?php echo $hesklang['add_user']; ?></h3>
-
-<p><?php echo $hesklang['req_marked_with']; ?> <font class="important">*</font><br />&nbsp;</p>
-
-<script language="Javascript" type="text/javascript"><!--
-var tabberOptions = {
-	'cookie':"tabbernu",
-	'onLoad': function(argsObj)
-	{
-		var t = argsObj.tabber;
-		var i;
-		if (t.id) {
-		t.cookie = t.id + t.cookie;
-	}
-
-	i = parseInt(getCookie(t.cookie));
-	if (isNaN(i)) { return; }
-		t.tabShow(i);
-	},
-
-	'onClick':function(argsObj)
-	{
-		var c = argsObj.tabber.cookie;
-		var i = argsObj.index;
-		setCookie(c, i);
-	}
-};
-//-->
-</script>
-
-<script language="Javascript" type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tabs/tabber-minimized.js"></script>
-
-<form name="form1" method="post" action="manage_users.php">
-<?php hesk_profile_tab('userdata', false); ?>
-
-<!-- Submit -->
-<p align="center"><input type="hidden" name="a" value="new" />
-<input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-<input type="submit" value="<?php echo $hesklang['create_user']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-|
-<a href="manage_users.php?a=reset_form"><?php echo $hesklang['refi']; ?></a></p>
-</form>
-
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-
+            <!-- Submit -->
+            <div class="right-bar__footer">
+                <input type="hidden" name="a" value="new">
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
+                <button type="button" class="btn btn-border" ripple="ripple" data-action="back"><?php echo $hesklang['wizard_back']; ?></button>
+                <button type="button" class="btn btn-full next" data-action="next" ripple="ripple"><?php echo $hesklang['wizard_next']; ?></button>
+                <button type="submit" class="btn btn-full save" data-action="save" ripple="ripple"><?php echo $hesklang['create_user']; ?></button>
+            </div>
+        </form>
+    </div>
+</div>
 <?php
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
@@ -525,67 +553,39 @@ function edit_user()
 	/* Print main manage users page */
 	require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 	?>
+    <div class="right-bar team-create" style="display: block">
+        <div class="right-bar__body form" data-step="1">
+            <h3>
+                <a href="manage_users.php">
+                    <svg class="icon icon-back">
+                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
+                    </svg>
+                    <span><?php echo $hesklang['editing_user'].' '.$_SESSION['original_user']; ?></span>
+                </a>
+            </h3>
+            <?php
+            if (hesk_SESSION(array('userdata', 'errors'))) {
+                /* This will handle error, success and notice messages */
+                echo '<div style="margin: -24px -24px 10px -16px;">';
+                hesk_handle_messages();
+                echo '</div>';
+            }
+            ?>
+            <form name="form1" method="post" action="manage_users.php" class="form <?php echo hesk_SESSION(array('userdata','errors')) ? 'invalid' : ''; ?>">
+                <?php hesk_profile_tab('userdata', false); ?>
 
-	</td>
-	</tr>
-	<tr>
-	<td>
-
-	<span class="smaller"><a href="manage_users.php" class="smaller"><?php echo $hesklang['manage_users']; ?></a> &gt; <?php echo $hesklang['editing_user'].' '.$_SESSION['original_user']; ?></span>
-
-	<br />&nbsp;
-
-	<?php
-	/* This will handle error, success and notice messages */
-	hesk_handle_messages();
-	?>
-
-	<h3><?php echo $hesklang['editing_user'].' '.$_SESSION['original_user']; ?></h3>
-
-	<p><?php echo $hesklang['req_marked_with']; ?> <font class="important">*</font><br />&nbsp;</p>
-
-	<script language="Javascript" type="text/javascript"><!--
-	var tabberOptions = {
-		'cookie':"tabbereu",
-		'onLoad': function(argsObj)
-		{
-			var t = argsObj.tabber;
-			var i;
-			if (t.id) {
-			t.cookie = t.id + t.cookie;
-		}
-
-		i = parseInt(getCookie(t.cookie));
-		if (isNaN(i)) { return; }
-			t.tabShow(i);
-		},
-
-		'onClick':function(argsObj)
-		{
-			var c = argsObj.tabber.cookie;
-			var i = argsObj.index;
-			setCookie(c, i);
-		}
-	};
-	//-->
-	</script>
-
-	<script language="Javascript" type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tabs/tabber-minimized.js"></script>
-
-	<form name="form1" method="post" action="manage_users.php">
-	<?php hesk_profile_tab('userdata', false); ?>
-
-	<!-- Submit -->
-	<p align="center"><input type="hidden" name="a" value="save" />
-	<input type="hidden" name="userid" value="<?php echo $id; ?>" />
-    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-	<input type="submit" value="<?php echo $hesklang['save_changes']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-    |
-    <a href="manage_users.php"><?php echo $hesklang['dich']; ?></a></p>
-	</form>
-
-	<p>&nbsp;</p>
-	<p>&nbsp;</p>
+                <!-- Submit -->
+                <div class="right-bar__footer">
+                    <input type="hidden" name="a" value="save">
+                    <input type="hidden" name="userid" value="<?php echo $id; ?>" />
+                    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
+                    <button type="button" class="btn btn-border" ripple="ripple" data-action="back"><?php echo $hesklang['wizard_back']; ?></button>
+                    <button type="button" class="btn btn-full next" data-action="next" ripple="ripple"><?php echo $hesklang['wizard_next']; ?></button>
+                    <button type="submit" class="btn btn-full save" data-action="save" ripple="ripple"><?php echo $hesklang['save_changes']; ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 	<?php
 	require_once(HESK_PATH . 'inc/footer.inc.php');
@@ -761,7 +761,7 @@ function update_user()
     unset($_SESSION['save_userdata']);
     unset($_SESSION['userdata']);
 
-    hesk_process_messages( $hesklang['user_profile_updated_success'],$_SERVER['PHP_SELF'],'SUCCESS');
+    hesk_process_messages( $hesklang['user_profile_updated_success'], './manage_users.php','SUCCESS');
 } // End update_profile()
 
 
@@ -770,10 +770,29 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
 	global $hesk_settings, $hesklang;
 
     $hesk_error_buffer = '';
+    $errors = array();
 
-	$myuser['name']		  = hesk_input( hesk_POST('name') ) or $hesk_error_buffer .= '<li>' . $hesklang['enter_real_name'] . '</li>';
-	$myuser['email']	  = hesk_validateEmail( hesk_POST('email'), 'ERR', 0) or $hesk_error_buffer .= '<li>' . $hesklang['enter_valid_email'] . '</li>';
-	$myuser['user']		  = hesk_input( hesk_POST('user') ) or $hesk_error_buffer .= '<li>' . $hesklang['enter_username'] . '</li>';
+    if (hesk_input(hesk_POST('name'))) {
+        $myuser['name'] = hesk_input(hesk_POST('name'));
+    } else {
+        $hesk_error_buffer .= '<li>' . $hesklang['enter_real_name'] . '</li>';
+        $errors[] = 'name';
+    }
+
+    if (hesk_validateEmail( hesk_POST('email'), 'ERR', 0)) {
+        $myuser['email'] = hesk_validateEmail( hesk_POST('email'), 'ERR', 0);
+    } else {
+        $hesk_error_buffer .= '<li>' . $hesklang['enter_valid_email'] . '</li>';
+        $errors[] = 'email';
+    }
+
+    if (hesk_input( hesk_POST('user') )) {
+        $myuser['user'] = hesk_input(hesk_POST('user'));
+    } else {
+        $hesk_error_buffer .= '<li>' . $hesklang['enter_username'] . '</li>';
+        $errors[] = 'user';
+    }
+
 	$myuser['isadmin']	  = empty($_POST['isadmin']) ? 0 : 1;
 	$myuser['signature']  = hesk_input( hesk_POST('signature') );
     $myuser['autoassign'] = hesk_POST('autoassign') == 'Y' ? 1 : 0;
@@ -787,6 +806,7 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
     	if (empty($_POST['categories']) || ! is_array($_POST['categories']) )
         {
 			$hesk_error_buffer .= '<li>' . $hesklang['asign_one_cat'] . '</li>';
+			$errors[] = 'categories';
         }
         else
         {
@@ -807,6 +827,7 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
     	if (empty($_POST['features']) || ! is_array($_POST['features']) )
         {
 			$hesk_error_buffer .= '<li>' . $hesklang['asign_one_feat'] . '</li>';
+			$errors[] = 'features';
         }
         else
         {
@@ -823,6 +844,7 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
 	if (hesk_mb_strlen($myuser['signature'])>1000)
     {
     	$hesk_error_buffer .= '<li>' . $hesklang['signature_long'] . '</li>';
+    	$errors[] = 'signature';
     }
 
     /* Password */
@@ -837,6 +859,7 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
         if ($passlen < 5)
         {
         	$hesk_error_buffer .= '<li>' . $hesklang['password_not_valid'] . '</li>';
+        	$errors[] = 'passwords';
         }
         /* Check password confirmation */
         else
@@ -846,6 +869,7 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
 			if ($newpass != $newpass2)
 			{
 				$hesk_error_buffer .= '<li>' . $hesklang['passwords_not_same'] . '</li>';
+                $errors[] = 'passwords';
 			}
             else
             {
@@ -893,7 +917,7 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
     $myuser['notify_note']				= empty($_POST['notify_note']) ? 0 : 1;
     $myuser['notify_pm']				= empty($_POST['notify_pm']) ? 0 : 1;
 
-    /* Save entered info in session so we don't loose it in case of errors */
+    /* Save entered info in session so we don't lose it in case of errors */
 	$_SESSION['userdata'] = $myuser;
 
     /* Any errors */
@@ -906,8 +930,9 @@ function hesk_validateUserInfo($pass_required = 1, $redirect_to = './manage_user
         	$_SESSION['userdata']['features'] = $default_userdata['features'];
         	$_SESSION['userdata']['categories'] = $default_userdata['categories'];
 		}
+        $_SESSION['userdata']['errors'] = $errors;
 
-    	$hesk_error_buffer = $hesklang['rfm'].'<br /><br /><ul>'.$hesk_error_buffer.'</ul>';
+        $hesk_error_buffer = $hesklang['rfm'].'<br /><br /><ul>'.$hesk_error_buffer.'</ul>';
     	hesk_process_messages($hesk_error_buffer,$redirect_to);
     }
 

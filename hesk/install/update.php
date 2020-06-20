@@ -881,7 +881,7 @@ function hesk_iUpdateTables()
 
 
 			// Update number of staff replies
-			$res2 = hesk_dbQuery("SELECT COUNT(*) as `cnt`, (CASE WHEN `staffid` = 0 THEN 0 ELSE 1 END) AS `staffcnt` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`=".intval($ticket['id'])." GROUP BY `staffcnt` ASC");
+			$res2 = hesk_dbQuery("SELECT COUNT(*) as `cnt`, (CASE WHEN `staffid` = 0 THEN 0 ELSE 1 END) AS `staffcnt` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`=".intval($ticket['id'])." GROUP BY `staffcnt`");
 
 			$total			= 0;
 			$staffreplies	= 0;
@@ -1192,6 +1192,13 @@ function hesk_iUpdateTables()
     } // END version 2.8.2 to 2.8.3
 
     // 2.8.4 no changes
+    // 2.8.5 no changes
+    // 3.0.0 no changes
+    // 3.0.1 no changes
+    // 3.0.2 no changes
+    // 3.0.3 no changes
+    // 3.1.0 no changes
+    // 3.1.1 no changes
 
 	// Insert the "HESK updated to latest version" mail for the administrator
 	if ( file_exists(HESK_PATH.'hesk_license.php') )
@@ -1302,6 +1309,7 @@ function hesk_defaultSettings()
 	$hesk_settings['webmaster_mail']='support@example.com';
 	$hesk_settings['noreply_mail']='noreply@example.com';
 	$hesk_settings['noreply_name']='Help Desk';
+    $hesk_settings['site_theme']='hesk3';
 
 	// --> Language settings
 	$hesk_settings['can_sel_lang']=0;
@@ -1333,6 +1341,8 @@ function hesk_defaultSettings()
 	$hesk_settings['max_open']=0;
 	$hesk_settings['new_top']=0;
 	$hesk_settings['reply_top']=0;
+    $hesk_settings['hide_replies']=-1;
+    $hesk_settings['limit_width']=800;
 
 	// --> Features
 	$hesk_settings['autologin']=1;
@@ -1474,6 +1484,7 @@ function hesk_defaultSettings()
 	// --> Date & Time
 	$hesk_settings['timezone']=date_default_timezone_get();
 	$hesk_settings['timeformat']='Y-m-d H:i:s';
+    $hesk_settings['time_display']=1;
 
 	// --> Other
 	$hesk_settings['ip_whois']='https://whois.domaintools.com/{IP}';

@@ -49,31 +49,6 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 /* Print main manage users page */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 ?>
-
-</td>
-</tr>
-<tr>
-<td>
-
-<!-- TABS -->
-<div id="tab1" class="tabberlive" style="margin-top:0px">
-
-	<ul class="tabbernav">
-		<li class="tabberactive"><a title="<?php echo $hesklang['manage_saved']; ?>" href="javascript:void(null);" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['manage_intro']); ?>')"><?php echo $hesklang['manage_saved']; ?> [?]</a></li>
-		<?php
-		// Show a link to manage_ticket_templates.php if user has permission to do so
-		if ( hesk_checkPermission('can_man_ticket_tpl',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['ticket_tpl'] . '" href="manage_ticket_templates.php">' . $hesklang['ticket_tpl'] . '</a></li>';
-		}
-		?>
-	</ul>
-
-</div>
-<!-- TABS -->
-
-&nbsp;<br />
-
 <script language="javascript" type="text/javascript"><!--
 function confirm_delete()
 {
@@ -105,10 +80,11 @@ myField.value += myValue;
 }
 //-->
 </script>
-
 <?php
 /* This will handle error, success and notice messages */
-hesk_handle_messages();
+if (!isset($_SESSION['canned']['what'])) {
+    hesk_handle_messages();
+}
 
 // Get canned responses from database
 $result = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'std_replies` ORDER BY `reply_order` ASC');
@@ -119,91 +95,210 @@ $javascript_titles='';
 $i=1;
 $j=0;
 $num = hesk_dbNumRows($result);
+?>
+<div class="main__content templates">
+    <section class="templates__head">
+        <h2>
+            <?php echo $hesklang['manage_saved']; ?>
+            <div class="tooltype right out-close">
+                <svg class="icon icon-info">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                </svg>
+                <div class="tooltype__content">
+                    <div class="tooltype__wrapper">
+                        <?php echo $hesklang['manage_intro']; ?>
+                    </div>
+                </div>
+            </div>
+        </h2>
+        <div class="btn btn--blue-border" ripple="ripple" data-action="create-template" onclick="diplayAddTitle()"><?php echo $hesklang['canned_add']; ?></div>
+    </section>
+    <ul class="response__list">
+        <?php if ($num < 1): ?>
+            <li><h3><?php echo $hesklang['no_saved']; ?></h3></li>
+        <?php
+        endif;
 
-if ($num < 1)
-{
-    echo '<p>'.$hesklang['no_saved'].'</p>';
-}
-else
-{
-	?>
-	<div align="center">
-	<table border="0" cellspacing="1" cellpadding="3" class="white" width="100%">
-	<tr>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['saved_title']; ?></i></b></th>
-	<th class="admin_white" style="width:80px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
-	</tr>
-	<?php
+        while ($mysaved=hesk_dbFetchAssoc($result))
+        {
+            $j++;
 
-    while ($mysaved=hesk_dbFetchAssoc($result))
-    {
-    	$j++;
+            $table_row = '';
+            if (isset($_SESSION['canned']['selcat2']) && $mysaved['id'] == $_SESSION['canned']['selcat2']) {
+                $table_row = 'class="ticket-new"';
+                unset($_SESSION['canned']['selcat2']);
+            }
 
-		if (isset($_SESSION['canned']['selcat2']) && $mysaved['id'] == $_SESSION['canned']['selcat2'])
-		{
-			$color = 'admin_green';
-			unset($_SESSION['canned']['selcat2']);
-		}
-		else
-		{
-			$color = $i ? 'admin_white' : 'admin_gray';
-		}
-        
-		$tmp   = $i ? 'White' : 'Blue';
-	    $style = 'class="option'.$tmp.'OFF" onmouseover="this.className=\'option'.$tmp.'ON\'" onmouseout="this.className=\'option'.$tmp.'OFF\'"';
-	    $i     = $i ? 0 : 1;
-
-        $options .= '<option value="'.$mysaved['id'].'"';
-        $options .= (isset($_SESSION['canned']['id']) && $_SESSION['canned']['id'] == $mysaved['id']) ? ' selected="selected" ' : '';
-        $options .= '>'.$mysaved['title'].'</option>';
+            $options .= '<option value="'.$mysaved['id'].'"';
+            $options .= (isset($_SESSION['canned']['id']) && $_SESSION['canned']['id'] == $mysaved['id']) ? ' selected="selected" ' : '';
+            $options .= '>'.$mysaved['title'].'</option>';
 
 
-        $javascript_messages.='myMsgTxt['.$mysaved['id'].']=\''.str_replace("\r\n","\\r\\n' + \r\n'", addslashes($mysaved['message']) )."';\n";
-        $javascript_titles.='myTitle['.$mysaved['id'].']=\''.addslashes($mysaved['title'])."';\n";
+            $javascript_messages.='myMsgTxt['.$mysaved['id'].']=\''.str_replace("\r\n","\\r\\n' + \r\n'", addslashes($mysaved['message']) )."';\n";
+            $javascript_titles.='myTitle['.$mysaved['id'].']=\''.addslashes($mysaved['title'])."';\n";
 
-	    echo '
-	    <tr>
-	    <td class="'.$color.'" style="text-align:left">'.$mysaved['title'].'</td>
-        <td class="'.$color.'" style="text-align:center; white-space:nowrap;">
+            echo '
+	    <li '.$table_row.'>
+	    <h3>'.$mysaved['title'].'</h3>
         ';
 
-        if ($num > 1)
-        {
-        	if ($j == 1)
+            if ($num > 1)
             {
-            	echo'<img src="../img/blank.gif" width="16" height="16" alt="" style="padding:3px;border:none;" /> <a href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=15&amp;token='.hesk_token_echo(0).'"><img src="../img/move_down.png" width="16" height="16" alt="'.$hesklang['move_dn'].'" title="'.$hesklang['move_dn'].'" '.$style.' /></a>';
-            }
-            elseif ($j == $num)
-            {
-            	echo'<a href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=-15&amp;token='.hesk_token_echo(0).'"><img src="../img/move_up.png" width="16" height="16" alt="'.$hesklang['move_up'].'" title="'.$hesklang['move_up'].'" '.$style.' /></a> <img src="../img/blank.gif" width="16" height="16" alt="" style="padding:3px;border:none;" />';
+                if ($j == 1)
+                {
+                    echo'
+                    <a href="#" style="visibility: hidden">
+                        <svg class="icon icon-chevron-down">
+                            <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-chevron-down"></use>
+                        </svg>
+                    </a>
+                    <a class="tooltip" title="'.$hesklang['move_dn'].'" href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=15&amp;token='.hesk_token_echo(0).'">
+                        <svg class="icon icon-chevron-down">
+                            <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-chevron-down"></use>
+                        </svg>
+                    </a>';
+                }
+                elseif ($j == $num)
+                {
+                    echo'
+                    <a class="tooltip" title="'.$hesklang['move_up'].'" href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=-15&amp;token='.hesk_token_echo(0).'">
+                        <svg class="icon icon-chevron-up">
+                            <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-chevron-down"></use>
+                        </svg>
+                    </a>
+                    <a href="#" style="visibility: hidden">
+                        <svg class="icon icon-chevron-down">
+                            <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-chevron-down"></use>
+                        </svg>
+                    </a>';
+                }
+                else
+                {
+                    echo'
+                    <a class="tooltip" title="'.$hesklang['move_up'].'" href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=-15&amp;token='.hesk_token_echo(0).'">
+                        <svg class="icon icon-chevron-up">
+                            <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-chevron-down"></use>
+                        </svg>
+                    </a>
+                    <a class="tooltip" title="'.$hesklang['move_dn'].'" href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=15&amp;token='.hesk_token_echo(0).'">
+                        <svg class="icon icon-chevron-down">
+                            <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-chevron-down"></use>
+                        </svg>
+                    </a>';
+                }
             }
             else
             {
-            	echo'
-			    <a href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=-15&amp;token='.hesk_token_echo(0).'"><img src="../img/move_up.png" width="16" height="16" alt="'.$hesklang['move_up'].'" title="'.$hesklang['move_up'].'" '.$style.' /></a>
-			    <a href="manage_canned.php?a=order&amp;replyid='.$mysaved['id'].'&amp;move=15&amp;token='.hesk_token_echo(0).'"><img src="../img/move_down.png" width="16" height="16" alt="'.$hesklang['move_dn'].'" title="'.$hesklang['move_dn'].'" '.$style.' /></a>
-                ';
+                echo '';
             }
-        }
-        else
-        {
-        	echo '';
-        }
 
-        echo '
-        <a name="'.$mysaved['title'].'" href="manage_canned.php?a=remove&amp;id='.$mysaved['id'].'&amp;token='.hesk_token_echo(0).'" onclick="return confirm_delete();"><img src="../img/delete.png" width="16" height="16" alt="'.$hesklang['remove'].'" title="'.$hesklang['remove'].'" '.$style.' /></a>&nbsp;</td>
-	    </tr>
+            $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                $hesklang['delete_saved'],
+                'manage_canned.php?a=remove&amp;id='.$mysaved['id'].'&amp;token='.hesk_token_echo(0));
+
+            echo '
+            <a class="tooltip" title="'.$hesklang['edit'].'" href="javascript:setMessage(' . $mysaved['id'] . ')">
+                <svg class="icon icon-edit-ticket">
+                    <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-edit-ticket"></use>
+                </svg>
+            </a>
+            <a class="tooltip" title="'.$hesklang['remove'].'" href="javascript:" data-modal="[data-modal-id=\''.$modal_id.'\']">
+                <svg class="icon icon-delete">
+                    <use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-delete"></use>
+                </svg>
+            </a>
+	    </li>
 		';
-    } // End while
+        } // End while
+        ?>
+    </ul>
+</div>
+<div class="right-bar template-create" <?php if (isset($_SESSION['canned']['what'])) { echo 'style="display: block"'; } ?>>
+    <div class="right-bar__body template-create__body">
+        <h3>
+            <a href="javascript:">
+                <svg class="icon icon-back">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
+                </svg>
+                <span <?php if (isset($_SESSION['canned']['what']) && $_SESSION['canned']['what'] !== 'NEW') { echo 'style="display: none"'; } ?> id="add-title"><?php echo $hesklang['canned_add']; ?></span>
+                <span <?php if (isset($_SESSION['canned']['what']) && $_SESSION['canned']['what'] !== 'EDIT') { echo 'style="display: none"'; } ?> id="edit-title"><?php echo $hesklang['canned_edit']; ?></span>
+            </a>
+        </h3>
+        <div class="form">
+            <?php
+            /* This will handle error, success and notice messages */
+            if (isset($_SESSION['canned']['what'])) {
+                echo '<div style="margin: -24px -24px 10px -16px;">';
+                hesk_handle_messages();
+                echo '</div>';
+            }
 
-    ?>
-	</table>
-	</div>
-    <?php
-}
-
-?>
-
+            $errors = hesk_SESSION(array('canned', 'errors'));
+            $errors = is_array($errors) ? $errors : array();
+            ?>
+            <form action="manage_canned.php" method="post" name="form1" class="form <?php echo hesk_SESSION(array('canned', 'errors')) ? 'invalid' : ''; ?>">
+                <div class="form-group">
+                    <label for="canned_title"><?php echo $hesklang['saved_title']; ?></label>
+                    <span id="HeskTitle">
+                        <input type="text" class="form-control <?php echo in_array('name', $errors) ? 'isError' : ''; ?>" id="canned_title" name="name" maxlength="50"
+                            <?php if (isset($_SESSION['canned']['name'])) {echo ' value="'.stripslashes($_SESSION['canned']['name']).'" ';} ?>>
+                    </span>
+                </div>
+                <div class="form-group">
+                    <label for="canned_message"><?php echo $hesklang['message']; ?></label>
+                    <span id="HeskMsg">
+                        <textarea class="form-control <?php echo in_array('msg', $errors) ? 'isError' : ''; ?>" name="msg" rows="15" cols="70" id="canned_message"><?php
+                            if (isset($_SESSION['canned']['msg'])) {
+                                echo stripslashes($_SESSION['canned']['msg']);
+                            }
+                            ?></textarea>
+                    </span>
+                </div>
+                <div class="template--tags">
+                    <label><?php echo $hesklang['insert_special']; ?></label>
+                    <div class="tag-list">
+                        <a href="javascript:" onclick="hesk_insertTag('HESK_ID')">
+                            <?php echo $hesklang['seqid']; ?>
+                        </a>
+                        <a href="javascript:" onclick="hesk_insertTag('HESK_TRACK_ID')">
+                            <?php echo $hesklang['trackID']; ?>
+                        </a>
+                        <a href="javascript:" onclick="hesk_insertTag('HESK_NAME')">
+                            <?php echo $hesklang['name']; ?>
+                        </a>
+                        <a href="javascript:" onclick="hesk_insertTag('HESK_FIRST_NAME')">
+                            <?php echo $hesklang['fname']; ?>
+                        </a>
+                        <a href="javascript:" onclick="hesk_insertTag('HESK_EMAIL')">
+                            <?php echo $hesklang['email']; ?>
+                        </a>
+                        <a href="javascript:" onclick="hesk_insertTag('HESK_OWNER')">
+                            <?php echo $hesklang['owner']; ?>
+                        </a>
+                        <?php
+                        foreach ($hesk_settings['custom_fields'] as $k=>$v) {
+                            if ($v['use']) {
+                                echo '<a href="javascript:" onclick="hesk_insertTag(\'HESK_'.$k.'\')">'.$v['name'].'</a>';
+                            }
+                        }
+                        ?>
+                    </div>
+                </div>
+                <div class="template--submit">
+                    <?php if(isset($_SESSION['canned']['what']) && $_SESSION['canned']['what'] == 'EDIT'): ?>
+                        <input type="hidden" name="a" value="edit">
+                        <input type="hidden" name="saved_replies" value="<?php echo $_SESSION['canned']['id']; ?>">
+                    <?php else: ?>
+                        <input type="hidden" name="a" value="new">
+                        <input type="hidden" name="saved_replies" value="0">
+                    <?php endif; ?>
+                    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
+                    <button class="btn btn-full" ripple="ripple"><?php echo $hesklang['save_reply']; ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <script language="javascript" type="text/javascript"><!--
 var myMsgTxt = new Array();
 myMsgTxt[0]='';
@@ -217,109 +312,34 @@ echo $javascript_messages;
 
 function setMessage(msgid) {
     if (document.getElementById) {
-        document.getElementById('HeskMsg').innerHTML='<textarea name="msg" rows="15" cols="70">'+myMsgTxt[msgid]+'</textarea>';
-        document.getElementById('HeskTitle').innerHTML='<input type="text" name="name" size="40" maxlength="50" value="'+myTitle[msgid]+'">';
+        document.getElementById('HeskMsg').innerHTML='<textarea class="form-control" id="canned_message" name="msg" rows="15" cols="70">'+myMsgTxt[msgid]+'</textarea>';
+        document.getElementById('HeskTitle').innerHTML='<input type="text" class="form-control" id="canned_title" name="name" maxlength="50" value="'+myTitle[msgid]+'">';
     } else {
         document.form1.msg.value=myMsgTxt[msgid];
         document.form1.name.value=myTitle[msgid];
     }
 
-    if (msgid==0) {
-        document.form1.a[0].checked=true;
-    } else {
-        document.form1.a[1].checked=true;
-    }
+    document.form1.a.value = 'edit';
+    document.form1.saved_replies.value = msgid;
+    document.getElementById('add-title').style.display = 'none';
+    document.getElementById('edit-title').style.display = 'block';
+    document.getElementsByClassName('template-create')[0].style.display = 'block';
+}
+
+function diplayAddTitle() {
+    document.form1.msg.value = '';
+    document.form1.name.value = '';
+    document.form1.saved_replies.value = 0;
+    document.form1.a.value = 'new';
+    document.getElementById('add-title').style.display = 'block';
+    document.getElementById('edit-title').style.display = 'none';
 }
 //-->
 </script>
-
-<p>&nbsp;</p>
-
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-	<tr>
-		<td width="7" height="7"><img src="../img/roundcornerslt.jpg" width="7" height="7" alt="" /></td>
-		<td class="roundcornerstop"></td>
-		<td><img src="../img/roundcornersrt.jpg" width="7" height="7" alt="" /></td>
-	</tr>
-	<tr>
-	<td class="roundcornersleft">&nbsp;</td>
-	<td>
-
-	<form action="manage_canned.php" method="post" name="form1">
-	<h3 align="center"><?php echo $hesklang['new_saved']; ?></h3>
-
-	<div align="center">
-	<table border="0">
-	<tr>
-	<td>
-
-	<?php
-    if ($num > 0)
-    {
-	    ?>
-		<p>
-	    <label><input type="radio" name="a" value="new" <?php echo (!isset($_SESSION['canned']['what']) || $_SESSION['canned']['what'] != 'EDIT') ? 'checked="checked"' : ''; ?> /> <?php echo $hesklang['canned_add']; ?></label><br />
-	    <label><input type="radio" name="a" value="edit" <?php echo (isset($_SESSION['canned']['what']) && $_SESSION['canned']['what'] == 'EDIT') ? 'checked="checked"' : ''; ?> /> <?php echo $hesklang['canned_edit']; ?></label>:
-		<select name="saved_replies" onchange="setMessage(this.value)"><option value="0"> - <?php echo $hesklang['select_empty']; ?> - </option><?php echo $options; ?></select>
-	    </p>
-	    <?php
-    }
-    else
-    {
-    	echo '<p><input type="hidden" name="a" value="new" /> ' . $hesklang['canned_add'] . '</label></p>';
-    }
-    ?>
-
-	<p><b><?php echo $hesklang['saved_title']; ?>:</b> <span id="HeskTitle"><input type="text" name="name" size="40" maxlength="50" <?php if (isset($_SESSION['canned']['name'])) {echo ' value="'.stripslashes($_SESSION['canned']['name']).'" ';} ?> /></span></p>
-
-	<p><b><?php echo $hesklang['message']; ?>:</b><br />
-	<span id="HeskMsg"><textarea name="msg" rows="15" cols="70"><?php
-    if (isset($_SESSION['canned']['msg']))
-    {
-    	echo stripslashes($_SESSION['canned']['msg']);
-    }
-    ?></textarea></span><br />
-
-	<?php echo $hesklang['insert_special']; ?>:<br />
-	<a href="javascript:void(0)" onclick="hesk_insertTag('HESK_ID')"><?php echo $hesklang['seqid']; ?></a> |
-	<a href="javascript:void(0)" onclick="hesk_insertTag('HESK_TRACK_ID')"><?php echo $hesklang['trackID']; ?></a> |
-	<a href="javascript:void(0)" onclick="hesk_insertTag('HESK_NAME')"><?php echo $hesklang['name']; ?></a> |
-	<a href="javascript:void(0)" onclick="hesk_insertTag('HESK_FIRST_NAME')"><?php echo $hesklang['fname']; ?></a> |
-	<a href="javascript:void(0)" onclick="hesk_insertTag('HESK_EMAIL')"><?php echo $hesklang['email']; ?></a> |
-	<a href="javascript:void(0)" onclick="hesk_insertTag('HESK_OWNER')"><?php echo $hesklang['owner']; ?></a>
-	<?php
-	    foreach ($hesk_settings['custom_fields'] as $k=>$v)
-	    {
-	        if ($v['use'])
-	        {
-	            echo '| <a href="javascript:void(0)" onclick="hesk_insertTag(\'HESK_'.$k.'\')">'.$v['name'].'</a> ';
-	        }
-	    }
-	?>
-	</p>
-
-	</td>
-	</tr>
-	</table>
-	</div>
-
-	<p align="center">
-    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-    <input type="submit" value="<?php echo $hesklang['save_reply']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-    </p>
-	</form>
-
-    </td>
-	<td class="roundcornersright">&nbsp;</td>
-	</tr>
-	<tr>
-	<td><img src="../img/roundcornerslb.jpg" width="7" height="7" alt="" /></td>
-	<td class="roundcornersbottom"></td>
-	<td width="7" height="7"><img src="../img/roundcornersrb.jpg" width="7" height="7" alt="" /></td>
-	</tr>
-</table>
-
 <?php
+
+hesk_cleanSessionVars('canned');
+
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
 
@@ -334,10 +354,23 @@ function edit_saved()
 	hesk_token_check('POST');
 
     $hesk_error_buffer = '';
+    $errors = array();
 
-	$id = intval( hesk_POST('saved_replies') ) or $hesk_error_buffer .= '<li>' . $hesklang['selcan'] . '</li>';
-	$savename = hesk_input( hesk_POST('name') ) or $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_title'] . '</li>';
-	$msg = hesk_input( hesk_POST('msg') ) or $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_msg'] . '</li>';
+    $id = intval(hesk_POST('saved_replies'));
+    if (!$id) {
+        $hesk_error_buffer .= '<li>' . $hesklang['selcan'] . '</li>';
+        $errors[] = 'saved_replies';
+    }
+	$savename = hesk_input( hesk_POST('name') );
+    if (!$savename) {
+        $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_title'] . '</li>';
+        $errors[] = 'name';
+    }
+	$msg = hesk_input( hesk_POST('msg') );
+    if (!$msg) {
+        $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_msg'] . '</li>';
+        $errors[] = 'msg';
+    }
 
 	// Avoid problems with utf-8 newline chars in Javascript code, detect and remove them
 	$msg = preg_replace('/\R/u', "\r\n", $msg);
@@ -346,6 +379,7 @@ function edit_saved()
     $_SESSION['canned']['id'] = $id;
     $_SESSION['canned']['name'] = $savename;
     $_SESSION['canned']['msg'] = $msg;
+    $_SESSION['canned']['errors'] = $errors;
 
     /* Any errors? */
     if (strlen($hesk_error_buffer))
@@ -360,6 +394,7 @@ function edit_saved()
     unset($_SESSION['canned']['id']);
     unset($_SESSION['canned']['name']);
     unset($_SESSION['canned']['msg']);
+    unset($_SESSION['canned']['errors']);
 
     hesk_process_messages($hesklang['your_saved'],'manage_canned.php?saved_replies='.$id,'SUCCESS');
 } // End edit_saved()
@@ -373,8 +408,17 @@ function new_saved()
 	hesk_token_check('POST');
 
     $hesk_error_buffer = '';
-	$savename = hesk_input( hesk_POST('name') ) or $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_title'] . '</li>';
-	$msg = hesk_input( hesk_POST('msg') ) or $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_msg'] . '</li>';
+    $errors = array();
+	$savename = hesk_input( hesk_POST('name') );
+	if (!$savename) {
+        $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_title'] . '</li>';
+	    $errors[] = 'name';
+    }
+	$msg = hesk_input( hesk_POST('msg') );
+	if (!$msg) {
+        $hesk_error_buffer .= '<li>' . $hesklang['ent_saved_msg'] . '</li>';
+        $errors[] = 'msg';
+    }
 
 	// Avoid problems with utf-8 newline chars in Javascript code, detect and remove them
 	$msg = preg_replace('/\R/u', "\r\n", $msg);
@@ -382,6 +426,7 @@ function new_saved()
 	$_SESSION['canned']['what'] = 'NEW';
     $_SESSION['canned']['name'] = $savename;
     $_SESSION['canned']['msg'] = $msg;
+    $_SESSION['canned']['errors'] = $errors;
 
     /* Any errors? */
     if (strlen($hesk_error_buffer))
@@ -393,13 +438,14 @@ function new_saved()
 	/* Get the latest reply_order */
 	$result = hesk_dbQuery('SELECT `reply_order` FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'std_replies` ORDER BY `reply_order` DESC LIMIT 1');
 	$row = hesk_dbFetchRow($result);
-	$my_order = $row[0]+10;
+    $my_order = isset($row[0]) ? intval($row[0]) + 10 : 10;
 
 	hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."std_replies` (`title`,`message`,`reply_order`) VALUES ('".hesk_dbEscape($savename)."','".hesk_dbEscape($msg)."','".intval($my_order)."')");
 
 	unset($_SESSION['canned']['what']);
     unset($_SESSION['canned']['name']);
     unset($_SESSION['canned']['msg']);
+    unset($_SESSION['canned']['errors']);
 
     hesk_process_messages($hesklang['your_saved'],'manage_canned.php','SUCCESS');
 } // End new_saved()

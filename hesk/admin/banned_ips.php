@@ -45,239 +45,148 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print main manage users page */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-?>
 
-</td>
-</tr>
-<tr>
-<td>
-
-<!-- TABS -->
-<div id="tab1" class="tabberlive" style="margin-top:0px">
-
-	<ul class="tabbernav">
-		<?php
-		// Show a link to banned_emails.php if user has permission to do so
-		if ( hesk_checkPermission('can_ban_emails',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['banemail'] . '" href="banned_emails.php">' . $hesklang['banemail'] . '</a></li> ';
-		}
-		?>
-		<li class="tabberactive"><a title="<?php echo $hesklang['banip']; ?>" href="javascript:void(null);" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['banip_intro']); ?>')"><?php echo $hesklang['banip']; ?> [?]</a></li>
-		<?php
-		// Show a link to status_message.php if user has permission to do so
-		if ( hesk_checkPermission('can_service_msg',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['sm_title'] . '" href="service_messages.php">' . $hesklang['sm_title'] . '</a></li> ';
-		}
-
-		// Show a link to email_templates.php if user has permission to do so
-		if ( hesk_checkPermission('can_email_tpl',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['et_title'] . '" href="email_templates.php">' . $hesklang['et_title'] . '</a></li> ';
-		}
-
-		// Show a link to custom_fields.php if user has permission to do so
-		if ( hesk_checkPermission('can_man_settings',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['tab_4'] . '" href="custom_fields.php">' . $hesklang['tab_4'] . '</a></li> ';
-			echo '<li class=""><a title="' . $hesklang['statuses'] . '" href="custom_statuses.php">' . $hesklang['statuses'] . '</a></li> ';
-		}
-		?>
-	</ul>
-
-</div>
-<!-- TABS -->
-
-&nbsp;<br />
-
-<script language="javascript" type="text/javascript"><!--
-function confirm_delete()
-{
-if (confirm('<?php echo hesk_makeJsString($hesklang['delban_confirm']); ?>')) {return true;}
-else {return false;}
-}
-//-->
-</script>
-
-<?php
 /* This will handle error, success and notice messages */
 hesk_handle_messages();
 ?>
-
-&nbsp;<br />
-
-<form action="banned_ips.php" method="post" name="form1">
-
-<table border="0">
-<tr>
-<td valign="top">
-<?php echo $hesklang['bananip']; ?>:
-<input type="text" name="ip" size="30" maxlength="255" />
-<input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-<input type="hidden" name="a" value="ban" />
-<input type="submit" value="<?php echo $hesklang['savebanip']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-</td>
-<td valign="top" style="padding-left:20px;"><i><?php echo $hesklang['banex']; ?></i><br />
-<b>123.0.0.0</b><br />
-<b>123.0.0.1 - 123.0.0.53</b><br />
-<b>123.0.0.0/24</b><br />
-<b>123.0.*.*</b></td>
-</tr>
-</table>
-
-</form>
-
-<p>&nbsp;</p>
-
-<?php
-
-// Get login failures
-$res = hesk_dbQuery("SELECT `ip`, TIMESTAMPDIFF(MINUTE, NOW(), DATE_ADD(`last_attempt`, INTERVAL ".intval($hesk_settings['attempt_banmin'])." MINUTE) ) AS `minutes` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."logins` WHERE `number` >= ".intval($hesk_settings['attempt_limit'])." AND `last_attempt` > (NOW() -  INTERVAL ".intval($hesk_settings['attempt_banmin'])." MINUTE)");
-$num = hesk_dbNumRows($res);
-
-if ($num > 0)
-{
-	?>
-	<h3 style="padding-bottom:5px;">&raquo; <?php echo $hesklang['iptemp']; ?></h3>
-	<div>
-	<table border="0" cellspacing="1" cellpadding="3" class="white" width="60%">
-	<tr>
-	<th class="admin_white" style="text-align:left" width="40%"><b><i><?php echo $hesklang['ip']; ?></i></b></th>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['m2e']; ?></i></b></th>
-	<?php
-	if ($can_unban)
-	{
-	?>
-	<th class="admin_white" style="width:80px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
-	<?php
-	}
-	?>
-	</tr>
-	<?php
-	$i = 1;
-
-    while ($ban=hesk_dbFetchAssoc($res))
-    {
-		$color = $i ? 'admin_white' : 'admin_gray';
-		$tmp   = $i ? 'White' : 'Blue';
-	    $style = 'class="option'.$tmp.'OFF" onmouseover="this.className=\'option'.$tmp.'ON\'" onmouseout="this.className=\'option'.$tmp.'OFF\'"';
-	    $i     = $i ? 0 : 1;
-
-	    echo '
-	    <tr>
-	    <td class="'.$color.'" style="text-align:left">'.$ban['ip'].'</td>
-	    <td class="'.$color.'" style="text-align:left">'.$ban['minutes'].'</td>
-		';
-
-		if ($can_unban)
-		{
-		echo '
-        <td class="'.$color.'" style="text-align:center; white-space:nowrap;">
-        <a href="banned_ips.php?a=ban&amp;ip='.urlencode($ban['ip']).'&amp;token='.hesk_token_echo(0).'"><img src="../img/ban.png" width="16" height="16" alt="'.$hesklang['ippermban'].'" title="'.$hesklang['ippermban'].'" '.$style.' /></a>
-        <a href="banned_ips.php?a=unbantemp&amp;ip='.urlencode($ban['ip']).'&amp;token='.hesk_token_echo(0).'" onclick="return confirm_delete();"><img src="../img/delete.png" width="16" height="16" alt="'.$hesklang['delban'].'" title="'.$hesklang['delban'].'" '.$style.' /></a>&nbsp;</td>
-		';
-		}
-
-	    echo '</tr>';
-    } // End while
-
-    ?>
-	</table>
-	</div>
-	<p>&nbsp;</p>
+<div class="main__content tools">
+    <h2>
+        <?php echo $hesklang['banip']; ?>
+        <div class="tooltype right out-close">
+            <svg class="icon icon-info">
+                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+            </svg>
+            <div class="tooltype__content">
+                <div class="tooltype__wrapper">
+                    <?php echo $hesklang['banip_intro']; ?>
+                </div>
+            </div>
+        </div>
+    </h2>
+    <form action="banned_ips.php" method="post" name="form1">
+        <div class="tools__add-mail form">
+            <div class="form-group">
+                <input type="text" name="ip" maxlength="255" placeholder="<?php echo $hesklang['bananip']; ?>" class="form-control">
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
+                <input type="hidden" name="a" value="ban" />
+                <button type="submit" class="btn btn--blue-border" ripple="ripple"><?php echo $hesklang['savebanip']; ?></button>
+            </div>
+            <div class="mail--examples"><?php echo $hesklang['banex']; ?></div>
+            <ul style="margin-left: 10px">
+                <li>123.0.0.0</li>
+                <li>123.0.0.1 - 123.0.0.53</li>
+                <li>123.0.0.0/24</li>
+                <li>123.0.*.*</li>
+            </ul>
+        </div>
+    </form>
     <?php
-}
+    // Get login failures
+    $res = hesk_dbQuery("SELECT `ip`, TIMESTAMPDIFF(MINUTE, NOW(), DATE_ADD(`last_attempt`, INTERVAL ".intval($hesk_settings['attempt_banmin'])." MINUTE) ) AS `minutes` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."logins` WHERE `number` >= ".intval($hesk_settings['attempt_limit'])." AND `last_attempt` > (NOW() -  INTERVAL ".intval($hesk_settings['attempt_banmin'])." MINUTE)");
+    $num = hesk_dbNumRows($res);
 
-// Get banned ips from database
-$res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'banned_ips` ORDER BY `ip_from` ASC');
-$num = hesk_dbNumRows($res);
-
-if ($num < 1)
-{
-    echo '<p>'.$hesklang['no_banips'].'</p>';
-}
-else
-{
-	// List of staff
-	if ( ! isset($admins) )
-	{
-		$admins = array();
-		$res2 = hesk_dbQuery("SELECT `id`,`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users`");
-		while ($row=hesk_dbFetchAssoc($res2))
-		{
-			$admins[$row['id']]=$row['name'];
-		}
-	}
-
-	?>
-	<h3 style="padding-bottom:5px;">&raquo; <?php echo $hesklang['ipperm']; ?></h3>
-	<div align="center">
-	<table border="0" cellspacing="1" cellpadding="3" class="white" width="100%">
-	<tr>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['ip']; ?></i></b></th>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['iprange']; ?></i></b></th>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['banby']; ?></i></b></th>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['date']; ?></i></b></th>
-	<?php
-	if ($can_unban)
-	{
-	?>
-	<th class="admin_white" style="width:80px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
-	<?php
-	}
-	?>
-	</tr>
-	<?php
-	$i = 1;
-
-    while ($ban=hesk_dbFetchAssoc($res))
-    {
-		if (isset($_SESSION['ban_ip']['id']) && $ban['id'] == $_SESSION['ban_ip']['id'])
-		{
-			$color = 'admin_green';
-			unset($_SESSION['ban_ip']['id']);
-		}
-		else
-		{
-			$color = $i ? 'admin_white' : 'admin_gray';
-		}
-        
-		$tmp   = $i ? 'White' : 'Blue';
-	    $style = 'class="option'.$tmp.'OFF" onmouseover="this.className=\'option'.$tmp.'ON\'" onmouseout="this.className=\'option'.$tmp.'OFF\'"';
-	    $i     = $i ? 0 : 1;
-
-	    echo '
-	    <tr>
-	    <td class="'.$color.'" style="text-align:left">'.$ban['ip_display'].'</td>
-	    <td class="'.$color.'" style="text-align:left">'.( ($ban['ip_to'] == $ban['ip_from']) ? long2ip($ban['ip_to']) : long2ip($ban['ip_from']).' - '.long2ip($ban['ip_to']) ).'</td>
-	    <td class="'.$color.'" style="text-align:left">'.(isset($admins[$ban['banned_by']]) ? $admins[$ban['banned_by']] : $hesklang['e_udel']).'</td>
-	    <td class="'.$color.'" style="text-align:left">'.$ban['dt'].'</td>
-		';
-
-		if ($can_unban)
-		{
-		echo '
-        <td class="'.$color.'" style="text-align:center; white-space:nowrap;">
-        <a name="Unban '.$ban['ip_display'].'" href="banned_ips.php?a=unban&amp;id='.$ban['id'].'&amp;token='.hesk_token_echo(0).'" onclick="return confirm_delete();"><img src="../img/delete.png" width="16" height="16" alt="'.$hesklang['delban'].'" title="'.$hesklang['delban'].'" '.$style.' /></a>&nbsp;</td>
-		';
-		}
-
-	    echo '</tr>';
-    } // End while
-
+    if ($num > 0):
     ?>
-	</table>
-	</div>
-    <?php
-}
+    <h3><?php echo $hesklang['iptemp']; ?></h3>
+    <div class="table-wrapper ips">
+        <table id="temporary-bans-table" class="table sindu-table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['ip']; ?></th>
+                <th><?php echo $hesklang['m2e']; ?></th>
+                <?php if ($can_unban): ?>
+                    <th><?php echo $hesklang['opt']; ?></th>
+                <?php endif; ?>
+            </tr>
+            </thead>
+            <tbody>
+            <?php while ($ban = hesk_dbFetchAssoc($res)): ?>
+	        <tr>
+	            <td><?php echo $ban['ip']; ?></td>
+	            <td><?php echo $ban['minutes']; ?></td>
+                <?php if ($can_unban): ?>
+                <td>
+                    <a href="banned_ips.php?a=ban&amp;ip=<?php echo urlencode($ban['ip']); ?>&amp;token=<?php hesk_token_echo(); ?>"><?php echo $hesklang['ippermban']; ?></a>
+                    <a href="banned_ips.php?a=unbantemp&amp;ip=<?php echo urlencode($ban['ip']); ?>&amp;token=<?php hesk_token_echo(); ?>"><?php echo $hesklang['delban']; ?></a>
+                </td>
+                <?php endif; ?>
+            </tr>
+            <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+    <h3><?php echo $hesklang['ipperm']; ?></h3>
+    <div class="table-wrapper ips">
+        <table id="default-table" class="table sindu-table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['ip']; ?></th>
+                <th><?php echo $hesklang['iprange']; ?></th>
+                <th><?php echo $hesklang['banby']; ?></th>
+                <th><?php echo $hesklang['date']; ?></th>
+                <?php if ($can_unban): ?>
+                <th><?php echo $hesklang['opt']; ?></th>
+                <?php endif; ?>
+            </tr>
+            </thead>
+            <tbody>
+            <?php
+            // Get banned ips from database
+            $res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'banned_ips` ORDER BY `ip_from` ASC');
+            $num = hesk_dbNumRows($res);
 
-?>
+            if ($num < 1):
+            ?>
+            <tr>
+                <td colspan="<?php echo $can_unban ? 5 : 4; ?>"><?php echo $hesklang['no_banips']; ?></td>
+            </tr>
+            <?php
+            else:
+                // List of staff
+                if ( ! isset($admins) )
+                {
+                    $admins = array();
+                    $res2 = hesk_dbQuery("SELECT `id`,`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users`");
+                    while ($row=hesk_dbFetchAssoc($res2))
+                    {
+                        $admins[$row['id']]=$row['name'];
+                    }
+                }
 
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
+                $i = 1;
 
+                while ($ban = hesk_dbFetchAssoc($res)):
+                    $table_row = '';
+                    if (isset($_SESSION['ban_ip']['id']) && $ban['id'] == $_SESSION['ban_ip']['id'])
+                    {
+                        $table_row = 'class="ticket-new"';
+                        unset($_SESSION['ban_ip']['id']);
+                    }
+            ?>
+                <tr <?php echo $table_row; ?>>
+                    <td><?php echo $ban['ip_display']; ?></td>
+                    <td><?php echo $ban['ip_to'] == $ban['ip_from'] ? long2ip($ban['ip_to']) : long2ip($ban['ip_from']) . ' - ' . long2ip($ban['ip_to']); ?></td>
+                    <td><?php echo isset($admins[$ban['banned_by']]) ? $admins[$ban['banned_by']] : $hesklang['e_udel']; ?></td>
+                    <td><?php echo $ban['dt']; ?></td>
+                    <?php if ($can_unban): ?>
+                        <td class="unban">
+                            <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                                $hesklang['delban_confirm'],
+                                'banned_ips.php?a=unban&amp;id='. $ban['id'] .'&amp;token='. hesk_token_echo(0)); ?>
+                            <a href="javascript:" data-modal="[data-modal-id='<?php echo $modal_id; ?>']">
+                                <?php echo $hesklang['delban']; ?>
+                            </a>
+                        </td>
+                    <?php endif; ?>
+                </tr>
+            <?php
+                endwhile;
+            endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 <?php
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
@@ -333,6 +242,11 @@ function ban_ip()
 	{
     	hesk_process_messages($hesklang['validbanip'],'banned_ips.php');
 	}
+
+    if ($ip_from === false || $ip_to === false)
+    {
+        hesk_process_messages($hesklang['validbanip'],'banned_ips.php');
+    }
 
 	// Make sure we have valid ranges
 	if ($ip_from < 0)

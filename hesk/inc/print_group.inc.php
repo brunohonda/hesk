@@ -60,16 +60,16 @@ elseif ($group == 'priority')
 	switch ($ticket['priority'])
 	{
 		case 0:
-			$tmp = '<font class="critical">'.$hesklang['critical'].'</font>';
+			$tmp = $hesklang['critical'];
 			break;
 		case 1:
-			$tmp =  '<font class="important">'.$hesklang['high'].'</font>';
+			$tmp = $hesklang['high'];
 			break;
 		case 2:
-			$tmp =  '<font class="medium">'.$hesklang['medium'].'</font>';
+			$tmp = $hesklang['medium'];
 			break;
 		default:
-			$tmp =  $hesklang['low'];
+			$tmp = $hesklang['low'];
 	}
 
 	if ($ticket['priority'] != $group_tmp)

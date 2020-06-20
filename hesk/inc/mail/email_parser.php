@@ -147,7 +147,7 @@ function process_addrname_pairs($email_info)
 function process_attachments($attachments)
 {
 	$result = array();
-	foreach($attachments as $info)
+	foreach($attachments as $key => $info)
     {
 		$orig_name = "";
 		$size = 0;
@@ -163,6 +163,10 @@ function process_attachments($attachments)
         {
 			$orig_name = $info["FileName"];
 		}
+        elseif ($type == 'message')
+        {
+            $orig_name = ($key + 1) . ".msg";
+        }
 
 		if ( ! strlen($orig_name))
         {

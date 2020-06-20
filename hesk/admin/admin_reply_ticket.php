@@ -115,7 +115,7 @@ if (strlen($message))
 	}
 
 	// Attach signature to the message?
-	if ( ! $submit_as_customer && ! empty($_POST['signature']))
+	if ( ! $submit_as_customer && ! empty($_POST['signature']) && strlen($_SESSION['signature']))
 	{
 	    $message .= "\n\n" . addslashes($_SESSION['signature']) . "\n";
 	}
@@ -205,9 +205,9 @@ if ( ! empty($_POST['set_priority']) )
     }
 
 	$options = array(
-		0 => '<font class="critical">'.$hesklang['critical'].'</font>',
-		1 => '<font class="important">'.$hesklang['high'].'</font>',
-		2 => '<font class="medium">'.$hesklang['medium'].'</font>',
+		0 => $hesklang['critical'],
+		1 => $hesklang['high'],
+		2 => $hesklang['medium'],
 		3 => $hesklang['low']
 	);
 

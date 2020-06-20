@@ -106,7 +106,7 @@ function hesk_load_statuses($use_cache=1)
 } // END hesk_load_statuses()
 
 
-function hesk_get_status_select($ignore_status = '')
+function hesk_get_status_select($ignore_status = '', $can_resolve = true, $select_status = '')
 {
     global $hesk_settings;
 
@@ -115,17 +115,20 @@ function hesk_get_status_select($ignore_status = '')
 
     foreach ($hesk_settings['statuses'] as $k => $v)
     {
-        if ($k == $ignore_status)
+        if ($k === $ignore_status)
         {
             continue;
         }
         elseif ($k == 3)
         {
-            $last = '<option value="'.$k.'">'.$v['name'].'</option>';
+            if ($can_resolve)
+            {
+                $last = '<option value="'.$k.'" '.($k == $select_status ? 'selected' : '').'>'.$v['name'].'</option>';
+            }
         }
         else
         {
-            $options .= '<option value="'.$k.'">'.$v['name'].'</option>';
+            $options .= '<option value="'.$k.'" '.($k == $select_status ? 'selected' : '').'>'.$v['name'].'</option>';
         }
     }
 
@@ -138,49 +141,32 @@ function hesk_get_status_checkboxes($selected = array())
 {
     global $hesk_settings;
 
-    $start_row = true;
-    $column = 1;
+    $i = 0;
 
-    foreach ($hesk_settings['statuses'] as $k => $v)
-    {
-        if ($start_row)
-        {
-            echo '<tr>';
-            $start_row = false;
-            $td = '<td width="34%"><label><input type="checkbox" name="s'.$k.'" value="1" ';
-        }
-        else
-        {
-            $td = '<td width="33%"><label><input type="checkbox" name="s'.$k.'" value="1" ';
+    echo '<div class="checkbox-group list">';
+
+    $has_row = false;
+    foreach ($hesk_settings['statuses'] as $k => $v) {
+        if ($i % 3 === 0) {
+            echo '<div class="row">';
+            $has_row = true;
         }
 
-        if (isset($selected[$k]))
-        {
-            $td .= 'checked="checked"';
+        echo '
+        <div class="checkbox-custom">
+            <input type="checkbox" id="s'.$k.'" name="s'.$k.'" value="1" '.(isset($selected[$k]) ? 'checked' : '').'>
+            <label for="s'.$k.'">'.hesk_get_admin_ticket_status($k).'</label>
+        </div>';
+
+        if ($i % 3 === 2) {
+            echo '</div>';
+            $has_row = false;
         }
 
-        $td .= ' /> '.hesk_get_admin_ticket_status($k).'</label></td>';
-
-        echo $td;
-
-        if ($column == 3)
-        {
-            echo '</tr>';
-            $column = 1;
-            $start_row = true;
-        }
-        else
-        {
-            $column++;
-        }
+        $i++;
     }
-
-    for ($i = $column; $i<=3; $i++)
-    {
-        echo '<td>&nbsp;</td>';
-    }
-
-    echo '</tr>';
+    if ($has_row) echo '</div>';
+    echo '</div>';
 } // END hesk_get_status_select()
 
 
@@ -212,7 +198,7 @@ function hesk_get_ticket_status($status, $append = '', $check_change = 1)
     {
         if (isset($hesk_settings['statuses'][$status]['color']))
         {
-            return '<font style="color:'.$hesk_settings['statuses'][$status]['color'].'">'.$hesk_settings['statuses'][$status]['name'].'</font>';
+            return '<span style="color:'.$hesk_settings['statuses'][$status]['color'].'">'.$hesk_settings['statuses'][$status]['name'].'</span>';
         }
 
         return $hesk_settings['statuses'][$status]['name'];
@@ -221,13 +207,13 @@ function hesk_get_ticket_status($status, $append = '', $check_change = 1)
     // Is this a default status? Use style class to add color
     if (isset($hesk_settings['statuses'][$status]['class']))
     {
-        return '<font class="'.$hesk_settings['statuses'][$status]['class'].'">'.$hesk_settings['statuses'][$status]['name'].'</font>' . $append;
+        return '<span class="'.$hesk_settings['statuses'][$status]['class'].'">'.$hesk_settings['statuses'][$status]['name'].'</span>' . $append;
     }
 
     // Does this status have a color code?
     if (isset($hesk_settings['statuses'][$status]['color']))
     {
-        return '<font style="color:'.$hesk_settings['statuses'][$status]['color'].'">'.$hesk_settings['statuses'][$status]['name'].'</font>' . $append;
+        return '<span style="color:'.$hesk_settings['statuses'][$status]['color'].'">'.$hesk_settings['statuses'][$status]['name'].'</span>' . $append;
     }
 
     // Just return the name if nothing matches
@@ -241,3 +227,40 @@ function hesk_can_customer_change_status($status)
     global $hesk_settings;
     return ( ! isset($hesk_settings['statuses'][$status]['can_customers_change']) || $hesk_settings['statuses'][$status]['can_customers_change'] == '1') ? true : false;
 } // END hesk_get_ticket_status()
+
+
+function hesk_print_status_select_box_jquery()
+{
+    global $hesk_settings;
+    ?>
+    <script>
+    $(document).ready(function() {
+        <?php
+        foreach ($hesk_settings['statuses'] as $id => $data)
+        {
+            // Is this a default status? Use style class to add color
+            if (isset($data['class']))
+            {
+                echo '$("#ticket-status-div > div.dropdown-select > ul.dropdown-list > li[data-option=\''.$id.'\']").addClass("'.$data['class'].'");'."\n";
+                echo '
+                    $("#ticket-status-div > div.dropdown-select > div.label > span").filter(function () {
+                        return $(this).text() == "'.addslashes($data['name']).'";
+                    }).addClass("'.$data['class'].'");'."\n";
+                continue;
+            }
+
+            // Does this status have a color code?
+            if (isset($data['color']))
+            {
+                echo '$("#ticket-status-div > div.dropdown-select > ul.dropdown-list > li[data-option=\''.$id.'\']").css("color", "'.$data['color'].'");'."\n";
+                echo '
+                    $("#ticket-status-div > div.dropdown-select > div.label > span").filter(function () {
+                        return $(this).text() == "'.addslashes($data['name']).'";
+                    }).css("color", "'.$data['color'].'");'."\n";
+            }
+        }
+        ?>
+    });
+    </script>
+    <?php
+} // END hesk_print_status_select_box_jquery()

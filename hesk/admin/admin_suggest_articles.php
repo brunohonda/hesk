@@ -42,29 +42,37 @@ if ( hesk_isREQUEST('p') )
 
 /* Return found articles */
 ?>
-<div class="notice">
-<span style="font-size:12px;font-weight:bold"><?php echo $hesklang['sc']; ?>:</span><br />&nbsp;<br />
-    <?php
-	if (!$num)
-	{
-		echo '<i>'.$hesklang['nsfo'].'</i>';
-	}
-    else
-    {
-		while ($article = hesk_dbFetchAssoc($res))
-		{
-			$txt = strip_tags($article['content']);
-			if (hesk_mb_strlen($txt) > $hesk_settings['kb_substrart'])
-			{
-				$txt = hesk_mb_substr($txt, 0, $hesk_settings['kb_substrart']).'...';
-			}
+<div class="main__content notice-flash" style="padding: 0">
+    <div class="notification-bar white notice-flash" style="display: block; border-left: solid 1px #d4d6e3; border-right: solid 1px #d4d6e3">
+        <div class="notification--text" style="display: block; margin: 10px">
+            <div>
+                <b><?php echo $hesklang['sc']; ?></b>
+            </div>
+            <span>
+                <?php
+                if (!$num)
+                {
+                    echo '<i>'.$hesklang['nsfo'].'</i>';
+                }
+                else
+                {
+                    while ($article = hesk_dbFetchAssoc($res))
+                    {
+                        $txt = strip_tags($article['content']);
+                        if (hesk_mb_strlen($txt) > $hesk_settings['kb_substrart'])
+                        {
+                            $txt = hesk_mb_substr($txt, 0, $hesk_settings['kb_substrart']).'...';
+                        }
 
-			echo '
-			<a href="knowledgebase_private.php?article='.$article['id'].'&amp;suggest=1" target="_blank">'.$article['subject'].'</a>
+                        echo '
+			<a class="link" href="knowledgebase_private.php?article='.$article['id'].'&amp;suggest=1" target="_blank">'.$article['subject'].'</a>
 		    <br />'.$txt.'<br /><br />';
-		}
-    }
-    ?>
+                    }
+                }
+                ?>
+            </span>
+        </div>
+    </div>
 </div>
 <?php
 exit();

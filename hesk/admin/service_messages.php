@@ -30,6 +30,10 @@ hesk_checkPermission('can_service_msg');
 // Define required constants
 define('LOAD_TABS',1);
 define('WYSIWYG',1);
+if (isset($_SESSION['preview_sm']))
+{
+    define('STYLE_CODE',1);
+}
 
 // Do we need to show the language options?
 $hesk_settings['show_language'] = (count($hesk_settings['languages']) > 1);
@@ -50,351 +54,351 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print main manage users page */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-?>
-
-</td>
-</tr>
-<tr>
-<td>
-
-<!-- TABS -->
-<div id="tab1" class="tabberlive" style="margin-top:0px">
-
-	<ul class="tabbernav">
-		<?php
-		// Show a link to banned_emails.php if user has permission to do so
-		if ( hesk_checkPermission('can_ban_emails',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['banemail'] . '" href="banned_emails.php">' . $hesklang['banemail'] . '</a></li> ';
-		}
-
-		// Show a link to banned_ips.php if user has permission to do so
-		if ( hesk_checkPermission('can_ban_ips',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['banip'] . '" href="banned_ips.php">' . $hesklang['banip'] . '</a></li> ';
-		}
-		?>
-		<li class="tabberactive"><a title="<?php echo $hesklang['sm_title']; ?>" href="javascript:void(null);" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['sm_intro']); ?>')"><?php echo $hesklang['sm_title']; ?> [?]</a></li>
-		<?php
-		// Show a link to email_templates.php if user has permission to do so
-		if ( hesk_checkPermission('can_email_tpl',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['et_title'] . '" href="email_templates.php">' . $hesklang['et_title'] . '</a></li> ';
-		}
-		
-		// Show a link to custom_fields.php if user has permission to do so
-		if ( hesk_checkPermission('can_man_settings',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['tab_4'] . '" href="custom_fields.php">' . $hesklang['tab_4'] . '</a></li> ';
-			echo '<li class=""><a title="' . $hesklang['statuses'] . '" href="custom_statuses.php">' . $hesklang['statuses'] . '</a></li> ';
-		}
-		?>
-	</ul>
-
-</div>
-<!-- TABS -->
-
-&nbsp;<br />
-
-<?php
-// Show a back link when editing
-if ($action == 'edit_sm')
-{
-	?>
-	<span class="smaller"><a href="service_messages.php" class="smaller">&laquo; <?php echo $hesklang['sm_title']; ?></a></span><br />&nbsp;
-	<?php
-}
 
 /* This will handle error, success and notice messages */
-hesk_handle_messages();
-?>
-
-&nbsp;<br />
-
-<?php
-if ( isset($_SESSION['new_sm']) && ! isset($_SESSION['edit_sm']) )
-{
-	$_SESSION['new_sm'] = hesk_stripArray($_SESSION['new_sm']);
+if (!hesk_SESSION(array('new_sm', 'errors'))) {
+    hesk_handle_messages();
 }
-
-if ( isset($_SESSION['preview_sm']) )
-{
-	hesk_service_message($_SESSION['new_sm']);
-}
-?>
-
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
-	<tr>
-		<td width="7" height="7"><img src="../img/roundcornerslt.jpg" width="7" height="7" alt="" /></td>
-		<td class="roundcornerstop"></td>
-		<td><img src="../img/roundcornersrt.jpg" width="7" height="7" alt="" /></td>
-	</tr>
-	<tr>
-	<td class="roundcornersleft">&nbsp;</td>
-	<td>
-
-	    <div align="center">
-	    <table border="0">
-	    <tr>
-	    <td>
-
-        <?php
-        if ($hesk_settings['kb_wysiwyg'])
-        {
-	        ?>
-			<script type="text/javascript">
-			tinyMCE.init({
-				mode : "exact",
-				elements : "content",
-				theme : "advanced",
-                   convert_urls : false,
-                   gecko_spellcheck: true,
-
-				theme_advanced_buttons1 : "cut,copy,paste,|,undo,redo,|,formatselect,fontselect,fontsizeselect,|,bold,italic,underline,strikethrough,|,justifyleft,justifycenter,justifyright,justifyfull",
-				theme_advanced_buttons2 : "sub,sup,|,charmap,|,bullist,numlist,|,outdent,indent,insertdate,inserttime,preview,|,forecolor,backcolor,|,hr,removeformat,visualaid,|,link,unlink,anchor,image,cleanup,code",
-				theme_advanced_buttons3 : "",
-
-				theme_advanced_toolbar_location : "top",
-				theme_advanced_toolbar_align : "left",
-				theme_advanced_statusbar_location : "bottom",
-				theme_advanced_resizing : true
-			});
-			</script>
-	        <?php
-        }
-        ?>
-
-	    <form action="service_messages.php" method="post" name="form1">
-
-		<h3 align="center"><a name="new_article"></a><?php echo hesk_SESSION('edit_sm') ? $hesklang['edit_sm'] : $hesklang['new_sm']; ?></h3>
-	    <br />
-
-		<table border="0">
-		<tr>
-		<td valign="middle"><b><?php echo $hesklang['sm_style']; ?>:</b></td>
-		<td>
-			<div class="none" style="margin-right:10px;float:left"><label><input type="radio" name="style" value="0" <?php if (!isset($_SESSION['new_sm']['style']) || (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 0) ) {echo 'checked="checked"';} ?> /> <b><?php echo $hesklang['sm_none']; ?></b></label></div>
-			<div class="success" style="margin-right:10px;float:left"><label><input type="radio" name="style" value="1" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 1 ) {echo 'checked="checked"';} ?> /> <b><?php echo $hesklang['sm_success']; ?></b></label></div>
-			<div class="info" style="margin-right:10px;float:left"><label><input type="radio" name="style" value="2" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 2) {echo 'checked="checked"';} ?> /> <b><?php echo $hesklang['sm_info']; ?></b></label></div>
-			<div class="notice" style="margin-right:10px;float:left"><label><input type="radio" name="style" value="3" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 3) {echo 'checked="checked"';} ?> /> <b><?php echo $hesklang['sm_notice']; ?></b></label></div>
-			<div class="error" style="float:left"><label><input type="radio" name="style" value="4" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 4) {echo 'checked="checked"';} ?> /> <b><?php echo $hesklang['sm_error']; ?></b></label></div>
-		</td>
-		</tr>
-		<tr>
-		<td cellspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-		<td valign="top"><b><?php echo $hesklang['sm_type']; ?>:</b></td>
-		<td>
-		<label><input type="radio" name="type" value="0" <?php if (!isset($_SESSION['new_sm']['type']) || (isset($_SESSION['new_sm']['type']) && $_SESSION['new_sm']['type'] == 0) ) {echo 'checked="checked"';} ?> /> <i><?php echo $hesklang['sm_published']; ?></i></label>
-		&nbsp;|&nbsp;
-		<label><input type="radio" name="type" value="1" <?php if (isset($_SESSION['new_sm']['type']) && $_SESSION['new_sm']['type'] == 1) {echo 'checked="checked"';} ?> /> <i><?php echo $hesklang['sm_draft']; ?></i></label><br />&nbsp;
-		</td>
-		</tr>
-        <?php
-        if ($hesk_settings['show_language'])
-        {
-            ?>
-    		<tr>
-    		<td valign="top"><b><?php echo $hesklang['lgs']; ?>:</b></td>
-    		<td><select name="language" id="language">
-            <option value=""><?php echo $hesklang['all']; ?></option>
-            <?php
-            foreach ($hesk_settings['languages'] as $lang => $v)
-            {
-                echo '<option '.(isset($_SESSION['new_sm']['language']) && $_SESSION['new_sm']['language'] == $lang ? 'selected="selected"' : '').'>'.$lang.'</option>';
-            }
-            ?>
-            </select></td>
-    		</tr>
-    		<tr>
-    		<td cellspan="2">&nbsp;</td>
-    		</tr>
-            <?php
-        }
-        ?>
-		<tr>
-		<td><b><?php echo $hesklang['sm_mtitle']; ?>:</b></td>
-		<td><input type="text" name="title" size="70" maxlength="255" <?php if (isset($_SESSION['new_sm']['title'])) {echo 'value="'.$_SESSION['new_sm']['title'].'"';} ?> /></td>
-		</tr>
-		</table>
-
-		<p>&nbsp;<br /><b><?php echo $hesklang['sm_msg']; ?>:</b></p>
-
-		<p><textarea name="message" rows="25" cols="70" id="content"><?php if (isset($_SESSION['new_sm']['message'])) {echo $_SESSION['new_sm']['message'];} ?></textarea></p>
-
-		<p align="center">
-        <?php echo isset($_SESSION['edit_sm']) ? '<input type="hidden" name="a" value="save_sm" /><input type="hidden" name="id" value="'.intval($_SESSION['new_sm']['id']).'" />' : '<input type="hidden" name="a" value="new_sm" />'; ?>
-        <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-        <input type="submit" name="sm_save" value="<?php echo $hesklang['sm_save']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-		<input type="submit" name="sm_preview" value="<?php echo $hesklang['sm_preview']; ?>" class="orangebuttonsec" onmouseover="hesk_btn(this,'orangebuttonsecover');" onmouseout="hesk_btn(this,'orangebuttonsec');" />
-		</p>
-		</form>
-
-		</td>
-		</tr>
-		</table>
-	    </div>
-	</td>
-	<td class="roundcornersright">&nbsp;</td>
-	</tr>
-	<tr>
-	<td><img src="../img/roundcornerslb.jpg" width="7" height="7" alt="" /></td>
-	<td class="roundcornersbottom"></td>
-	<td width="7" height="7"><img src="../img/roundcornersrb.jpg" width="7" height="7" alt="" /></td>
-	</tr>
-</table>
-
-<p>&nbsp;</p>
-
-<?php
 
 // Get service messages from database
 $res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'service_messages` ORDER BY `order` ASC');
 $num = hesk_dbNumRows($res);
-
-if ($num < 1)
-{
-    echo '<p><i>'.$hesklang['no_sm'].'</i></p>';
-}
-else
-{
-	// List of staff
-	if ( ! isset($admins) )
-	{
-		$admins = array();
-		$res2 = hesk_dbQuery("SELECT `id`,`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users`");
-		while ($row=hesk_dbFetchAssoc($res2))
-		{
-			$admins[$row['id']]=$row['name'];
-		}
-	}
-
-	?>
-	<h3 style="padding-bottom:5px;">&raquo; <?php echo $hesklang['ex_sm']; ?></h3>
-	&nbsp;
-
-	<div align="center">
-	<table border="0" cellspacing="1" cellpadding="3" class="white" width="100%">
-	<tr>
-	<th class="admin_white"><b><i><?php echo $hesklang['sm_mtitle']; ?></i></b></th>
-    <?php
-    if ($hesk_settings['show_language'])
-    {
-        ?>
-        <th class="admin_white"><b><i><?php echo $hesklang['lgs']; ?></i></b></th>
-        <?php
-    }
-    ?>
-	<th class="admin_white"><b><i><?php echo $hesklang['sm_author']; ?></i></b></th>
-	<th class="admin_white"><b><i><?php echo $hesklang['sm_type']; ?></i></b></th>
-	<th class="admin_white" style="width:120px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
-	</tr>
-	<?php
-	$i = 1;
-	$j = 1;
-	$k = 1;
-
-    while ($sm=hesk_dbFetchAssoc($res))
-    {
-		switch ($sm['style'])
-		{
-        	case 1:
-				$sm_style = "success";
-				break;
-        	case 2:
-				$sm_style = "info";
-				break;
-        	case 3:
-				$sm_style = "notice";
-				break;
-        	case 4:
-				$sm_style = "error";
-				break;
-        	default:
-				$sm_style = "none";
-		}
-
-		$type = $sm['type'] ? $hesklang['sm_draft']: $hesklang['sm_published'];
-
-		$color = 'admin_white'; //$i ? 'admin_white' : 'admin_gray';
-		$tmp   = 'White'; //$i ? 'White' : 'Blue';
-	    $style = 'class="option'.$tmp.'OFF" onmouseover="this.className=\'option'.$tmp.'ON\'" onmouseout="this.className=\'option'.$tmp.'OFF\'"';
-	    $i     = $i ? 0 : 1;
-
-		?>
-		<tr>
-			<td class="<?php echo $color; ?>" style="text-align:left; padding:5px;" width="50%">
-				<div class="<?php echo $sm_style; ?>">
-                <?php
-                if ($sm_style != 'none')
-                {
-                ?>
-				<img src="<?php echo HESK_PATH; ?>img/<?php echo $sm_style; ?>.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
-                <?php
-                }
-                ?>
-				<?php echo $sm['title']; ?></b>
-				</div>
-			</td>
-            <?php
-            if ($hesk_settings['show_language'])
-            {
-                ?>
-                <td class="<?php echo $color; ?>" style="text-align:left; white-space:nowrap;"><?php echo strlen($sm['language']) ? $sm['language'] : $hesklang['all']; ?></td>
-                <?php
-            }
-            ?>
-			<td class="<?php echo $color; ?>" style="text-align:center; white-space:nowrap;"><?php echo (isset($admins[$sm['author']]) ? $admins[$sm['author']] : $hesklang['e_udel']); ?></td>
-			<td class="<?php echo $color; ?>" style="text-align:center; white-space:nowrap;"><?php echo $type; ?></td>
-			<td class="<?php echo $color; ?>" style="text-align:center; white-space:nowrap;">
-			<?php
-			if ($num > 1)
-			{
-				if ($k == 1)
-				{
-					?>
-					<img src="../img/blank.gif" width="16" height="16" alt="" style="padding:3px;border:none;" />
-					<a href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=15&amp;token=<?php hesk_token_echo(); ?>"><img src="../img/move_down.png" width="16" height="16" alt="<?php echo $hesklang['move_dn']; ?>" title="<?php echo $hesklang['move_dn']; ?>" <?php echo $style; ?> /></a>
-					<?php
-				}
-				elseif ($k == $num)
-				{
-					?>
-					<a href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=-15&amp;token=<?php hesk_token_echo(); ?>"><img src="../img/move_up.png" width="16" height="16" alt="<?php echo $hesklang['move_up']; ?>" title="<?php echo $hesklang['move_up']; ?>" <?php echo $style; ?> /></a>
-					<img src="../img/blank.gif" width="16" height="16" alt="" style="padding:3px;border:none;" />
-					<?php
-				}
-				else
-				{
-					?>
-					<a href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=-15&amp;token=<?php hesk_token_echo(); ?>"><img src="../img/move_up.png" width="16" height="16" alt="<?php echo $hesklang['move_up']; ?>" title="<?php echo $hesklang['move_up']; ?>" <?php echo $style; ?> /></a>
-					<a href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=15&amp;token=<?php hesk_token_echo(); ?>"><img src="../img/move_down.png" width="16" height="16" alt="<?php echo $hesklang['move_dn']; ?>" title="<?php echo $hesklang['move_dn']; ?>" <?php echo $style; ?> /></a>
-					<?php
-				}
-			}
-			?>
-			<a name="Edit <?php echo $sm['title']; ?>" href="service_messages.php?a=edit_sm&amp;id=<?php echo $sm['id']; ?>"><img src="../img/edit.png" width="16" height="16" alt="<?php echo $hesklang['edit']; ?>" title="<?php echo $hesklang['edit']; ?>" <?php echo $style; ?> /></a>
-			<a name="Delete <?php echo $sm['title']; ?>" href="service_messages.php?a=remove_sm&amp;id=<?php echo $sm['id']; ?>&amp;token=<?php hesk_token_echo(); ?>" onclick="return hesk_confirmExecute('<?php echo hesk_makeJsString($hesklang['del_sm']); ?>');"><img src="../img/delete.png" width="16" height="16" alt="<?php echo $hesklang['delete']; ?>" title="<?php echo $hesklang['delete']; ?>" <?php echo $style; ?> /></a>&nbsp;</td>
-		</tr>
-		<?php
-		$j++;
-		$k++;
-    } // End while
-
-    ?>
-	</table>
-	</div>
-    <?php
-}
-
 ?>
+<div class="main__content tools">
+    <section class="tools__between-head">
+        <h2>
+            <?php echo $hesklang['sm_title']; ?>
+            <div class="tooltype right out-close">
+                <svg class="icon icon-info">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                </svg>
+                <div class="tooltype__content">
+                    <div class="tooltype__wrapper">
+                        <?php echo $hesklang['sm_intro']; ?>
+                    </div>
+                </div>
+            </div>
+        </h2>
+        <?php if ($action !== 'edit_sm' && !isset($_SESSION['preview_sm'])): ?>
+            <div class="btn btn--blue-border" ripple="ripple" data-action="create-service-message"><?php echo $hesklang['new_sm']; ?></div>
+        <?php endif;?>
+    </section>
+    <div class="table-wrapper service-message">
+        <div class="table">
+            <table id="default-table" class="table sindu-table">
+                <thead>
+                <tr>
+                    <th><?php echo $hesklang['sm_mtitle']; ?></th>
+                    <th><?php echo $hesklang['sm_style']; ?></th>
+                    <?php
+                    if ($hesk_settings['show_language'])
+                    {
+                        ?>
+                        <th><?php echo $hesklang['lgs']; ?></th>
+                        <?php
+                    }
+                    ?>
+                    <th><?php echo $hesklang['sm_author']; ?></th>
+                    <th><?php echo $hesklang['sm_type']; ?></th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php if ($num < 1): ?>
+                <tr>
+                    <td colspan="<?php echo $hesk_settings['show_language'] ? 2 : 1; ?>">
+                        <?php echo $hesklang['no_sm']; ?>
+                    </td>
+                </tr>
+                <?php
+                else:
+                    // List of staff
+                    if (!isset($admins)) {
+                        $admins = array();
+                        $res2 = hesk_dbQuery("SELECT `id`,`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users`");
+                        while ($row=hesk_dbFetchAssoc($res2))
+                        {
+                            $admins[$row['id']]=$row['name'];
+                        }
+                    }
 
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
+                    $k = 1;
 
+                    while ($sm=hesk_dbFetchAssoc($res)) {
+                        switch ($sm['style']) {
+                            case 1:
+                                $sm_style = "success";
+                                break;
+                            case 2:
+                                $sm_style = "info";
+                                break;
+                            case 3:
+                                $sm_style = "notice";
+                                break;
+                            case 4:
+                                $sm_style = "error";
+                                break;
+                            default:
+                                $sm_style = "none";
+                        }
+
+                        $table_row = '';
+                        if (isset($_SESSION['smord']) && $_SESSION['smord'] == $sm['id']) {
+                            $table_row = 'class="ticket-new"';
+                            unset($_SESSION['smord']);
+                        }
+
+                        $type = $sm['type'] ? $hesklang['sm_draft']: $hesklang['sm_published'];
+                        ?>
+                        <tr <?php echo $table_row; ?>>
+                            <td><?php echo $sm['title']; ?></td>
+                            <td>
+                                <div class="style <?php echo $sm_style; ?>">
+                                    <?php echo $hesklang['sm_' . $sm_style]; ?>
+                                </div>
+                            </td>
+                            <?php
+                            if ($hesk_settings['show_language'])
+                            {
+                                ?>
+                                <td><?php echo strlen($sm['language']) ? $sm['language'] : $hesklang['all']; ?></td>
+                                <?php
+                            }
+                            ?>
+                            <td><?php echo (isset($admins[$sm['author']]) ? $admins[$sm['author']] : $hesklang['e_udel']); ?></td>
+                            <td><?php echo $type; ?></td>
+                            <td class="nowrap buttons">
+                                <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                                    $hesklang['del_sm'],
+                                    'service_messages.php?a=remove_sm&amp;id='. $sm['id'] .'&amp;token='. hesk_token_echo(0)); ?>
+                                <p>
+                                    <?php
+                                    if ($num > 1)
+                                    {
+                                        if ($k == 1)
+                                        {
+                                            ?>
+                                            <a href="#" style="visibility: hidden">
+                                                <svg class="icon icon-chevron-up">
+                                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                                                </svg>
+                                            </a>
+                                            <a class="tooltip" href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=15&amp;token=<?php hesk_token_echo(); ?>"
+                                               title="<?php echo $hesklang['move_dn']; ?>">
+                                                <svg class="icon icon-chevron-down">
+                                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                                                </svg>
+                                            </a>
+                                            <?php
+                                        }
+                                        elseif ($k == $num)
+                                        {
+                                            ?>
+                                            <a class="tooltip" href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=-15&amp;token=<?php hesk_token_echo(); ?>"
+                                               title="<?php echo $hesklang['move_up']; ?>">
+                                                <svg class="icon icon-chevron-up">
+                                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                                                </svg>
+                                            </a>
+                                            <a href="#" style="visibility: hidden"
+                                               title="<?php echo $hesklang['move_dn']; ?>">
+                                                <svg class="icon icon-chevron-down">
+                                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                                                </svg>
+                                            </a>
+                                            <?php
+                                        }
+                                        else
+                                        {
+                                            ?>
+                                            <a class="tooltip" href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=-15&amp;token=<?php hesk_token_echo(); ?>"
+                                               title="<?php echo $hesklang['move_up']; ?>">
+                                                <svg class="icon icon-chevron-up">
+                                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                                                </svg>
+                                            </a>
+                                            <a class="tooltip" href="service_messages.php?a=order_sm&amp;id=<?php echo $sm['id']; ?>&amp;move=15&amp;token=<?php hesk_token_echo(); ?>"
+                                               title="<?php echo $hesklang['move_dn']; ?>">
+                                                <svg class="icon icon-chevron-down">
+                                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                                                </svg>
+                                            </a>
+                                            <?php
+                                        }
+                                    }
+                                    ?>
+                                    <a href="service_messages.php?a=edit_sm&amp;id=<?php echo $sm['id']; ?>" class="edit tooltip" title="<?php echo $hesklang['edit']; ?>">
+                                        <svg class="icon icon-edit-ticket">
+                                            <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-edit-ticket"></use>
+                                        </svg>
+                                    </a>
+                                    <a href="javascript:" class="delete tooltip" title="<?php echo $hesklang['delete']; ?>" data-modal="[data-modal-id='<?php echo $modal_id; ?>']">
+                                        <svg class="icon icon-delete">
+                                            <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-delete"></use>
+                                        </svg>
+                                    </a>
+                                </p>
+                            </td>
+                        </tr>
+                        <?php
+                        $k++;
+                    } // End while
+                ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 <?php
+if ($hesk_settings['kb_wysiwyg'])
+{
+    ?>
+    <script>
+        tinymce.init({
+            selector: '#content',
+            convert_urls: false,
+            branding: false,
+            browser_spellcheck: true,
+            toolbar: 'undo redo | styleselect fontselect fontsizeselect | bold italic underline | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent | link unlink image codesample code',
+            plugins: 'charmap code codesample image link lists table',
+        });
+    </script>
+    <?php
+}
+?>
+<div class="right-bar service-message-create" <?php if ($action === 'edit_sm' || isset($_SESSION['preview_sm']) || hesk_SESSION(array('new_sm','errors'))) {echo 'style="display: block"';} ?>>
+    <div class="right-bar__body form" data-step="1">
+        <h3 class="">
+            <a href="<?php echo $action === 'edit_sm' || isset($_SESSION['preview_sm']) ? 'service_messages.php' : 'javascript:' ?>">
+                <svg class="icon icon-back">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
+                </svg>
+                <span><?php echo hesk_SESSION('edit_sm') ? $hesklang['edit_sm'] : $hesklang['new_sm']; ?></span>
+            </a>
+        </h3>
+        <?php
+        if (hesk_SESSION(array('new_sm', 'errors'))) {
+            hesk_handle_messages();
+        }
+
+        if ( isset($_SESSION['new_sm']) && (isset($_SESSION['preview_sm']) || ! isset($_SESSION['edit_sm'])) )
+        {
+            $_SESSION['new_sm'] = hesk_stripArray($_SESSION['new_sm']);
+        }
+
+        /* Do we have a service message to preview? */
+        if (isset($_SESSION['preview_sm'])) {
+            hesk_service_message($_SESSION['new_sm']);
+        }
+        ?>
+        <ul class="step-bar">
+            <li data-link="1" data-all="2"><?php echo $hesklang['sm_content']; ?></li>
+            <li data-link="2" data-all="2"><?php echo $hesklang['sm_settings']; ?></li>
+        </ul>
+        <form action="service_messages.php" method="post" name="form1" class="form <?php echo hesk_SESSION(array('new_sm','errors')) ? 'invalid' : ''; ?>">
+            <div class="step-slider">
+                <div class="step-item step-1">
+                    <div class="form-group">
+                        <label for="sm-title"><?php echo $hesklang['sm_mtitle']; ?></label>
+                        <input id="sm-title" type="text" name="title" class="form-control <?php echo hesk_SESSION(array('new_sm','errors')) ? 'isError' : ''; ?>" maxlength="255" <?php if (isset($_SESSION['new_sm']['title'])) {echo 'value="'.$_SESSION['new_sm']['title'].'"';} ?>>
+                    </div>
+                    <div class="form-group" style="width: 100%">
+                        <label for="content"><?php echo $hesklang['sm_msg']; ?></label>
+                        <textarea class="form-control" name="message" id="content" style="height: 300px;"><?php if (isset($_SESSION['new_sm']['message'])) {echo $_SESSION['new_sm']['message'];} ?></textarea>
+                    </div>
+                </div>
+                <div class="step-item step-2">
+                    <h4><?php echo $hesklang['sm_style']; ?></h4>
+                    <div class="styles__radio">
+                        <label class="none">
+                            <input type="radio" value="0" name="style" <?php if (!isset($_SESSION['new_sm']['style']) || (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 0) ) {echo 'checked';} ?>>
+                            <svg class="icon icon-tick">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                            </svg>
+                            <span><?php echo $hesklang['sm_none']; ?></span>
+                        </label>
+                        <label class="success">
+                            <input type="radio" value="1" name="style" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 1 ) {echo 'checked';} ?>>
+                            <svg class="icon icon-tick">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                            </svg>
+                            <span><?php echo $hesklang['sm_success']; ?></span>
+                        </label>
+                        <label class="info">
+                            <input type="radio" value="2" name="style" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 2) {echo 'checked';} ?>>
+                            <svg class="icon icon-tick">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                            </svg>
+                            <span><?php echo $hesklang['sm_info']; ?></span>
+                        </label>
+                        <label class="notice">
+                            <input type="radio" value="3" name="style" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 3) {echo 'checked';} ?>>
+                            <svg class="icon icon-tick">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                            </svg>
+                            <span><?php echo $hesklang['sm_notice']; ?></span>
+                        </label>
+                        <label class="error">
+                            <input type="radio" value="4" name="style" <?php if (isset($_SESSION['new_sm']['style']) && $_SESSION['new_sm']['style'] == 4) {echo 'checked';} ?>>
+                            <svg class="icon icon-tick">
+                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                            </svg>
+                            <span><?php echo $hesklang['sm_error']; ?></span>
+                        </label>
+                    </div>
+                    <section class="param">
+                        <span><?php echo $hesklang['sm_type']; ?></span>
+                        <div class="dropdown-select center out-close">
+                            <select name="type">
+                                <option value="0" <?php if (!isset($_SESSION['new_sm']['type']) || (isset($_SESSION['new_sm']['type']) && $_SESSION['new_sm']['type'] == 0) ) {echo 'selected="selected"';} ?>>
+                                    <?php echo $hesklang['sm_published']; ?>
+                                </option>
+                                <option value="1" <?php if (isset($_SESSION['new_sm']['type']) && $_SESSION['new_sm']['type'] == 1) {echo 'selected="selected"';} ?>>
+                                    <?php echo $hesklang['sm_draft']; ?>
+                                </option>
+                            </select>
+                        </div>
+                    </section>
+                    <?php if ($hesk_settings['show_language']): ?>
+                    <section class="param">
+                        <span><?php echo $hesklang['lgs']; ?></span>
+                        <div class="dropdown-select center out-close">
+                            <select name="language">
+                                <option value=""><?php echo $hesklang['all']; ?></option>
+                                <?php foreach ($hesk_settings['languages'] as $lang => $v): ?>
+                                    <option <?php echo (isset($_SESSION['new_sm']['language']) && $_SESSION['new_sm']['language'] == $lang ? 'selected="selected"' : ''); ?>>
+                                        <?php echo $lang; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </section>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="right-bar__footer">
+                <button type="button" class="btn btn-border" ripple="ripple" data-action="back"><?php echo $hesklang['wizard_back']; ?></button>
+                <button type="button" class="btn btn-full next" data-action="next" ripple="ripple"><?php echo $hesklang['sm_go_to_settings']; ?></button>
+                <?php if (isset($_SESSION['edit_sm'])): ?>
+                    <input type="hidden" name="a" value="save_sm" />
+                    <input type="hidden" name="id" value="<?php echo intval($_SESSION['new_sm']['id']); ?>" />
+                <?php else: ?>
+                    <input type="hidden" name="a" value="new_sm" />
+                <?php endif; ?>
+                <button type="submit" name="sm_preview" class="btn btn-border preview" ripple="ripple"><?php echo $hesklang['sm_preview']; ?></button>
+                <button type="submit" name="sm_save" class="btn btn-full save" ripple="ripple"><?php echo $hesklang['sm_save']; ?></button>
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
+            </div>
+        </form>
+    </div>
+</div>
+<?php
+
+if ( isset($_SESSION['new_sm']) && ! isset($_SESSION['edit_sm']) )
+{
+	$_SESSION['new_sm'] = hesk_stripArray($_SESSION['new_sm']);
+}
 
 hesk_cleanSessionVars( array('new_sm', 'preview_sm', 'edit_sm') );
 
@@ -444,6 +448,7 @@ function save_sm()
 		'type' => $type,
 		'title' => $title,
 		'message' => hesk_input( hesk_POST('message') ),
+        'errors' => array('title')
 		);
 
 		$tmp = '';
@@ -468,7 +473,7 @@ function save_sm()
 		'style' => $style,
 		'type' => $type,
 		'title' => $title,
-		'message' => $message,
+		'message' => $message
 		);
 
 		header('Location: service_messages.php');
@@ -504,7 +509,9 @@ function edit_sm()
     	hesk_error($hesklang['sm_not_found']);
 	}
 	$sm = hesk_dbFetchAssoc($res);
+    $sm['message'] = hesk_htmlspecialchars($sm['message']);
 
+    $_SESSION['smord'] = $id;
 	$_SESSION['new_sm'] = $sm;
 	$_SESSION['edit_sm'] = true;
 
@@ -528,6 +535,8 @@ function order_sm()
 
     // Update order of all service messages
     update_sm_order();
+
+    $_SESSION['smord'] = $id;
 
 	// Finish
 	header('Location: service_messages.php');
@@ -621,6 +630,7 @@ function new_sm()
         'language' => $language,
 		'title' => $title,
 		'message' => hesk_input( hesk_POST('message') ),
+        'errors' => array('title')
 		);
 
 		$tmp = '';
@@ -654,7 +664,7 @@ function new_sm()
 	// Get the latest service message order
 	$res = hesk_dbQuery("SELECT `order` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` ORDER BY `order` DESC LIMIT 1");
 	$row = hesk_dbFetchRow($res);
-	$my_order = intval($row[0]) + 10;
+	$my_order = isset($row[0]) ? intval($row[0]) + 10 : 10;
 
     // Insert service message into database
 	hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` (`author`,`title`,`message`,`language`,`style`,`type`,`order`) VALUES (

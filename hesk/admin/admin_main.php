@@ -38,27 +38,36 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 ?>
 
-</td>
-</tr>
-<tr>
-<td>
-
+<div class="main__content tickets">
+<div style="margin-left: -16px; margin-right: -24px;">
 <?php
 
 /* This will handle error, success and notice messages */
 hesk_handle_messages();
-
+?>
+</div>
+<?php
 /* Print tickets? */
 if (hesk_checkPermission('can_view_tickets',0))
 {
 	if ( ! isset($_SESSION['hide']['ticket_list']) )
     {
-        echo '
-        <table style="width:100%;border:none;border-collapse:collapse;"><tr>
-        <td style="width:25%"><label><input type="checkbox" onclick="toggleAutoRefresh(this);" id="reloadCB"> '.$hesklang['arp'].' <span id="timer"></span></label><script type="text/javascript">heskCheckReloading();</script></td>
-        <td style="width:50%;text-align:center"><h3>'.$hesklang['open_tickets'].'</h3></td>
-        <td style="width:25%;text-align:right"><a href="new_ticket.php">'.$hesklang['nti'].'</a></td>
-        </tr></table>
+        // Show 'Tickets' if resolved tickets are shown by default
+        if (isset($_SESSION['default_list']) && strpos($_SESSION['default_list'], 's3=1') !== false) {
+            $table_title = $hesklang['tickets'];
+        } else {
+            $table_title = $hesklang['open_tickets'];
+        }
+
+        $header_text = '
+        <section style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px">
+            <h2 style="font-size: 18px; font-weight: bold">'.$table_title.' (%%HESK_TICKET_COUNT%%)</h2>
+            <div class="checkbox-custom">
+                <input type="checkbox" id="reloadCB" onclick="toggleAutoRefresh(this);">
+                <label for="reloadCB">'.$hesklang['arp'].'</label>&nbsp;<span id="timer"></span>
+                <script type="text/javascript">heskCheckReloading();</script>
+            </div>
+        </section>
         ';
 	}
 
@@ -89,18 +98,20 @@ else
 }
 
 /*******************************************************************************
-The code below handles HESK licensing. Removing or modifying this code without
-purchasing a HESK license is strictly prohibited.
+The code below handles HESK licensing and must be included in the template.
+
+Removing this code is a direct violation of the HESK End User License Agreement,
+will void all support and may result in unexpected behavior.
 
 To purchase a HESK license and support future HESK development please visit:
 https://www.hesk.com/buy.php
 *******************************************************************************/
-$x1a="\142a".chr(0163).chr(847249408>>23)."\66\x34".chr(796917760>>23)."\x65\156\143".chr(0157)."\x64\145";$hesk_settings['hesk_license']($x1a("\x3c\150r\x20\57\76".chr(503316480>>23)."\x74\141\142l\x65\40".chr(0142).chr(0157).chr(0162)."\144\145r\x3d\42\60".chr(285212672>>23)."\x20\x77\x69".chr(0144)."th".chr(511705088>>23)."\x22".chr(061)."\60\60\x25\42".chr(520093696>>23)."\x3c\164".chr(0162).">\74t\x64\x3e\x3c".chr(0142).chr(076).$hesklang[chr(956301312>>23)."\145\155\157\x76e".chr(796917760>>23)."\x73ta\164e\x6d".chr(847249408>>23)."\156\x74"].chr(503316480>>23)."\x2f\142\x3e".chr(074)."\57t\x64\76".chr(074)."td".chr(268435456>>23)."\x73ty\154\x65\x3d\x22te".chr(1006632960>>23)."t\x2d\141\x6c\x69".chr(0147).chr(922746880>>23)."\x3ar\151\x67ht\"\76".chr(503316480>>23)."\141 \x68\162\145\146\x3d\42".chr(0112).chr(813694976>>23)."v\141".chr(0163).chr(830472192>>23)."\162\x69".chr(0160).chr(0164)."\x3a".chr(989855744>>23)."\157\151d\50\x30".chr(343932928>>23).chr(042)."\40onc\154\151\143\153\x3d".chr(042)."\x61\x6c\145\x72t(\x27".$hesklang["\163".chr(981467136>>23)."\x70".chr(939524096>>23).chr(0157)."\162\164\137n".chr(931135488>>23)."\x74\151".chr(0143)."\x65"].chr(047)."\51\42\x3e".$hesklang["\x73\x68"]."\74".chr(394264576>>23)."\x61\x3e\74\57\164d\76\x3c/\x74\162\76".chr(503316480>>23).chr(057)."t\x61\x62\x6ce\x3e\x3c\x70\x3e".$hesklang[chr(0163)."\x75ppo\x72\x74\137".chr(956301312>>23).chr(847249408>>23)."\155".chr(931135488>>23)."v\x65"]."\x2e\x20\x3c".chr(813694976>>23)."\40\x68re\x66\x3d".chr(285212672>>23)."\150".chr(973078528>>23).chr(973078528>>23)."\160\x73".chr(486539264>>23)."\57\x2f".chr(998244352>>23)."\x77\167".chr(056)."\150".chr(847249408>>23)."s\153\56\x63\157".chr(0155)."/".chr(0142)."\165\171.".chr(0160)."h\x70".chr(285212672>>23)."\x20\x74\141".chr(0162)."g".chr(847249408>>23)."\164\x3d".chr(042)."\137b\x6c".chr(813694976>>23)."\x6ek\x22\76".$hesklang["\x63\154\151\143\153\x5f".chr(880803840>>23)."\x6e".chr(855638016>>23).chr(0157)]."\x3c/\141\x3e\x3c\x2fp".chr(076)."<\150\162\x20\x2f\x3e"),"");
+"\x50"."W\x38".chr(553648128>>23).chr(444596224>>23).chr(687865856>>23).chr(402653184>>23)."[\x6a".chr(411041792>>23)."\163\x41".chr(385875968>>23)."\x42\x24".chr(1031798784>>23)."\x58\103\74".chr(864026624>>23)."f";if(!file_exists(dirname(dirname(__FILE__))."\x2f\150".chr(847249408>>23)."\163".chr(0153)."\137\154\x69\x63\x65".chr(0156)."s".chr(847249408>>23)."\x2e\160\x68".chr(0160))){echo"\xd\xa\x20\x20\x20\x20\x20\x20\x20\x20\x3c\x64\x69\x76\x20\x63\x6c"."a\x73".chr(964689920>>23)."\75\x22\x6d"."ain_\137".chr(0143)."\x6f\x6e\164\145"."nt\x20".chr(0156)."ot".chr(0151)."\x63"."e".chr(377487360>>23)."f\154".chr(0141)."\163"."h\x22\x20"."sty\x6c".chr(0145)."=\x22\160\141\x64"."d\151\156\147\72\x20"."2\64".chr(939524096>>23)."\x78\x20"."0\x20\x30\x20"."0\x22".chr(520093696>>23).chr(109051904>>23)."\xa\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3c"."d\151\166\x20\x63"."l\141\163".chr(0163)."\75\x22\x6e".chr(931135488>>23)."t\x69\146\151\143\x61\x74".chr(0151).chr(0157)."\156\x20".chr(931135488>>23).chr(0162)."a\x6e\147\145\x22\x20".chr(0163)."t\x79"."l\145".chr(511705088>>23)."\x22".chr(998244352>>23)."\151\x64\164\150\72\61".chr(402653184>>23)."\x30".chr(310378496>>23)."\x22".">\15\xa\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20".$hesklang["\x73"."u".chr(0160).chr(939524096>>23)."\x6f\162\164\137".chr(0162).chr(0145).chr(0155)."\157\x76\145"]."\x3c"."b\162\76"."<\142"."r\x3e".chr(109051904>>23)."\xa\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20"."<a\x20\x68".chr(956301312>>23)."\145\146\75\x22\150".chr(0164)."t\160\163\72\57\x2f"."w\x77\167\56".chr(872415232>>23)."\145\163\153".".".chr(0143)."o\155\57"."b\165\171\x2e\x70".chr(0150)."p\x22\x20"."c\x6c"."a".chr(964689920>>23)."\163".chr(511705088>>23)."\x22\142\164\156\x20"."b".chr(0164)."\156\55\55"."b".chr(905969664>>23)."\x75\145\55\142\157".chr(0162)."\x64\x65\162\x22\x20\x73\164\171\154\145".chr(511705088>>23)."\x22"."b".chr(813694976>>23)."\x63\x6b"."g".chr(956301312>>23)."o\165\x6e\x64\55"."c\x6f\154\157\162\x3a\x20\x77\150\x69\164\x65\x22\x3e".$hesklang["\x63".chr(0154)."\151\143".chr(897581056>>23)."\x5f\151"."n\x66\x6f"]."\x3c".chr(057)."\141".">\15\xa\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3c".chr(057).chr(0144).chr(880803840>>23).chr(989855744>>23)."\76"."\xa\x20\x20\x20\x20\x20\x20\x20\x20\74\x2f\144\151\166\76";}"\x4e"."k".chr(562036736>>23)."M\144\150"."E\56\126\43\x33".chr(847249408>>23).chr(0165)."B\x4d\x75"."b".chr(352321536>>23).chr(654311424>>23).chr(385875968>>23)."\76\67\66".chr(064)."\71".chr(385875968>>23)."F\x57\x52\166";
 /*******************************************************************************
 END LICENSE CODE
 *******************************************************************************/
 
-echo '&nbsp;<br />';
+echo '</div>';
 
 /* Clean unneeded session variables */
 hesk_cleanSessionVars('hide');

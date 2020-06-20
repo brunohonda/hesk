@@ -27,13 +27,20 @@ header("Pragma: no-cache");
 
 header('Content-type: text/plain; charset=utf-8');
 ?>
-<a href="Javascript:void(0)" onclick="Javascript:hesk_rate('generate_spam_question.php','question')"><?php echo $hesklang['genq']; ?></a><br />
-
-<?php echo $hesklang['q_q']; ?>:<br />
-<textarea name="s_question_ask" rows="3" cols="40"><?php echo addslashes(hesk_htmlspecialchars($spam_question[0])); ?></textarea><br />
-
-<?php echo $hesklang['q_a']; ?>:<br />
-<input type="text" name="s_question_ans" value="<?php echo addslashes(hesk_htmlspecialchars($spam_question[1])); ?>" size="10" />
+<div class="form-group">
+    <h5></h5>
+    <button style="margin-left: 24px" type="button" class="btn btn--blue-border" onclick="Javascript:hesk_rate('generate_spam_question.php','question')">
+        <?php echo $hesklang['genq']; ?>
+    </button>
+</div>
+<div class="form-group">
+    <h5><span><?php echo $hesklang['q_q']; ?></span></h5>
+    <textarea style="margin-left: 24px;" name="s_question_ask" class="form-control" rows="3" cols="40"><?php echo addslashes(hesk_htmlspecialchars($spam_question[0])); ?></textarea>
+</div>
+<div class="form-group">
+    <h5><span><?php echo $hesklang['q_a']; ?></span></h5>
+    <input class="form-control" type="text" name="s_question_ans" value="<?php echo addslashes(hesk_htmlspecialchars($spam_question[1])); ?>">
+</div>
 <?php
 exit();
 ?>

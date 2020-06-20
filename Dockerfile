@@ -1,4 +1,4 @@
-FROM php
+FROM php:apache
 LABEL maintainer="Bruno Honda <bruno.honda@live.com>"
 
 RUN apt-get update && docker-php-ext-install mysqli

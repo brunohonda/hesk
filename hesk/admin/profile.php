@@ -76,120 +76,121 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print admin navigation */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-?>
 
-</td>
-</tr>
-<tr>
-<td>
-
-<?php
 /* This will handle error, success and notice messages */
-hesk_handle_messages();
+if (!hesk_SESSION(array('new', 'errors'))) {
+    hesk_handle_messages();
+}
 
 if (defined('WARN_PASSWORD'))
 {
 	hesk_show_notice($hesklang['chdp2'],'<span class="important">'.$hesklang['security'].'</span>');
 }
 ?>
-
-	<h3><?php echo $hesklang['profile_for'].' <b>'.$_SESSION['new']['user']; ?></b></h3>
-
-	<?php
-	if ($hesk_settings['can_sel_lang'])
-	{
-		/* Update preferred language in the database? */
-		if (isset($_GET['save_language']) )
-		{
-			$newlang = hesk_input( hesk_GET('language') );
-
-			/* Only update if it's a valid language */
-			if ( isset($hesk_settings['languages'][$newlang]) )
-			{
-            	$newlang = ($newlang == HESK_DEFAULT_LANGUAGE) ? "NULL" : "'" . hesk_dbEscape($newlang) . "'";
-				hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."users` SET `language`=$newlang WHERE `id`='".intval($_SESSION['id'])."'");
-			}
-		}
-
-		$str  = '<form method="get" action="profile.php" style="margin:0;padding:0;border:0;white-space:nowrap;">';
-        $str .= '<input type="hidden" name="save_language" value="1" />';
-        $str .= '<p>'.$hesklang['chol'].': ';
-
-        if ( ! isset($_GET) )
-        {
-        	$_GET = array();
+<div class="main__content profile">
+    <article class="profile__wrapper">
+        <div class="profile__info">
+            <div class="profile__info_list">
+                <h3><?php echo $_SESSION['new']['name']; ?></h3>
+                <div class="info--mail">
+                    <a href="mailto:<?php echo $_SESSION['new']['email']; ?>"><?php echo $_SESSION['new']['email']; ?></a>
+                </div>
+            </div>
+        </div>
+        <div class="profile__control">
+            <div class="profile__edit">
+                <button class="btn btn--blue-border" data-action="profile-edit"><?php echo $hesklang['edit_profile']; ?></button>
+            </div>
+            <a href="index.php?a=logout&token=<?php hesk_token_echo(); ?>" class="profile-log-out">
+                <svg class="icon icon-log-out">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-log-out"></use>
+                </svg>
+                <span><?php echo $hesklang['logout']; ?></span>
+            </a>
+        </div>
+    </article>
+</div>
+<div class="right-bar profile-edit" <?php echo hesk_SESSION(array('new','errors')) ? 'style="display: block"' : ''; ?>>
+    <div class="right-bar__body form" data-step="1">
+        <h3>
+            <a href="javascript:">
+                <svg class="icon icon-back">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
+                </svg>
+                <span><?php echo $hesklang['profile_for'].' <b>'.$_SESSION['new']['user']; ?></span>
+            </a>
+        </h3>
+        <?php
+        /* This will handle error, success and notice messages */
+        if (hesk_SESSION(array('new', 'errors'))) {
+            hesk_handle_messages();
         }
 
-		foreach ($_GET as $k => $v)
-		{
-			if ($k == 'language' || $k == 'save_language')
-			{
-				continue;
-			}
-			$str .= '<input type="hidden" name="'.htmlentitieshesk_htmlentities($k).'" value="'.hesk_htmlentities($v).'" />';
-		}
+        if ($hesk_settings['can_sel_lang'])
+        {
+            /* Update preferred language in the database? */
+            if (isset($_GET['save_language']) )
+            {
+                $newlang = hesk_input( hesk_GET('language') );
 
-        $str .= '<select name="language" onchange="this.form.submit()">';
-		$str .= hesk_listLanguages(0);
-		$str .= '</select>';
+                /* Only update if it's a valid language */
+                if ( isset($hesk_settings['languages'][$newlang]) )
+                {
+                    $newlang = ($newlang == HESK_DEFAULT_LANGUAGE) ? "NULL" : "'" . hesk_dbEscape($newlang) . "'";
+                    hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."users` SET `language`=$newlang WHERE `id`='".intval($_SESSION['id'])."'");
+                }
+            }
 
-	?>
-        <script language="javascript" type="text/javascript">
-		document.write('<?php echo str_replace(array('"','<','=','>',"'"),array('\42','\74','\75','\76','\47'),$str . '</p></form>'); ?>');
-        </script>
-        <noscript>
-        <?php
-        	echo $str . '<input type="submit" value="'.$hesklang['go'].'" /></p></form>';
+            $str  = '<form method="get" class="form" action="profile.php" style="margin:10px 0 0 0;padding:0;border:0;white-space:nowrap;">';
+            $str .= '<input type="hidden" name="save_language" value="1" />';
+            $str .= '<div class="form-group"><label for="prof_language">'.$hesklang['chol'].'</label>';
+
+            if ( ! isset($_GET) )
+            {
+                $_GET = array();
+            }
+
+            foreach ($_GET as $k => $v)
+            {
+                if ($k == 'language' || $k == 'save_language')
+                {
+                    continue;
+                }
+                $str .= '<input type="hidden" name="'.htmlentitieshesk_htmlentities($k).'" value="'.hesk_htmlentities($v).'" />';
+            }
+
+            $str .= '<div class="dropdown-select center out-close"><select class="form-control" name="language" onchange="this.form.submit()">';
+            $str .= hesk_listLanguages(0);
+            $str .= '</select></div></div>';
+
+            ?>
+            <script language="javascript" type="text/javascript">
+                document.write('<?php echo str_replace(array('"','<','=','>',"'"),array('\42','\74','\75','\76','\47'),$str . '</p></form>'); ?>');
+            </script>
+            <noscript>
+                <?php
+                echo $str . '<input type="submit" value="'.$hesklang['go'].'" /></p></form>';
+                ?>
+            </noscript>
+            <?php
+        }
         ?>
-        </noscript>
-	<?php
-	}
-    ?>
+        <form name="form1" method="post" action="profile.php" class="form <?php echo hesk_SESSION(array('new','errors')) ? 'invalid' : ''; ?>">
+            <?php hesk_profile_tab(); ?>
 
-<p><?php echo $hesklang['req_marked_with']; ?> <span class="important">*</span><br />&nbsp;</p>
-
-<form method="post" action="profile.php" name="form1">
-
-<script language="Javascript" type="text/javascript"><!--
-var tabberOptions = {
-	'cookie':"tabberpr",
-	'onLoad': function(argsObj)
-	{
-		var t = argsObj.tabber;
-		var i;
-		if (t.id) {
-		t.cookie = t.id + t.cookie;
-	}
-
-	i = parseInt(getCookie(t.cookie));
-	if (isNaN(i)) { return; }
-		t.tabShow(i);
-	},
-
-	'onClick':function(argsObj)
-	{
-		var c = argsObj.tabber.cookie;
-		var i = argsObj.index;
-		setCookie(c, i);
-	}
-};
-//-->
-</script>
-
-<script language="Javascript" type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tabs/tabber-minimized.js"></script>
-
-<?php hesk_profile_tab(); ?>
-
-<!-- Submit -->
-<p align="center"><input type="hidden" name="action" value="update" />
-<input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-<input type="submit" value="<?php echo $hesklang['update_profile']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" /></p>
-</form>
-
-<p>&nbsp;</p>
-<p>&nbsp;</p>
+            <!-- Submit -->
+            <div class="right-bar__footer">
+                <input type="hidden" name="action" value="update" />
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
+                <button type="submit" class="btn btn-full save" data-action="save" ripple="ripple"><?php echo $hesklang['update_profile']; ?></button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?php
+unset($_SESSION['new']['errors']);
+
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
 
@@ -206,15 +207,25 @@ function update_profile() {
     $sql_username = '';
 
     $hesk_error_buffer = '';
+    $errors = array();
 
-	$_SESSION['new']['name']  = hesk_input( hesk_POST('name') ) or $hesk_error_buffer .= '<li>' . $hesklang['enter_your_name'] . '</li>';
-	$_SESSION['new']['email'] = hesk_validateEmail( hesk_POST('email'), 'ERR', 0) or $hesk_error_buffer .= '<li>' . $hesklang['enter_valid_email'] . '</li>';
+	$_SESSION['new']['name']  = hesk_input( hesk_POST('name') );
+	if (!$_SESSION['new']['name']) {
+        $hesk_error_buffer .= '<li>' . $hesklang['enter_your_name'] . '</li>';
+        $errors[] = 'name';
+    }
+	$_SESSION['new']['email'] = hesk_validateEmail( hesk_POST('email'), 'ERR', 0);
+	if (!$_SESSION['new']['email']) {
+        $hesk_error_buffer .= '<li>' . $hesklang['enter_valid_email'] . '</li>';
+        $errors[] = 'email';
+    }
 	$_SESSION['new']['signature'] = hesk_input( hesk_POST('signature') );
 
 	/* Signature */
 	if (hesk_mb_strlen($_SESSION['new']['signature'])>1000)
     {
 		$hesk_error_buffer .= '<li>' . $hesklang['signature_long'] . '</li>';
+		$errors[] = 'signature';
     }
 
     /* Admins can change username */
@@ -227,6 +238,7 @@ function update_profile() {
 		if (hesk_dbNumRows($result) != 0)
 		{
 	        $hesk_error_buffer .= '<li>' . $hesklang['duplicate_user'] . '</li>';
+	        $errors[] = 'user';
 		}
         else
         {
@@ -243,6 +255,7 @@ function update_profile() {
         if ($passlen < 5)
         {
         	$hesk_error_buffer .= '<li>' . $hesklang['password_not_valid'] . '</li>';
+        	$errors[] = 'passwords';
         }
         /* Check password confirmation */
         else
@@ -252,6 +265,7 @@ function update_profile() {
 			if ($newpass != $newpass2)
 			{
 				$hesk_error_buffer .= '<li>' . $hesklang['passwords_not_same'] . '</li>';
+                $errors[] = 'passwords';
 			}
             else
             {
@@ -314,6 +328,7 @@ function update_profile() {
 		$_SESSION['new'] = hesk_stripArray($_SESSION['new']);
 
 		$hesk_error_buffer = $hesklang['rfm'].'<br /><br /><ul>'.$hesk_error_buffer.'</ul>';
+        $_SESSION['new']['errors'] = $errors;
 		hesk_process_messages($hesk_error_buffer,'NOREDIRECT');
     }
     else

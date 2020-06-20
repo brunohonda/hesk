@@ -329,14 +329,7 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print main manage users page */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-?>
 
-</td>
-</tr>
-<tr>
-<td>
-
-<?php
 /* This will handle error, success and notice messages */
 hesk_handle_messages();
 
@@ -353,179 +346,210 @@ if (isset($success_msg))
 	}
 }
 ?>
+<div class="main__content reports">
+    <h2>
+        <?php echo $hesklang['export']; ?>
+        <div class="tooltype right out-close">
+            <svg class="icon icon-info">
+                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+            </svg>
+            <div class="tooltype__content">
+                <div class="tooltype__wrapper">
+                    <?php echo $hesklang['export_intro']; ?>
+                </div>
+            </div>
+        </div>
+    </h2>
+    <form name="showt" action="export.php" method="get">
+        <div class="reports__range pl0">
+            <h4><?php echo $hesklang['dtrg']; ?></h4>
+            <div class="reports__range_form form">
+                <div class="radio-list">
+                    <div class="radio-custom">
+                        <input type="radio" name="w" value="0" id="w0" <?php echo $selected['w'][0]; ?>>
+                        <label for="w0">&nbsp;</label>
+                        <div class="dropdown-select center out-close">
+                            <select name="time" onclick="document.getElementById('w0').checked = true" onchange="document.getElementById('w0').checked = true" style="margin-top:5px;margin-bottom:5px;">
+                                <option value="1" <?php echo $selected['time'][1]; ?>><?php echo $hesklang['r1']; ?> (<?php echo $hesklang['d'.date('w')]; ?>)</option>
+                                <option value="2" <?php echo $selected['time'][2]; ?>><?php echo $hesklang['r2']; ?> (<?php echo $hesklang['d'.date('w',mktime(0, 0, 0, date('m'), date('d')-1, date('Y')))]; ?>)</option>
+                                <option value="3" <?php echo $selected['time'][3]; ?>><?php echo $hesklang['r3']; ?> (<?php echo $hesklang['m'.date('n')]; ?>)</option>
+                                <option value="4" <?php echo $selected['time'][4]; ?>><?php echo $hesklang['r4']; ?> (<?php echo $hesklang['m'.date('n',mktime(0, 0, 0, date('m')-1, 1, date('Y')))]; ?>)</option>
+                                <option value="5" <?php echo $selected['time'][5]; ?>><?php echo $hesklang['r5']; ?></option>
+                                <option value="6" <?php echo $selected['time'][6]; ?>><?php echo $hesklang['r6']; ?></option>
+                                <option value="7" <?php echo $selected['time'][7]; ?>><?php echo $hesklang['r7']; ?></option>
+                                <option value="8" <?php echo $selected['time'][8]; ?>><?php echo $hesklang['r8']; ?></option>
+                                <option value="9" <?php echo $selected['time'][9]; ?>><?php echo $hesklang['r9']; ?></option>
+                                <option value="10" <?php echo $selected['time'][10]; ?>><?php echo $hesklang['r10']; ?> (<?php echo date('Y'); ?>)</option>
+                                <option value="11" <?php echo $selected['time'][11]; ?>><?php echo $hesklang['r11']; ?> (<?php echo date('Y',mktime(0, 0, 0, date('m'), date('d'), date('Y')-1)); ?>)</option>
+                                <option value="12" <?php echo $selected['time'][12]; ?>><?php echo $hesklang['r12']; ?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" name="w" value="1" id="w1" <?php echo $selected['w'][1]; ?>>
+                        <label for="w1">&nbsp;</label>
+                        <?php echo $hesklang['from']; ?>
+                        <section class="param calendar" style="margin-left: 10px; margin-right: 10px">
+                            <div class="calendar--button">
+                                <button type="button" onclick="document.getElementById('w1').checked = true">
+                                    <svg class="icon icon-calendar">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
+                                    </svg>
+                                </button>
+                                <input name="datefrom"
+                                       id="datefrom"
+                                    <?php if ($input_datefrom) {echo 'value="'.$input_datefrom.'"';} ?>
+                                       type="text" class="datepicker">
+                            </div>
+                            <div class="calendar--value" <?php echo ($input_datefrom ? 'style="display: block"' : ''); ?>>
+                                <span><?php echo $input_datefrom; ?></span>
+                                <i class="close">
+                                    <svg class="icon icon-close">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                                    </svg>
+                                </i>
+                            </div>
+                        </section>
+                        <?php echo $hesklang['to']; ?>
+                        <section class="param calendar" style="margin-left: 10px;">
+                            <div class="calendar--button">
+                                <button type="button" onclick="document.getElementById('w1').checked = true">
+                                    <svg class="icon icon-calendar">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
+                                    </svg>
+                                </button>
+                                <input name="dateto"
+                                       id="dateto"
+                                    <?php if ($input_dateto) {echo 'value="'.$input_dateto.'"';} ?>
+                                       type="text" class="datepicker">
+                            </div>
+                            <div class="calendar--value" <?php echo ($input_dateto ? 'style="display: block"' : ''); ?>>
+                                <span><?php echo $input_dateto; ?></span>
+                                <i class="close">
+                                    <svg class="icon icon-close">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                                    </svg>
+                                </i>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['status']; ?></h3>
+            <?php
+            hesk_get_status_checkboxes($status);
+            ?>
+        </section>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['priority']; ?></h3>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="p0" id="p0" value="1" <?php if (isset($priority[0])) {echo 'checked';} ?>>
+                <label for="p0"><?php echo $hesklang['critical']; ?></label>
+            </div>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="p1" id="p1" value="1" <?php if (isset($priority[1])) {echo 'checked';} ?>>
+                <label for="p1"><?php echo $hesklang['high']; ?></label>
+            </div>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="p2" id="p2" value="1" <?php if (isset($priority[2])) {echo 'checked';} ?>>
+                <label for="p2"><?php echo $hesklang['medium']; ?></label>
+            </div>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="p3" id="p3" value="1" <?php if (isset($priority[3])) {echo 'checked';} ?>>
+                <label for="p3"><?php echo $hesklang['low']; ?></label>
+            </div>
+        </section>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['assigned_to']; ?></h3>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="s_my" id="s_my" value="1" <?php if ($s_my[1]) echo 'checked'; ?>>
+                <label for="s_my"><?php echo $hesklang['s_my']; ?></label>
+            </div>
+            <?php
+            if ($can_view_unassigned)
+            {
+                ?>
+                <div class="checkbox-custom">
+                    <input type="checkbox" name="s_un" id="s_un" value="1" <?php if ($s_un[1]) echo 'checked'; ?>>
+                    <label for="s_un"><?php echo $hesklang['s_un']; ?></label>
+                </div>
+                <?php
+            }
 
-<!-- TABS -->
-<div id="tab1" class="tabberlive" style="margin-top:0px">
-
-	<ul class="tabbernav">
-		<?php
-		// Show a link to reports.php if user has permission to do so
-		if ( hesk_checkPermission('can_run_reports',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['reports_tab'] . '" href="reports.php">' . $hesklang['reports_tab'] . '</a></li>';
-		}
-		?>
-		<li class="tabberactive"><a title="<?php echo $hesklang['export']; ?>" href="javascript:void(null);" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['export_intro']); ?>')"><?php echo $hesklang['export']; ?> [?]</a></li>
-	</ul>
-
-	<div class="tabbertab">
-
-	&nbsp;
-
-	<!-- ** START EXPORT FORM ** -->
-
-<form name="showt" action="export.php" method="get">
-
-<table border="0" cellpadding="3" cellspacing="0" width="100%">
-<tr>
-<td width="20%" class="alignTop"><b><?php echo $hesklang['dtrg']; ?></b>: &nbsp; </td>
-<td width="80%">
-    <!-- START DATE -->
-        <input type="radio" name="w" value="0" id="w0" <?php echo $selected['w'][0]; ?> />
-		<select name="time" onclick="document.getElementById('w0').checked = true" onfocus="document.getElementById('w0').checked = true" style="margin-top:5px;margin-bottom:5px;">
-			<option value="1" <?php echo $selected['time'][1]; ?>><?php echo $hesklang['r1']; ?> (<?php echo $hesklang['d'.date('w')]; ?>)</option>
-			<option value="2" <?php echo $selected['time'][2]; ?>><?php echo $hesklang['r2']; ?> (<?php echo $hesklang['d'.date('w',mktime(0, 0, 0, date('m'), date('d')-1, date('Y')))]; ?>)</option>
-			<option value="3" <?php echo $selected['time'][3]; ?>><?php echo $hesklang['r3']; ?> (<?php echo $hesklang['m'.date('n')]; ?>)</option>
-			<option value="4" <?php echo $selected['time'][4]; ?>><?php echo $hesklang['r4']; ?> (<?php echo $hesklang['m'.date('n',mktime(0, 0, 0, date('m')-1, 1, date('Y')))]; ?>)</option>
-			<option value="5" <?php echo $selected['time'][5]; ?>><?php echo $hesklang['r5']; ?></option>
-			<option value="6" <?php echo $selected['time'][6]; ?>><?php echo $hesklang['r6']; ?></option>
-			<option value="7" <?php echo $selected['time'][7]; ?>><?php echo $hesklang['r7']; ?></option>
-			<option value="8" <?php echo $selected['time'][8]; ?>><?php echo $hesklang['r8']; ?></option>
-			<option value="9" <?php echo $selected['time'][9]; ?>><?php echo $hesklang['r9']; ?></option>
-			<option value="10" <?php echo $selected['time'][10]; ?>><?php echo $hesklang['r10']; ?> (<?php echo date('Y'); ?>)</option>
-			<option value="11" <?php echo $selected['time'][11]; ?>><?php echo $hesklang['r11']; ?> (<?php echo date('Y',mktime(0, 0, 0, date('m'), date('d'), date('Y')-1)); ?>)</option>
-			<option value="12" <?php echo $selected['time'][12]; ?>><?php echo $hesklang['r12']; ?></option>
-		</select>
-
-        <br />
-
-        <input type="radio" name="w" value="1" id="w1" <?php echo $selected['w'][1]; ?> />
-		<?php echo $hesklang['from']; ?> <input type="text" name="datefrom" value="<?php echo $input_datefrom; ?>" id="datefrom" class="tcal" size="10" onclick="document.getElementById('w1').checked = true" onfocus="document.getElementById('w1').checked = true;this.focus;" />
-        <?php echo $hesklang['to']; ?> <input type="text" name="dateto" value="<?php echo $input_dateto; ?>" id="dateto" class="tcal" size="10" onclick="document.getElementById('w1').checked = true" onfocus="document.getElementById('w1').checked = true; this.focus;" />
-    <!-- END DATE -->
-</td>
-</tr>
-
-<td width="20%" class="borderTop alignTop"><b><?php echo $hesklang['status']; ?></b>: &nbsp; </td>
-<td width="80%" class="borderTop">
-
-<table border="0" cellpadding="0" cellspacing="0" width="100%">
-<?php
-hesk_get_status_checkboxes($status);
-?>
-</table>
-
-</td>
-</tr>
-</table>
-
-<table border="0" cellpadding="3" cellspacing="0" width="100%">
-<tr>
-<td width="20%" class="borderTop alignTop"><b><?php echo $hesklang['priority']; ?></b>: &nbsp; </td>
-<td width="80%" class="borderTop alignTop">
-
-<table border="0" cellpadding="0" cellspacing="0" width="100%">
-<tr>
-<td width="34%"><label><input type="checkbox" name="p0" value="1" <?php if (isset($priority[0])) {echo 'checked="checked"';} ?> /> <span class="critical"><?php echo $hesklang['critical']; ?></span></label></td>
-<td width="33%"><label><input type="checkbox" name="p2" value="1" <?php if (isset($priority[2])) {echo 'checked="checked"';} ?> /> <span class="medium"><?php echo $hesklang['medium']; ?></span></label></td>
-<td width="33%">&nbsp;</td>
-</tr>
-<tr>
-<td width="34%"><label><input type="checkbox" name="p1" value="1" <?php if (isset($priority[1])) {echo 'checked="checked"';} ?> /> <span class="important"><?php echo $hesklang['high']; ?></span></label></td>
-<td width="33%"><label><input type="checkbox" name="p3" value="1" <?php if (isset($priority[3])) {echo 'checked="checked"';} ?> /> <span class="normal"><?php echo $hesklang['low']; ?></span></label></td>
-<td width="33%">&nbsp;</td>
-</tr>
-</table>
-
-</td>
-</tr>
-
-<tr>
-<td class="borderTop alignTop"><b><?php echo $hesklang['show']; ?></b>: &nbsp; </td>
-<td class="borderTop">
-
-<table border="0" cellpadding="0" cellspacing="0" width="100%">
-<tr>
-<td width="34%" class="alignTop">
-<label><input type="checkbox" name="s_my" value="1" <?php if ($s_my[1]) echo 'checked="checked"'; ?> /> <?php echo $hesklang['s_my']; ?></label>
-<?php
-if ($can_view_unassigned)
-{
-	?>
-    <br />
-	<label><input type="checkbox" name="s_un" value="1" <?php if ($s_un[1]) echo 'checked="checked"'; ?> /> <?php echo $hesklang['s_un']; ?></label>
-	<?php
-}
-?>
-</td>
-<td width="33%" class="alignTop">
-<?php
-if ($can_view_ass_others)
-{
-	?>
-	<label><input type="checkbox" name="s_ot" value="1" <?php if ($s_ot[1]) echo 'checked="checked"'; ?> /> <?php echo $hesklang['s_ot']; ?></label>
-    <br />
-	<?php
-}
-?>
-<label><input type="checkbox" name="archive" value="1" <?php if ($archive[1]) echo 'checked="checked"'; ?> /> <?php echo $hesklang['disp_only_archived']; ?></label></td>
-<td width="33%">&nbsp;</td>
-</tr>
-</table>
-
-</td>
-</tr>
-
-<tr>
-<td class="borderTop alignTop"><b><?php echo $hesklang['sort_by']; ?></b>: &nbsp; </td>
-<td class="borderTop">
-<table border="0" cellpadding="0" cellspacing="0" width="100%">
-<tr>
-<td width="34%"><label><input type="radio" name="sort" value="priority"  <?php if ($sort == 'priority') {echo 'checked="checked"';} ?> /> <?php echo $hesklang['priority']; ?></label></td>
-<td width="33%"><label><input type="radio" name="sort" value="lastchange" <?php if ($sort == 'lastchange') {echo 'checked="checked"';} ?> /> <?php echo $hesklang['last_update']; ?></label></td>
-<td width="33%"><label><input type="radio" name="sort" value="name" <?php if ($sort == 'name') {echo 'checked="checked"';} ?> /> <?php echo $hesklang['name']; ?></label></td>
-</tr>
-<tr>
-<td width="34%"><label><input type="radio" name="sort" value="subject" <?php if ($sort == 'subject') {echo 'checked="checked"';} ?> /> <?php echo $hesklang['subject']; ?></label></td>
-<td width="33%"><label><input type="radio" name="sort" value="status" <?php if ($sort == 'status') {echo 'checked="checked"';} ?> /> <?php echo $hesklang['status']; ?></label></td>
-<td width="33%"><label><input type="radio" name="sort" value="id" <?php if ($sort == 'id') {echo 'checked="checked"';} ?> /> <?php echo $hesklang['sequentially']; ?></label></td>
-</tr>
-</table>
-
-</td>
-</tr>
-
-<tr>
-<td class="borderTop alignMiddle"><b><?php echo $hesklang['category']; ?></b>: &nbsp; </td>
-<td class="borderTop alignMiddle">
-<select name="category">
-<option value="0" ><?php echo $hesklang['any_cat']; ?></option>
-<?php echo $category_options; ?>
-</select>
-</td>
-</tr>
-
-<tr>
-<td class="borderTop alignMiddle"><b><?php echo $hesklang['order']; ?></b>: &nbsp; </td>
-<td class="borderTop alignMiddle">
-<label><input type="radio" name="asc" value="1" <?php if ($asc) {echo 'checked="checked"';} ?> /> <?php echo $hesklang['ascending']; ?></label>
-|
-<label><input type="radio" name="asc" value="0" <?php if (!$asc) {echo 'checked="checked"';} ?> /> <?php echo $hesklang['descending']; ?></label></td>
-</tr>
-
-</table>
-
-<p><input type="submit" id="export" value="<?php echo $hesklang['export_btn']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-<input type="hidden" name="cot" value="1" /></p>
-
-</form>
-
-	<!-- ** END EXPORT FORM ** -->
-
-	</div>
-
+            if ($can_view_ass_others)
+            {
+                ?>
+                <div class="checkbox-custom">
+                    <input type="checkbox" name="s_ot" id="s_ot" value="1" <?php if ($s_ot[1]) echo 'checked'; ?>>
+                    <label for="reportCheck14"><?php echo $hesklang['s_ot']; ?></label>
+                </div>
+                <?php
+            }
+            ?>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="archive" id="archive" value="1" <?php if ($archive[1]) echo 'checked'; ?>>
+                <label for="archive"><?php echo $hesklang['disp_only_archived']; ?></label>
+            </div>
+        </section>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['sort_by']; ?></h3>
+            <div class="radio-list">
+                <div class="radio-custom">
+                    <input type="radio" name="sort" id="sort_priority" value="priority" <?php if ($sort == 'priority') {echo 'checked';} ?>>
+                    <label for="sort_priority"><?php echo $hesklang['priority']; ?></label>
+                </div>
+                <div class="radio-custom">
+                    <input type="radio" name="sort" id="sort_lastchange" value="lastchange" <?php if ($sort == 'lastchange') {echo 'checked';} ?>>
+                    <label for="sort_lastchange"><?php echo $hesklang['last_update']; ?></label>
+                </div>
+                <div class="radio-custom">
+                    <input type="radio" name="sort" id="sort_name" value="name" <?php if ($sort == 'name') {echo 'checked';} ?>>
+                    <label for="sort_name"><?php echo $hesklang['name']; ?></label>
+                </div>
+                <div class="radio-custom">
+                    <input type="radio" name="sort" id="sort_subject" value="subject" <?php if ($sort == 'subject') {echo 'checked';} ?>>
+                    <label for="sort_subject"><?php echo $hesklang['subject']; ?></label>
+                </div>
+                <div class="radio-custom">
+                    <input type="radio" name="sort" id="sort_status" value="status" <?php if ($sort == 'status') {echo 'checked';} ?>>
+                    <label for="sort_status"><?php echo $hesklang['status']; ?></label>
+                </div>
+                <div class="radio-custom">
+                    <input type="radio" name="sort" id="sort_id" value="id" <?php if ($sort == 'id') {echo 'checked';} ?>>
+                    <label for="sort_id"><?php echo $hesklang['sequentially']; ?></label>
+                </div>
+            </div>
+        </section>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['category']; ?></h3>
+            <div class="dropdown-select center out-close">
+                <select name="category">
+                    <option value="0" ><?php echo $hesklang['any_cat']; ?></option>
+                    <?php echo $category_options; ?>
+                </select>
+            </div>
+        </section>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['order']; ?></h3>
+            <div class="radio-list">
+                <div class="radio-custom">
+                    <input type="radio" name="asc" id="asc_1" value="1" <?php if ($asc) {echo 'checked';} ?>>
+                    <label for="asc_1"><?php echo $hesklang['ascending']; ?></label>
+                </div>
+                <div class="radio-custom">
+                    <input type="radio" name="asc" id="asc_0" value="0" <?php if (!$asc) {echo 'checked';} ?>>
+                    <label for="asc_0"><?php echo $hesklang['descending']; ?></label>
+                </div>
+            </div>
+        </section>
+        <div class="reports__export">
+            <input type="hidden" name="cot" value="1">
+            <button class="btn btn-full" ripple="ripple" data-action="reports-export"><?php echo $hesklang['export_btn']; ?></button>
+        </div>
+    </form>
 </div>
-<!-- TABS -->
 
 <?php
 require_once(HESK_PATH . 'inc/footer.inc.php');

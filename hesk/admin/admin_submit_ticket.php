@@ -412,7 +412,7 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
 if ($ticket['owner'] && $ticket['owner'] == intval($_SESSION['id']))
 {
 	$hesklang['new_ticket_submitted'] .= '<br />&nbsp;<br />
-    <img src="' . HESK_PATH . 'img/notice.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" /> <b>' . (isset($autoassign_owner) ? $hesklang['taasy'] : $hesklang['tasy']) . '</b>';
+    <b>' . (isset($autoassign_owner) ? $hesklang['taasy'] : $hesklang['tasy']) . '</b>';
 }
 
 // Show the ticket or just the success message

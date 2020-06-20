@@ -18,309 +18,322 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 function hesk_profile_tab($session_array='new',$is_profile_page=true)
 {
 	global $hesk_settings, $hesklang, $can_reply_tickets, $can_view_tickets, $can_view_unassigned;
+
+	$show_permissions = false;
+	$show_preferences = false;
+
+	$steps = array($hesklang['pinfo']);
+	if (!$is_profile_page) {
+	    $steps[] = $hesklang['permissions'];
+	    $show_permissions = true;
+    }
+	$steps[] = $hesklang['sig'];
+	if (!$is_profile_page || $can_reply_tickets) {
+	    $steps[] = $hesklang['pref'];
+	    $show_preferences = true;
+    }
+	$steps[] = $hesklang['notn'];
+
+	$errors = hesk_SESSION(array($session_array, 'errors'));
+	$errors = is_array($errors) ? $errors : array();
 	?>
 	<!-- TABS -->
-	<div class="tabber" id="tab1">
-
-		<!-- PROFILE INFO -->
-		<div class="tabbertab">
-		<h2><?php echo $hesklang['pinfo']; ?></h2>
-
-		&nbsp;<br />
-
-		<table border="0" width="100%">
-		<tr>
-		<td width="200" style="text-align:right"><?php echo $hesklang['real_name']; ?>: <font class="important">*</font></td>
-		<td align="left"><input type="text" name="name" size="40" maxlength="50" value="<?php echo $_SESSION[$session_array]['name']; ?>" /></td>
-		</tr>
-		<tr>
-		<td width="200" style="text-align:right"><?php echo $hesklang['email']; ?>: <font class="important">*</font></td>
-		<td align="left"><input type="text" name="email" size="40" maxlength="255" value="<?php echo $_SESSION[$session_array]['email']; ?>" /></td>
-		</tr>
-		<?php
-		if ( ! $is_profile_page || $_SESSION['isadmin'])
-		{
-		?>
-		<tr>
-		<td width="200" style="text-align:right"><?php echo $hesklang['username']; ?>: <font class="important">*</font></td>
-		<td><input type="text" name="user" autocomplete="off" size="40" maxlength="20" value="<?php echo $_SESSION[$session_array]['user']; ?>" /></td>
-		</tr>
-		<?php
-		}
-		?>
-		<tr>
-		<td width="200" style="text-align:right"><?php echo $is_profile_page ? $hesklang['new_pass'] : $hesklang['pass']; ?>:</td>
-		<td><input type="password" name="newpass" autocomplete="off" size="40" value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>" onkeyup="javascript:hesk_checkPassword(this.value)" /></td>
-		</tr>
-		<tr>
-		<td width="200" style="text-align:right"><?php echo $hesklang['confirm_pass']; ?>:</td>
-		<td><input type="password" name="newpass2" autocomplete="off" size="40" value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>" /></td>
-		</tr>
-		<tr>
-		<td width="200" style="text-align:right"><?php echo $hesklang['pwdst']; ?>:</td>
-		<td>
-		<div style="border: 1px solid gray; width: 100px;">
-		<div id="progressBar" style="font-size: 1px; height: 14px; width: 0px; border: 1px solid white;">
-		</div>
-		</div>
-		</td>
-		</tr>
-		<?php
-		if ( ! $is_profile_page && $hesk_settings['autoassign'])
-		{
-			?>
-			<tr>
-			<td width="200" style="text-align:right">&nbsp;</td>
-			<td>&nbsp;<br /><label><input type="checkbox" name="autoassign" value="Y" <?php if ( isset($_SESSION[$session_array]['autoassign']) && ! empty($_SESSION[$session_array]['autoassign']) ) {echo 'checked="checked"';} ?> /> <?php echo $hesklang['user_aa']; ?></label></td>
-			</tr>
-			<?php
-		}
-		?>
-		</table>
-
-		&nbsp;<br />&nbsp;
-
-		</div>
-		<!-- PROFILE INFO -->
-
-		<?php
-		if ( ! $is_profile_page)
-		{
-		?>
-		<!-- PERMISSIONS -->
-		<div class="tabbertab">
-		<h2><?php echo $hesklang['permissions']; ?></h2>
-
-		&nbsp;<br />
-
-		<table border="0" width="100%">
-		<tr>
-		<td valign="top" width="200" style="text-align:right"><?php echo $hesklang['atype']; ?>:</td>
-		<td valign="top">
-
-		<?php
-		/* Only administrators can create new administrator accounts */
-		if ($_SESSION['isadmin'])
-		{
-			?>
-		    <label><input type="radio" name="isadmin" value="1" onchange="Javascript:hesk_toggleLayerDisplay('options')" <?php if ($_SESSION[$session_array]['isadmin']) echo 'checked="checked"'; ?> /> <b><?php echo $hesklang['administrator'].'</b> '.$hesklang['admin_can']; ?></label><br />
-			<label><input type="radio" name="isadmin" value="0" onchange="Javascript:hesk_toggleLayerDisplay('options')" <?php if (!$_SESSION[$session_array]['isadmin']) echo 'checked="checked"'; ?> /> <b><?php echo $hesklang['astaff'].'</b> '.$hesklang['staff_can']; ?></label>
-		    <?php
-		}
-		else
-		{
-			echo '<b>'.$hesklang['astaff'].'</b> '.$hesklang['staff_can'];
-		}
-		?>
-
-		</td>
-		</tr>
-		</table>
-
-		&nbsp;<br />
-
-		<div id="options" style="display: <?php echo ($_SESSION['isadmin'] && $_SESSION[$session_array]['isadmin']) ? 'none' : 'block'; ?>;">
-
-		<table border="0" width="100%">
-		<tr>
-		<td valign="top" width="200" style="text-align:right"><?php echo $hesklang['allowed_cat']; ?>: <font class="important">*</font></td>
-		<td valign="top">
-		<?php
-		foreach ($hesk_settings['categories'] as $catid => $catname)
-		{
-			echo '<label><input type="checkbox" name="categories[]" value="' . $catid . '" ';
-			if ( in_array($catid,$_SESSION[$session_array]['categories']) )
-			{
-				echo ' checked="checked" ';
-			}
-			echo ' />' . $catname . '</label><br /> ';
-		}
-		?>
-		&nbsp;
-		</td>
-		</tr>
-		<tr>
-		<td colspan="2">&nbsp;</td>
-		</tr>
-
-		<tr>
-		<td valign="top" width="200" style="text-align:right"><?php echo $hesklang['allow_feat']; ?>: <font class="important">*</font></td>
-		<td valign="top">
-		<?php
-		foreach ($hesk_settings['features'] as $k)
-		{
-			echo '<label><input type="checkbox" id="'.$k.'" name="features[]" value="' . $k . '" ';
-			if (in_array($k,$_SESSION[$session_array]['features']))
-			{
-				echo ' checked="checked" ';
-			}
-			echo ' />' . $hesklang[$k] . '</label><br /> ';
-		}
-		?>
-		&nbsp;
-		</td>
-		</tr>
-		</table>
-
-		</div>
-
-		&nbsp;<br />&nbsp;
-
-		</div>
-		<!-- PERMISSIONS -->
-		<?php
-		}
-		?>
-
-		<!-- SIGNATURE -->
-		<div class="tabbertab">
-		<h2><?php echo $hesklang['sig']; ?></h2>
-
-		&nbsp;<br />
-
-		<table border="0" width="100%">
-		<tr>
-		<td valign="top" width="200" style="text-align:right">&nbsp;</td>
-		<td><?php echo $hesklang['signature_max']; ?>:<br />&nbsp;<br /><textarea name="signature" rows="10" cols="60"><?php echo $_SESSION[$session_array]['signature']; ?></textarea><br />
-		<?php echo $hesklang['sign_extra']; ?></td>
-		</tr>
-		</table>
-
-		&nbsp;<br />&nbsp;
-
-		</div>
-		<!-- SIGNATURE -->
-
-		<?php
-		if ( ! $is_profile_page || $can_reply_tickets )
-		{
-		?>
-		<!-- PREFERENCES -->
-		<div class="tabbertab">
-		<h2><?php echo $hesklang['pref']; ?></h2>
-
-		&nbsp;<br />
-
-		<table border="0" width="100%">
-		<tr>
-		<td style="text-align:right" valign="top" width="200"><?php echo $hesklang['aftrep']; ?>:</td>
-		<td>
-	    <label><input type="radio" name="afterreply" value="0" <?php if (!$_SESSION[$session_array]['afterreply']) {echo 'checked="checked"';} ?>/> <?php echo $hesklang['showtic']; ?></label><br />
-	    <label><input type="radio" name="afterreply" value="1" <?php if ($_SESSION[$session_array]['afterreply'] == 1) {echo 'checked="checked"';} ?>/> <?php echo $hesklang['gomain']; ?></label><br />
-	    <label><input type="radio" name="afterreply" value="2" <?php if ($_SESSION[$session_array]['afterreply'] == 2) {echo 'checked="checked"';} ?>/> <?php echo $hesklang['shownext']; ?></label><br />
-	    </td>
-		</tr>
-		<tr>
-		<td cellspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-		<td style="text-align:right" valign="top" width="200"><?php echo $hesklang['defaults']; ?>:</td>
-		<td>
-		<?php
-		if ($hesk_settings['time_worked'])
-		{
-		?>
-		<label><input type="checkbox" name="autostart" value="1" <?php if (!empty($_SESSION[$session_array]['autostart'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['autoss']; ?></label><br />
-		<?php
-		}
-
-        if (empty($_SESSION[$session_array]['autoreload']))
-        {
-            $reload_time = 30;
-            $sec = 'selected="selected"';
-            $min = '';
-        }
-        else
-        {
-            $reload_time = intval($_SESSION[$session_array]['autoreload']);
-
-            if ($reload_time >= 60 && $reload_time % 60 == 0)
+    <ul class="step-bar">
+        <?php
+        $i = 1;
+        foreach ($steps as $step_name): ?>
+            <li data-link="<?php echo $i++; ?>" data-all="<?php echo count($steps); ?>">
+                <?php echo $step_name; ?>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <?php
+    $current_step = 1;
+    ?>
+    <div class="step-slider">
+        <div class="step-item step-<?php echo $current_step++; ?>">
+            <div class="form-group">
+                <label for="prof_name"><?php echo $hesklang['real_name']; ?></label>
+                <input type="text" class="form-control <?php echo in_array('name', $errors) ? 'isError' : ''; ?>" id="prof_name" name="name" maxlength="50"
+                       value="<?php echo $_SESSION[$session_array]['name']; ?>">
+            </div>
+            <div class="form-group">
+                <label for="prof_email"><?php echo $hesklang['email']; ?></label>
+                <input type="text" class="form-control <?php echo in_array('email', $errors) ? 'isError' : ''; ?>" name="email" maxlength="255" id="prof_user"
+                       value="<?php echo $_SESSION[$session_array]['email']; ?>">
+            </div>
+            <?php
+            if ( ! $is_profile_page || $_SESSION['isadmin'])
             {
-                $reload_time = $reload_time/60;
-                $sec = '';
-                $min = 'selected="selected"';
+                ?>
+                <div class="form-group">
+                    <label for="prof_user"><?php echo $hesklang['username']; ?></label>
+                    <input type="text" class="form-control <?php echo in_array('user', $errors) ? 'isError' : ''; ?>" name="user" autocomplete="off" id="prof_user" maxlength="20"
+                           value="<?php echo $_SESSION[$session_array]['user']; ?>">
+                </div>
+                <?php
             }
-            else
-            {
-                $sec = 'selected="selected"';
-                $min = '';
-            }
-        }
-		?>
-		<label><input type="checkbox" name="notify_customer_new" value="1" <?php if (!empty($_SESSION[$session_array]['notify_customer_new'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['pncn']; ?></label><br />
-		<label><input type="checkbox" name="notify_customer_reply" value="1" <?php if (!empty($_SESSION[$session_array]['notify_customer_reply'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['pncr']; ?></label><br />
-		<label><input type="checkbox" name="show_suggested" value="1" <?php if (!empty($_SESSION[$session_array]['show_suggested'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['pssy']; ?></label><br />
-		<label><input type="checkbox" name="autoreload" value="1" <?php if (!empty($_SESSION[$session_array]['autoreload'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['arpp']; ?></label>
-        <input type="text" name="reload_time" value="<?php echo $reload_time; ?>" size="5" maxlength="5" onkeyup="this.value=this.value.replace(/[^\d]+/,'')" />
-        <select name="secmin">
-            <option value="sec" <?php echo $sec; ?>><?php echo $hesklang['seconds']; ?></option>
-            <option value="min" <?php echo $min; ?>><?php echo $hesklang['minutes']; ?></option>
-        </select><br />
-		</td>
-		</tr>
-		</table>
+            ?>
+            <section class="item--section">
+                <h4>
+                    <?php echo $hesklang['pass']; ?>
+                    <?php if ($is_profile_page): ?>
+                    <span>
+                        <?php echo $hesklang['optional']; ?>
+                    </span>
+                    <?php endif; ?>
+                </h4>
+                <div class="form-group">
+                    <label for="prof_newpass"><?php echo $is_profile_page ? $hesklang['new_pass'] : $hesklang['pass']; ?></label>
+                    <input type="password" id="prof_newpass" name="newpass" autocomplete="off" class="form-control <?php echo in_array('passwords', $errors) ? 'isError' : ''; ?>"
+                           value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>"
+                           onkeyup="hesk_checkPassword(this.value)">
+                </div>
+                <div class="form-group">
+                    <label for="prof_newpass2"><?php echo $hesklang['confirm_pass']; ?></label>
+                    <input type="password" class="form-control <?php echo in_array('passwords', $errors) ? 'isError' : ''; ?>" id="prof_newpass2" name="newpass2" autocomplete="off"
+                           value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>">
+                </div>
+                <div class="form-group">
+                    <label><?php echo $hesklang['pwdst']; ?></label>
+                    <div style="border: 1px solid #d4d6e3; width: 100%; height: 40px">
+                        <div id="progressBar" style="font-size: 1px; height: 38px; width: 0px; border: none;">
+                        </div>
+                    </div>
+                </div>
+                <?php if (!$is_profile_page && $hesk_settings['autoassign']): ?>
+                    <div class="form-switcher">
+                        <label class="switch-checkbox">
+                            <input type="checkbox" name="autoassign" value="Y"
+                                <?php if (isset($_SESSION[$session_array]['autoassign']) && !empty($_SESSION[$session_array]['autoassign'])) {echo 'checked';} ?>>
+                            <div class="switch-checkbox__bullet">
+                                <i>
+                                    <svg class="icon icon-close">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                                    </svg>
+                                    <svg class="icon icon-tick">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                                    </svg>
+                                </i>
+                            </div>
+                            <span><?php echo $hesklang['user_aa']; ?></span>
+                        </label>
+                    </div>
+                <?php endif; ?>
+            </section>
+        </div>
+        <?php if ($show_permissions): ?>
+        <div class="step-item step-<?php echo $current_step++; ?>">
+            <div class="form-group">
+                <label><?php echo $hesklang['atype']; ?></label>
+                <?php
+                /* Only administrators can create new administrator accounts */
+                if ($_SESSION['isadmin']) {
+                    ?>
+                    <div class="radio-list">
+                        <div class="radio-custom">
+                            <input type="radio" id="prof_isadmin1" name="isadmin" value="1" onchange="hesk_toggleLayerDisplay('options')"
+                                <?php if ($_SESSION[$session_array]['isadmin']) echo 'checked'; ?>>
+                            <label for="prof_isadmin1">
+                                <?php echo $hesklang['administrator']; ?>
+                                <?php echo $hesklang['admin_can']; ?>
+                            </label>
+                        </div>
+                        <div class="radio-custom">
+                            <input type="radio" id="prof_isadmin0" name="isadmin" value="0" onchange="hesk_toggleLayerDisplay('options')"
+                                <?php if (!$_SESSION[$session_array]['isadmin']) echo 'checked'; ?>>
+                            <label for="prof_isadmin0">
+                                <?php echo $hesklang['astaff']; ?>
+                                <?php echo $hesklang['staff_can']; ?>
+                            </label>
+                        </div>
+                    </div>
+                    <?php
+                } else {
+                    echo '<label>'.$hesklang['astaff'].' '.$hesklang['staff_can'] . '</label>';
+                }
+                ?>
+            </div>
+            <div id="options" style="display: <?php echo ($_SESSION['isadmin'] && $_SESSION[$session_array]['isadmin']) ? 'none' : 'block'; ?>;">
+                <h4><?php echo $hesklang['allowed_cat']; ?></h4>
+                <section class="item--section">
+                    <?php foreach ($hesk_settings['categories'] as $catid => $catname): ?>
+                    <div class="checkbox-custom <?php echo in_array('categories', $errors) ? 'isError' : ''; ?>">
+                        <input type="checkbox" id="prof_category_<?php echo $catid; ?>" name="categories[]" value="<?php echo $catid; ?>"
+                            <?php if (in_array($catid,$_SESSION[$session_array]['categories'])) { echo 'checked'; } ?>>
+                        <label for="prof_category_<?php echo $catid; ?>"><?php echo $catname; ?></label>
+                    </div>
+                    <?php endforeach; ?>
+                </section>
+                <h4><?php echo $hesklang['allow_feat']; ?></h4>
+                <section class="item--section">
+                    <?php foreach ($hesk_settings['features'] as $k): ?>
+                        <div class="checkbox-custom <?php echo in_array('features', $errors) ? 'isError' : ''; ?>">
+                            <input type="checkbox" id="<?php echo $k; ?>" name="features[]" value="<?php echo $k; ?>"
+                                <?php if (in_array($k,$_SESSION[$session_array]['features'])) { echo 'checked'; } ?>>
+                            <label for="<?php echo $k ?>"><?php echo $hesklang[$k]; ?></label>
+                        </div>
+                    <?php endforeach; ?>
+                </section>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div class="step-item step-<?php echo $current_step++; ?>">
+            <div class="form-group">
+                <label for="prof_signature"><?php echo $hesklang['signature_max']; ?></label>
+                <textarea class="form-control <?php echo in_array('signature', $errors) ? 'isError' : ''; ?>" name="signature" rows="10" cols="60"><?php echo $_SESSION[$session_array]['signature']; ?></textarea>
+                <?php echo $hesklang['sign_extra']; ?>
+            </div>
+        </div>
+        <?php if ($show_preferences): ?>
+        <div class="step-item step-<?php echo $current_step++; ?>">
+            <section class="item--section">
+                <div class="form-group">
+                    <label><?php echo $hesklang['aftrep']; ?></label>
+                    <div class="radio-list">
+                        <div class="radio-custom">
+                            <input type="radio" id="prof_afterreply0" name="afterreply" value="0" <?php if (!$_SESSION[$session_array]['afterreply']) {echo 'checked';} ?>>
+                            <label for="prof_afterreply0 ">
+                                <?php echo $hesklang['showtic']; ?>
+                            </label>
+                        </div>
+                        <div class="radio-custom">
+                            <input type="radio" id="prof_afterreply1" name="afterreply" value="1" <?php if ($_SESSION[$session_array]['afterreply'] == 1) {echo 'checked';} ?>>
+                            <label for="prof_afterreply1">
+                                <?php echo $hesklang['gomain']; ?>
+                            </label>
+                        </div>
+                        <div class="radio-custom">
+                            <input type="radio" id="prof_afterreply2" name="afterreply" value="2" <?php if ($_SESSION[$session_array]['afterreply'] == 2) {echo 'checked';} ?>>
+                            <label for="prof_afterreply2">
+                                <?php echo $hesklang['shownext']; ?>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="item--section defaults-section">
+                <h4><?php echo $hesklang['defaults']; ?></h4>
+                <?php if ($hesk_settings['time_worked']): ?>
+                    <div class="checkbox-custom">
+                        <input type="checkbox" id="prof_autostart" name="autostart" value="1" <?php if (!empty($_SESSION[$session_array]['autostart'])) {echo 'checked';}?>>
+                        <label for="prof_autostart"><?php echo $hesklang['autoss']; ?></label>
+                    </div>
+                <?php
+                endif;
 
-		&nbsp;<br />&nbsp;
+                if (empty($_SESSION[$session_array]['autoreload'])) {
+                    $reload_time = 30;
+                    $sec = 'selected="selected"';
+                    $min = '';
+                } else {
+                    $reload_time = intval($_SESSION[$session_array]['autoreload']);
 
-		</div>
-		<!-- PREFERENCES -->
-		<?php
-		}
-		?>
+                    if ($reload_time >= 60 && $reload_time % 60 == 0) {
+                        $reload_time = $reload_time / 60;
+                        $sec = '';
+                        $min = 'selected="selected"';
+                    } else {
+                        $sec = 'selected="selected"';
+                        $min = '';
+                    }
+                }
+                ?>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_customer_new" name="notify_customer_new" value="1" <?php if (!empty($_SESSION[$session_array]['notify_customer_new'])) {echo 'checked';}?>>
+                    <label for="prof_notify_customer_new"><?php echo $hesklang['pncn']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_customer_reply" name="notify_customer_reply" value="1" <?php if (!empty($_SESSION[$session_array]['notify_customer_reply'])) {echo 'checked';}?>>
+                    <label for="prof_notify_customer_reply"><?php echo $hesklang['pncr']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_show_suggested" name="show_suggested" value="1" <?php if (!empty($_SESSION[$session_array]['show_suggested'])) {echo 'checked';}?>>
+                    <label for="prof_show_suggested"><?php echo $hesklang['pssy']; ?></label>
+                </div>
+                <div class="check-plus-input">
+                    <div class="checkbox-custom">
+                        <input type="checkbox" id="prof_autoreload" name="autoreload" value="1" <?php if (!empty($_SESSION[$session_array]['autoreload'])) {echo 'checked';}?>>
+                        <label for="prof_autoreload"><?php echo $hesklang['arpp']; ?></label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="reload_time" value="<?php echo $reload_time; ?>" maxlength="5" onkeyup="this.value=this.value.replace(/[^\d]+/,'')">
+                    </div>
+                    <div class="form-group">
+                        <div class="dropdown-select center out-close">
+                            <select name="secmin">
+                                <option value="sec" <?php echo $sec; ?>><?php echo $hesklang['seconds']; ?></option>
+                                <option value="min" <?php echo $min; ?>><?php echo $hesklang['minutes']; ?></option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <?php endif; ?>
+        <div class="step-item step-<?php echo $current_step; ?>">
+            <h5><?php echo $hesklang['nomw']; ?></h5>
+            <?php if (!$is_profile_page || $can_view_tickets) {
+                echo '<section class="item--section">';
+                if (!$is_profile_page || $can_view_unassigned) { ?>
+                    <div class="checkbox-custom">
+                        <input type="checkbox" id="prof_notify_new_unassigned" name="notify_new_unassigned" value="1"
+                            <?php if (!empty($_SESSION[$session_array]['notify_new_unassigned'])) {echo 'checked';}?>>
+                        <label for="prof_notify_new_unassigned"><?php echo $hesklang['nwts']; ?> <?php echo $hesklang['unas']; ?></label>
+                    </div>
+            <?php
+                }
+                ?>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_new_my" name="notify_new_my" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_new_my'])) {echo 'checked';}?>>
+                    <label for="prof_notify_new_my"><?php echo $hesklang['nwts']; ?> <?php echo $hesklang['s_my']; ?></label>
+                </div>
+            <?php
+                echo '</section>';
+                echo '<section class="item--section">';
 
-		<!-- NOTIFICATIONS -->
-		<div class="tabbertab">
-		<h2><?php echo $hesklang['notn']; ?></h2>
-
-		<p><?php echo $hesklang['nomw']; ?></p>
-
-		<table border="0" width="100%">
-		<tr>
-		<td>
-		<?php
-        if ( ! $is_profile_page || $can_view_tickets)
-		{
-			if ( ! $is_profile_page || $can_view_unassigned)
-			{
-				?>
-				<label><input type="checkbox" name="notify_new_unassigned" value="1" <?php if (!empty($_SESSION[$session_array]['notify_new_unassigned'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['nwts']; ?> <?php echo $hesklang['unas']; ?></label><br />
-				<?php
-			}
-			?>
-			<label><input type="checkbox" name="notify_new_my" value="1" <?php if (!empty($_SESSION[$session_array]['notify_new_my'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['nwts']; ?> <?php echo $hesklang['s_my']; ?></label><br />
-			<hr />
-			<?php
-			if ( ! $is_profile_page || $can_view_unassigned)
-			{
-				?>
-				<label><input type="checkbox" name="notify_reply_unassigned" value="1" <?php if (!empty($_SESSION[$session_array]['notify_reply_unassigned'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['ncrt']; ?> <?php echo $hesklang['unas']; ?></label><br />
-				<?php
-			}
-			?>
-			<label><input type="checkbox" name="notify_reply_my" value="1" <?php if (!empty($_SESSION[$session_array]['notify_reply_my'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['ncrt']; ?> <?php echo $hesklang['s_my']; ?></label><br />
-			<hr />
-			<label><input type="checkbox" name="notify_assigned" value="1" <?php if (!empty($_SESSION[$session_array]['notify_assigned'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['ntam']; ?></label><br />
-			<label><input type="checkbox" name="notify_note" value="1" <?php if (!empty($_SESSION[$session_array]['notify_note'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['ntnote']; ?></label><br />
-			<?php
-		}
-		?>
-		<label><input type="checkbox" name="notify_pm" value="1" <?php if (!empty($_SESSION[$session_array]['notify_pm'])) {echo 'checked="checked"';}?> /> <?php echo $hesklang['npms']; ?></label><br />
-		</td>
-		</tr>
-		</table>
-
-		&nbsp;<br />&nbsp;
-
-		</div>
-		<!-- NOTIFICATIONS -->
-
-	</div>
-	<!-- TABS -->
+                if (!$is_profile_page || $can_view_unassigned) { ?>
+                    <div class="checkbox-custom">
+                        <input type="checkbox" id="prof_notify_reply_unassigned" name="notify_reply_unassigned" value="1"
+                            <?php if (!empty($_SESSION[$session_array]['notify_reply_unassigned'])) {echo 'checked';}?>>
+                        <label for="prof_notify_reply_unassigned"><?php echo $hesklang['ncrt']; ?> <?php echo $hesklang['unas']; ?></label>
+                    </div>
+                <?php
+                } ?>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_reply_my" name="notify_reply_my" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_reply_my'])) {echo 'checked';}?>>
+                    <label for="prof_notify_reply_my"><?php echo $hesklang['ncrt']; ?> <?php echo $hesklang['s_my']; ?></label>
+                </div>
+            <?php
+                echo '</section>';
+            ?>
+            <section class="item--section">
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_assigned" name="notify_assigned" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_assigned'])) {echo 'checked';}?>>
+                    <label for="prof_notify_assigned"><?php echo $hesklang['ntam']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_note" name="notify_note" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_note'])) {echo 'checked';}?>>
+                    <label for="prof_notify_note"><?php echo $hesklang['ntnote']; ?></label>
+                </div>
+            <?php
+            } ?>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_pm" name="notify_pm" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_pm'])) {echo 'checked';}?>>
+                    <label for="prof_notify_pm"><?php echo $hesklang['npms']; ?></label>
+                </div>
+            </section>
+        </div>
+    </div>
 
 	<script language="Javascript" type="text/javascript"><!--
 	hesk_checkPassword(document.form1.newpass.value);
 	//-->
 	</script>
-
 	<?php
 } // END hesk_profile_tab()

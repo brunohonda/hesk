@@ -49,7 +49,7 @@ function hesk_uploadFile($i)
 	$tmp = uniqid();
 	for($j=1;$j<10;$j++)
 	{
-	    $tmp .= $useChars{mt_rand(0,29)};
+	    $tmp .= $useChars[mt_rand(0,29)];
 	}
 
     if (defined('KB'))

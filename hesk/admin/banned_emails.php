@@ -44,177 +44,100 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print main manage users page */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-?>
 
-</td>
-</tr>
-<tr>
-<td>
-
-<!-- TABS -->
-<div id="tab1" class="tabberlive" style="margin-top:0px">
-
-	<ul class="tabbernav">
-		<li class="tabberactive"><a title="<?php echo $hesklang['banemail']; ?>" href="javascript:void(null);" onclick="javascript:alert('<?php echo hesk_makeJsString($hesklang['banemail_intro']); ?>')"><?php echo $hesklang['banemail']; ?> [?]</a></li>
-		<?php
-		// Show a link to banned_ips.php if user has permission to do so
-		if ( hesk_checkPermission('can_ban_ips',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['banip'] . '" href="banned_ips.php">' . $hesklang['banip'] . '</a></li> ';
-		}
-
-		// Show a link to status_message.php if user has permission to do so
-		if ( hesk_checkPermission('can_service_msg',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['sm_title'] . '" href="service_messages.php">' . $hesklang['sm_title'] . '</a></li> ';
-		}
-
-		// Show a link to email_templates.php if user has permission to do so
-		if ( hesk_checkPermission('can_email_tpl',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['et_title'] . '" href="email_templates.php">' . $hesklang['et_title'] . '</a></li> ';
-		}
-
-		// Show a link to custom_fields.php if user has permission to do so
-		if ( hesk_checkPermission('can_man_settings',0) )
-		{
-			echo '<li class=""><a title="' . $hesklang['tab_4'] . '" href="custom_fields.php">' . $hesklang['tab_4'] . '</a></li> ';
-			echo '<li class=""><a title="' . $hesklang['statuses'] . '" href="custom_statuses.php">' . $hesklang['statuses'] . '</a></li> ';
-		}
-		?>
-	</ul>
-
-</div>
-<!-- TABS -->
-
-&nbsp;<br />
-
-<script language="javascript" type="text/javascript"><!--
-function confirm_delete()
-{
-if (confirm('<?php echo hesk_makeJsString($hesklang['delban_confirm']); ?>')) {return true;}
-else {return false;}
-}
-//-->
-</script>
-
-<?php
 /* This will handle error, success and notice messages */
 hesk_handle_messages();
 ?>
 
-&nbsp;<br />
-
-<form action="banned_emails.php" method="post" name="form1">
-
-<table border="0">
-<tr>
-<td valign="top">
-<?php echo $hesklang['bananemail']; ?>:
-<input type="text" name="email" size="30" maxlength="255" />
-<input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-<input type="hidden" name="a" value="ban" />
-<input type="submit" value="<?php echo $hesklang['savebanemail']; ?>" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" />
-</td>
-<td valign="top" style="padding-left:20px;"><i><?php echo $hesklang['banex']; ?></i><br />
-<b>john@example.com</b><br />
-<b>@example.com</b></td>
-</tr>
-</table>
-
-</form>
-
-<p>&nbsp;</p>
-
-<?php
-
-// Get banned emails from database
-$res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'banned_emails` ORDER BY `email` ASC');
-$num = hesk_dbNumRows($res);
-
-if ($num < 1)
-{
-    echo '<p>'.$hesklang['no_banemails'].'</p>';
-}
-else
-{
-	// List of staff
-	if ( ! isset($admins) )
-	{
-		$admins = array();
-		$res2 = hesk_dbQuery("SELECT `id`,`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users`");
-		while ($row=hesk_dbFetchAssoc($res2))
-		{
-			$admins[$row['id']]=$row['name'];
-		}
-	}
-
-	?>
-	<h3 style="padding-bottom:5px;">&raquo; <?php echo $hesklang['eperm']; ?></h3>
-	<div align="center">
-	<table border="0" cellspacing="1" cellpadding="3" class="white" width="100%">
-	<tr>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['email']; ?></i></b></th>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['banby']; ?></i></b></th>
-	<th class="admin_white" style="text-align:left"><b><i><?php echo $hesklang['date']; ?></i></b></th>
-	<?php
-	if ($can_unban)
-	{
-	?>
-	<th class="admin_white" style="width:80px"><b><i>&nbsp;<?php echo $hesklang['opt']; ?>&nbsp;</i></b></th>
-	<?php
-	}
-	?>
-	</tr>
-	<?php
-	$i = 1;
-
-    while ($ban=hesk_dbFetchAssoc($res))
-    {
-		if (isset($_SESSION['ban_email']['id']) && $ban['id'] == $_SESSION['ban_email']['id'])
-		{
-			$color = 'admin_green';
-			unset($_SESSION['ban_email']['id']);
-		}
-		else
-		{
-			$color = $i ? 'admin_white' : 'admin_gray';
-		}
-        
-		$tmp   = $i ? 'White' : 'Blue';
-	    $style = 'class="option'.$tmp.'OFF" onmouseover="this.className=\'option'.$tmp.'ON\'" onmouseout="this.className=\'option'.$tmp.'OFF\'"';
-	    $i     = $i ? 0 : 1;
-
-	    echo '
-	    <tr>
-	    <td class="'.$color.'" style="text-align:left">'.$ban['email'].'</td>
-	    <td class="'.$color.'" style="text-align:left">'.(isset($admins[$ban['banned_by']]) ? $admins[$ban['banned_by']] : $hesklang['e_udel']).'</td>
-	    <td class="'.$color.'" style="text-align:left">'.$ban['dt'].'</td>
-		';
-
-		if ($can_unban)
-		{
-		echo '
-        <td class="'.$color.'" style="text-align:center; white-space:nowrap;">
-        <a name="Unban '.$ban['email'].'" href="banned_emails.php?a=unban&amp;id='.$ban['id'].'&amp;token='.hesk_token_echo(0).'" onclick="return confirm_delete();"><img src="../img/delete.png" width="16" height="16" alt="'.$hesklang['delban'].'" title="'.$hesklang['delban'].'" '.$style.' /></a>&nbsp;</td>
-		';
-		}
-
-	    echo '</tr>';
-    } // End while
-
-    ?>
-	</table>
-	</div>
+<div class="main__content tools">
+    <h2>
+        <?php echo $hesklang['banemail']; ?>
+        <div class="tooltype right out-close">
+            <svg class="icon icon-info">
+                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+            </svg>
+            <div class="tooltype__content">
+                <div class="tooltype__wrapper">
+                    <?php echo $hesklang['banemail_intro']; ?>
+                </div>
+            </div>
+        </div>
+    </h2>
+    <form action="banned_emails.php" method="post" name="form1">
+        <div class="tools__add-mail form">
+            <div class="form-group">
+                <input type="text" name="email" class="form-control" maxlength="255" placeholder="<?php echo htmlspecialchars($hesklang['bananemail']); ?>">
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
+                <input type="hidden" name="a" value="ban" />
+                <button type="submit" class="btn btn--blue-border" ripple="ripple"><?php echo $hesklang['savebanemail']; ?></button>
+            </div>
+            <div class="mail--examples"><?php echo $hesklang['banex']; ?> john@example.com, @example.com</div>
+        </div>
+    </form>
     <?php
-}
+    // Get banned emails from database
+    $res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'banned_emails` ORDER BY `email` ASC');
+    $num = hesk_dbNumRows($res);
+    ?>
+    <div class="table-wrapper email">
+        <table id="default-table" class="table sindu-table">
+            <thead>
+            <tr>
+                <th><?php echo $hesklang['email']; ?></th>
+                <th><?php echo $hesklang['banby']; ?></th>
+                <th><?php echo $hesklang['date']; ?></th>
+                <?php if ($can_unban): ?>
+                    <th><?php echo $hesklang['opt']; ?></th>
+                <?php endif; ?>
+            </tr>
+            </thead>
+            <tbody>
+            <?php if ($num < 1): ?>
+            <tr>
+                <td colspan="<?php echo $can_unban ? 4 : 3; ?>"><?php echo $hesklang['no_banemails']; ?></td>
+            </tr>
+            <?php
+            else:
+                // List of staff
+                if ( ! isset($admins) )
+                {
+                    $admins = array();
+                    $res2 = hesk_dbQuery("SELECT `id`,`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users`");
+                    while ($row=hesk_dbFetchAssoc($res2))
+                    {
+                        $admins[$row['id']]=$row['name'];
+                    }
+                }
 
-?>
-
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-
+                while ($ban = hesk_dbFetchAssoc($res)):
+                    $table_row = '';
+                    if (isset($_SESSION['ban_email']['id']) && $ban['id'] == $_SESSION['ban_email']['id'])
+                    {
+                        $table_row = 'class="ticket-new"';
+                        unset($_SESSION['ban_email']['id']);
+                    }
+                ?>
+                <tr <?php echo $table_row; ?>>
+                    <td><?php echo $ban['email']; ?></td>
+                    <td><?php echo isset($admins[$ban['banned_by']]) ? $admins[$ban['banned_by']] : $hesklang['e_udel']; ?></td>
+                    <td><?php echo $ban['dt']; ?></td>
+                    <?php if ($can_unban): ?>
+                    <td class="unban">
+                        <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                            $hesklang['delban_confirm'],
+                            'banned_emails.php?a=unban&amp;id='. $ban['id'] .'&amp;token='. hesk_token_echo(0)); ?>
+                        <a title="<?php echo $hesklang['delban']; ?>" href="javascript:" data-modal="[data-modal-id='<?php echo $modal_id; ?>']">
+                            <?php echo $hesklang['delban']; ?>
+                        </a>
+                    </td>
+                    <?php endif; ?>
+                </tr>
+                <?php endwhile;
+                endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 <?php
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();

@@ -15,7 +15,7 @@
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 // We will be installing this HESK version:
-define('HESK_NEW_VERSION','2.8.4');
+define('HESK_NEW_VERSION','3.1.1');
 define('REQUIRE_PHP_VERSION','5.3.0');
 define('REQUIRE_MYSQL_VERSION','5.0.7');
 
@@ -211,6 +211,7 @@ $hesk_settings[\'hesk_url\']=\'' . $set['hesk_url'] . '\';
 $hesk_settings[\'webmaster_mail\']=\'' . $set['webmaster_mail'] . '\';
 $hesk_settings[\'noreply_mail\']=\'' . $set['noreply_mail'] . '\';
 $hesk_settings[\'noreply_name\']=\'' . $set['noreply_name'] . '\';
+$hesk_settings[\'site_theme\']=\'' . $set['site_theme'] . '\';
 
 // --> Language settings
 $hesk_settings[\'can_sel_lang\']=' . $set['can_sel_lang'] . ';
@@ -240,6 +241,8 @@ $hesk_settings[\'autoclose\']=' . $set['autoclose'] . ';
 $hesk_settings[\'max_open\']=' . $set['max_open'] . ';
 $hesk_settings[\'new_top\']=' . $set['new_top'] . ';
 $hesk_settings[\'reply_top\']=' . $set['reply_top'] . ';
+$hesk_settings[\'hide_replies\']=' . $set['hide_replies'] . ';
+$hesk_settings[\'limit_width\']=' . $set['limit_width'] . ';
 
 // --> Features
 $hesk_settings[\'autologin\']=' . $set['autologin'] . ';
@@ -382,6 +385,7 @@ $hesk_settings[\'updatedformat\']=' . $set['updatedformat'] . ';
 // --> Date & Time
 $hesk_settings[\'timezone\']=\'' . $set['timezone'] . '\';
 $hesk_settings[\'timeformat\']=\'' . $set['timeformat'] . '\';
+$hesk_settings[\'time_display\']=\'' . $set['time_display'] . '\';
 
 // --> Other
 $hesk_settings[\'ip_whois\']=\'' . $set['ip_whois'] . '\';
@@ -738,7 +742,7 @@ function hesk_iCheckSetup()
 	    'secimg.inc.php',
 
 	    // pre-2.4 files
-	    'hesk_style_v23.css','help_files/','TreeMenu.js',
+	    'hesk_style_v23.css','TreeMenu.js',
 
         // malicious files that were found on some websites illegally redistributing HESK
         'inc/tiny_mce/utils/r00t10.php', 'language/en/help_files/r00t10.php',
@@ -750,7 +754,137 @@ function hesk_iCheckSetup()
         'hesk_style_v25.css', 'hesk_javascript_v25.js',
 
 		// pre-2.7 files,
-		$hesk_settings['admin_dir'].'/options.php'
+		$hesk_settings['admin_dir'].'/options.php',
+
+        // pre-3.0 files,
+        $hesk_settings['admin_dir'].'/admin_settings.php',
+        'img/add_article.png',
+        'img/add_category.png',
+        'img/anonymize.png',
+        'img/article_text.png',
+        'img/autoassign_off.png',
+        'img/autoassign_on.png',
+        'img/ban.png',
+        'img/banned.png',
+        'img/blank.gif',
+        'img/bluebtn.png',
+        'img/clip.png',
+        'img/code.png',
+        'img/code_off.png',
+        'img/delete.png',
+        'img/delete_off.png',
+        'img/delete_ticket.png',
+        'img/edit.png',
+        'img/email.png',
+        'img/error.png',
+        'img/existingticket.png',
+        'img/export.png',
+        'img/flag_critical.png',
+        'img/flag_high.png',
+        'img/flag_low.png',
+        'img/flag_low2.png',
+        'img/flag_medium.png',
+        'img/folder-expanded.gif',
+        'img/folder.gif',
+        'img/greenbtn.jpg',
+        'img/greenbtnover.gif',
+        'img/header.png',
+        'img/headerbgsm.jpg',
+        'img/headerleftsm.jpg',
+        'img/headerrightsm.jpg',
+        'img/header_bottom.png',
+        'img/header_bottom_left.png',
+        'img/header_bottom_right.png',
+        'img/header_left.png',
+        'img/header_right.png',
+        'img/header_top.png',
+        'img/header_up_left.png',
+        'img/header_up_right.png',
+        'img/ico-search.png',
+        'img/ico_canned.gif',
+        'img/ico_categories.gif',
+        'img/ico_home.gif',
+        'img/ico_kb.gif',
+        'img/ico_logout.gif',
+        'img/ico_mail.gif',
+        'img/ico_profile.gif',
+        'img/ico_reports.gif',
+        'img/ico_settings.gif',
+        'img/ico_tools.png',
+        'img/ico_users.gif',
+        'img/import_kb.png',
+        'img/import_kb1.png',
+        'img/inbox.png',
+        'img/info.png',
+        'img/link.png',
+        'img/lock.png',
+        'img/login.png',
+        'img/mail.png',
+        'img/manage.png',
+        'img/menu.png',
+        'img/move_down.png',
+        'img/move_down1.png',
+        'img/move_down2.png',
+        'img/move_down3.png',
+        'img/move_down4.png',
+        'img/move_down5.png',
+        'img/move_down6.png',
+        'img/move_down7.png',
+        'img/move_down8.png',
+        'img/move_down9.png',
+        'img/move_up.png',
+        'img/move_up1.png',
+        'img/move_up2.png',
+        'img/move_up3.png',
+        'img/move_up4.png',
+        'img/move_up5.png',
+        'img/move_up6.png',
+        'img/move_up7.png',
+        'img/move_up8.png',
+        'img/move_up9.png',
+        'img/newticket.png',
+        'img/new_mail.png',
+        'img/notice.png',
+        'img/online_off.png',
+        'img/online_on.png',
+        'img/orangebtn.jpg',
+        'img/orangebtnover.gif',
+        'img/orangebtnsec.jpg',
+        'img/outbox.png',
+        'img/print.png',
+        'img/private.png',
+        'img/public.png',
+        'img/refresh.png',
+        'img/reload.png',
+        'img/roundcornersb.jpg',
+        'img/roundcornerslb.jpg',
+        'img/roundcornerslm.jpg',
+        'img/roundcornerslt.jpg',
+        'img/roundcornersrb.jpg',
+        'img/roundcornersrm.jpg',
+        'img/roundcornersrt.jpg',
+        'img/roundcornerst.jpg',
+        'img/sort_priority_asc.png',
+        'img/sort_priority_desc.png',
+        'img/star_0.png',
+        'img/star_10.png',
+        'img/star_15.png',
+        'img/star_20.png',
+        'img/star_25.png',
+        'img/star_30.png',
+        'img/star_35.png',
+        'img/star_40.png',
+        'img/star_45.png',
+        'img/star_50.png',
+        'img/sticky.png',
+        'img/sticky_off.png',
+        'img/success.png',
+        'img/tableheader.jpg',
+        'img/tag.png',
+        'img/tag_off.png',
+        'img/unlock.png',
+        'img/vertical.jpg',
+        'img/view.png',
 	    );
 
 	sort($old_files);
@@ -772,8 +906,33 @@ function hesk_iCheckSetup()
 	    }
 	}
 
+    $old_folders = array(
+        // pre-2.4 folders
+        'help_files/',
+
+        // pre-3.0 folders
+        'inc/calendar/',
+    );
+
+	foreach ($old_folders as $f)
+	{
+		if (is_dir(HESK_PATH . $f))
+	    {
+            //Try to remove the folder
+            hesk_rrmdir(HESK_PATH . $f);
+
+            // If not successful, ask the user to delete those folders
+            if (is_dir(HESK_PATH . $f))
+            {
+	    	    $still_exist[] = $f;
+            }
+	    }
+	}
+
 	if ( count($still_exist) )
 	{
+        sort(array_unique($still_exist));
+
 		$correct_these[] = '
 		Outdated files and folders<br /><br />
 		For security reasons please delete these legacy files and folders:<br />
@@ -892,8 +1051,8 @@ function hesk_iHeader()
 	<head>
 	<title>HESK setup script: <?php echo HESK_NEW_VERSION; ?></title>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-	<link href="../hesk_style.css?<?php echo HESK_NEW_VERSION; ?>" type="text/css" rel="stylesheet" />
-	<script language="Javascript" type="text/javascript" src="../hesk_javascript.js?<?php echo HESK_NEW_VERSION; ?>"></script>
+	<link href="hesk_style.css?<?php echo HESK_NEW_VERSION; ?>" type="text/css" rel="stylesheet" />
+	<script type="text/javascript" src="hesk_javascript.js?<?php echo HESK_NEW_VERSION; ?>"></script>
 	</head>
 	<body>
 
@@ -903,9 +1062,9 @@ function hesk_iHeader()
 	<td>
 		<table width="100%" border="0" cellspacing="0" cellpadding="0">
 		<tr>
-		<td width="3"><img src="../img/headerleftsm.jpg" width="3" height="25" alt="" /></td>
+		<td width="3"><img src="img/headerleftsm.jpg" width="3" height="25" alt="" /></td>
 		<td class="headersm">HESK setup script: <?php echo HESK_NEW_VERSION; ?></td>
-		<td width="3"><img src="../img/headerrightsm.jpg" width="3" height="25" alt="" /></td>
+		<td width="3"><img src="img/headerrightsm.jpg" width="3" height="25" alt="" /></td>
 		</tr>
 		</table>
 	</td>
@@ -953,9 +1112,9 @@ function hesk_iHeader()
     <div align="center">
 	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	<tr>
-		<td width="7" height="7"><img src="../img/roundcornerslt.jpg" width="7" height="7" alt="" /></td>
+		<td width="7" height="7"><img src="img/roundcornerslt.jpg" width="7" height="7" alt="" /></td>
 		<td class="roundcornerstop"></td>
-		<td><img src="../img/roundcornersrt.jpg" width="7" height="7" alt="" /></td>
+		<td><img src="img/roundcornersrt.jpg" width="7" height="7" alt="" /></td>
 	</tr>
 	<tr>
 		<td class="roundcornersleft">&nbsp;</td>
@@ -972,9 +1131,9 @@ function hesk_iFooter()
 		<td class="roundcornersright">&nbsp;</td>
 	</tr>
 	<tr>
-		<td><img src="../img/roundcornerslb.jpg" width="7" height="7" alt="" /></td>
+		<td><img src="img/roundcornerslb.jpg" width="7" height="7" alt="" /></td>
 		<td class="roundcornersbottom"></td>
-		<td width="7" height="7"><img src="../img/roundcornersrb.jpg" width="7" height="7" alt="" /></td>
+		<td width="7" height="7"><img src="img/roundcornersrb.jpg" width="7" height="7" alt="" /></td>
 	</tr>
 	</table>
     </div>
@@ -999,7 +1158,7 @@ function hesk_iSessionError()
 
 	<br />
 	<div class="error">
-		<img src="<?php echo HESK_PATH; ?>img/error.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
+		<img src="<?php echo HESK_PATH; ?>install/img/error.png" width="16" height="16" border="0" alt="" style="vertical-align:text-bottom" />
 		<b>Error:</b> PHP sessions not working!<br /><br />Note that this is a server configuration issue, not a HESK issue.<br /><br />Please contact your hosting company and ask them to verify why PHP sessions aren't working on your server!
 	</div>
 	<br />
@@ -1043,7 +1202,7 @@ function is__writable($path)
 //see http://bugs.php.net/bug.php?id=27609
 //see http://bugs.php.net/bug.php?id=30931
 
-    if ($path{strlen($path)-1}=='/') // recursively return a temporary file path
+    if ($path[strlen($path)-1]=='/') // recursively return a temporary file path
         return is__writable($path.uniqid(mt_rand()).'.tmp');
     else if (is_dir($path))
         return is__writable($path.'/'.uniqid(mt_rand()).'.tmp');

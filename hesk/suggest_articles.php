@@ -35,48 +35,34 @@ $res = hesk_dbQuery("SELECT t1.`id`, t1.`subject`, LEFT(t1.`content`, ".max(200,
 					LIMIT ".intval($hesk_settings['kb_search_limit']));
 $num = hesk_dbNumRows($res);
 
-/* Solve some spacing issues */
-if ( hesk_isREQUEST('p') )
+$articles = array();
+/* Return found articles */
+$max_score = 0;
+
+while ($article = hesk_dbFetchAssoc($res))
 {
-	echo '&nbsp;<br />';
+    if ($article['score'] > $max_score)
+    {
+        $max_score = $article['score'];
+    }
+
+    if ($max_score && ($article['score'] / $max_score) < 0.25)
+    {
+        break;
+    }
+
+    $txt = strip_tags($article['content']);
+    if (hesk_mb_strlen($txt) > $hesk_settings['kb_substrart'])
+    {
+        $txt = hesk_mb_substr($txt, 0, $hesk_settings['kb_substrart']).'...';
+    }
+
+    $articles[] = array(
+        'id' => $article['id'],
+        'subject' => $article['subject'],
+        'contentPreview' => $txt,
+        'hiddenInputValue' => $article['id'].'|'.stripslashes( hesk_input($article['subject']) )
+    );
 }
 
-/* Return found articles */
-?>
-<div class="notice">
-<span style="font-size:12px;font-weight:bold"><?php echo $hesklang['sc']; ?>:</span><br />&nbsp;<br />
-    <?php
-	if (!$num)
-	{
-		echo '<i>'.$hesklang['nsfo'].'</i>';
-	}
-    else
-    {
-    	$max_score = 0;
-
-		while ($article = hesk_dbFetchAssoc($res))
-		{
-			if ($article['score'] > $max_score)
-			{
-				$max_score = $article['score'];
-			}
-
-			if ($max_score && ($article['score'] / $max_score) < 0.25)
-			{
-				break;
-			}
-
-			$txt = strip_tags($article['content']);
-			if (hesk_mb_strlen($txt) > $hesk_settings['kb_substrart'])
-			{
-				$txt = hesk_mb_substr($txt, 0, $hesk_settings['kb_substrart']).'...';
-			}
-
-			echo '
-			<a href="knowledgebase.php?article='.$article['id'].'&amp;suggest=1" target="_blank">'.$article['subject'].'</a>
-			<input type="hidden" name="suggested[]" value="'.$article['id'].'|'.stripslashes( hesk_input($article['subject']) ).'">
-			<br />'.$txt.'<br /><br />';
-		}
-    }
-    ?>
-</div>
+print json_encode($articles);

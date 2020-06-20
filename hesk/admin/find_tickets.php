@@ -43,17 +43,20 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 
 /* Print admin navigation */
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
-
 ?>
+<div class="main__content tickets">
+    <div style="margin-left: -16px; margin-right: -24px;">
+        <?php
 
-</td>
-</tr>
-<tr>
-<td>
-
-<h3 align="center"><?php echo $hesklang['tickets_found']; ?></h3>
-
+        /* This will handle error, success and notice messages */
+        hesk_handle_messages();
+        ?>
+    </div>
 <?php
+$header_text = '
+    <section style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px">
+        <h2 style="font-size: 18px; font-weight: bold">'. $hesklang['tickets_found'] .' (%%HESK_TICKET_COUNT%%)</h2>
+    </section>';
 
 // This SQL code will be used to retrieve results
 $sql_final = "SELECT
@@ -273,11 +276,6 @@ if ($handle !== FALSE)
 	$href = 'find_tickets.php';
 	require_once(HESK_PATH . 'inc/ticket_list.inc.php');
 }
-?>
-
-<hr />
-
-<?php
 
 /* Clean unneeded session variables */
 hesk_cleanSessionVars('hide');

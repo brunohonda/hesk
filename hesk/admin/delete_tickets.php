@@ -16,6 +16,7 @@ define('HESK_PATH','../');
 
 /* Get all the required files and functions */
 require(HESK_PATH . 'hesk_settings.inc.php');
+define('TEMPLATE_PATH', HESK_PATH . "theme/{$hesk_settings['site_theme']}/");
 require(HESK_PATH . 'inc/common.inc.php');
 require(HESK_PATH . 'inc/admin_functions.inc.php');
 hesk_load_database_functions();
@@ -95,14 +96,14 @@ $i=0;
 
 // Possible priorities
 $priorities = array(
-	'critical'	=> array('value' => 0, 'text' => $hesklang['critical'],	'formatted' => '<font class="critical">'.$hesklang['critical'].'</font>'),
-	'high'		=> array('value' => 1, 'text' => $hesklang['high'],		'formatted' => '<font class="important">'.$hesklang['high'].'</font>'),
-	'medium'	=> array('value' => 2, 'text' => $hesklang['medium'],	'formatted' => '<font class="medium">'.$hesklang['medium'].'</font>'),
+	'critical'	=> array('value' => 0, 'text' => $hesklang['critical'],	'formatted' => $hesklang['critical']),
+	'high'		=> array('value' => 1, 'text' => $hesklang['high'],		'formatted' => $hesklang['high']),
+	'medium'	=> array('value' => 2, 'text' => $hesklang['medium'],	'formatted' => $hesklang['medium']),
 	'low'		=> array('value' => 3, 'text' => $hesklang['low'],		'formatted' => $hesklang['low']),
 );
 
 // Assign tickets to
-if ( isset($_POST['assign']) && $_POST['assign'] == $hesklang['assi'])
+if ( isset($_POST['action-type']) && $_POST['action-type'] == 'assi')
 {
 	if ( ! isset($_POST['owner']) || $_POST['owner'] == '')
 	{
@@ -493,44 +494,12 @@ elseif ($_POST['a']=='print')
 
     // Print page head
     header('Content-Type: text/html; charset=utf-8');
-    ?>
-    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-    <html>
-    <head>
-    <title><?php echo $hesk_settings['hesk_title']; ?></title>
-    <meta http-equiv="Content-Type" content="text/html; charset=<?php echo $hesklang['ENCODING']; ?>">
-    <style type="text/css">
-    body, table, td, p
-    {
-        color : black;
-        font-family : Verdana, Geneva, Arial, Helvetica, sans-serif;
-        font-size : <?php echo $hesk_settings['print_font_size']; ?>px;
-        word-wrap: break-word;
-        word-break: break-word;
-    }
-    table
-    {
-    	border-collapse:collapse;
-    }
-    hr
-    {
-    	border: 0;
-    	color: #9e9e9e;
-    	background-color: #9e9e9e;
-    	height: 1px;
-    	width: 100%;
-    	text-align: left;
-    }
-    </style>
-    </head>
-    <body onload="window.print()">
-    <?php
 
+	$tickets = array();
     // Loop through ticket IDs and print them
     foreach ($_POST['id'] as $this_id)
     {
-        if ( is_array($this_id) )
-        {
+        if ( is_array($this_id) ) {
             continue;
         }
 
@@ -568,16 +537,25 @@ elseif ($_POST['a']=='print')
 
         // Get replies
         $res  = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`='{$ticket['id']}' ORDER BY `id` ASC");
-        $replies = hesk_dbNumRows($res);
 
-        // Print ticket
-        require(HESK_PATH . 'inc/print_template.inc.php');
-		flush();
+        // Get notes
+        $notes = array();
+        $res2 = hesk_dbQuery("SELECT t1.*, t2.`name` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."notes` AS t1 LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."users` AS t2 ON t1.`who` = t2.`id` WHERE `ticket`='{$ticket['id']}' ORDER BY t1.`id`");
+        while ($note = hesk_dbFetchAssoc($res2))
+        {
+            $notes[] = $note;
+        }
+
+        $ticket['notes'] = $notes;
+        $ticket['replies'] = $res;
+        $ticket['categoryName'] = $category['name'];
+        $tickets[] = $ticket;
     }
-    ?>
-    </body>
-    </html>
-    <?php
+
+	// Print tickets
+	require(HESK_PATH . 'inc/print_template.inc.php');
+	flush();
+
     exit();
 }
 /* JUST CLOSE */
@@ -585,7 +563,6 @@ else
 {
     /* Check permissions for this feature */
 	hesk_checkPermission('can_view_tickets');
-    hesk_checkPermission('can_reply_tickets');
     hesk_checkPermission('can_resolve');
 
 	/* A security check */

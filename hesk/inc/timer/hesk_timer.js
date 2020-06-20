@@ -47,6 +47,10 @@ function force_stop()
 	}
 }
 
+function timer_running() {
+	return 0!=t[2];
+}
+
 function disp()
 {
 	if (t[2]) t[1]=(new Date()).valueOf();
