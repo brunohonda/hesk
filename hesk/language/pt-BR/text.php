@@ -3,7 +3,7 @@
 *
 * Language file for Help Desk Software HESK (https://www.hesk.com)
 * Language: Português Brasileiro (Brazilian Portuguese)
-* Version: 2.7.x
+* Version: 3.2.x
 *
 * ==> CONTRIBUTORS
 *
@@ -12,6 +12,7 @@
 * Murilo Zoratti
 * Fabio Bmed (http://www.fabiobmed.com.br)
 * Bruno Andrade da Silva
+* Felipe Rozelio
 *
 * ==> HOW TO TRANSLATE THIS FILE
 *
@@ -155,7 +156,7 @@ $hesklang['find_ticket']='Procurar chamado';
 $hesklang['yyyy_mm_dd']='AAAA-MM-DD';
 $hesklang['results_page']='resultados por página';
 $hesklang['opened']='aberto'; // The ticket has been OPENED
-$hesklang['closed']='Resolvido'; // Ticket has been RESOLVED
+$hesklang['closed']='resolvido'; // Ticket has been RESOLVED
 $hesklang['ticket']='Chamado';
 $hesklang['tickets']='Chamados';
 $hesklang['ticket_been']='Este chamado foi';
@@ -183,13 +184,13 @@ $hesklang['ticket_trackID']='Código de identificação do chamado';
 $hesklang['c2c']='Clique para continuar';
 $hesklang['tickets_deleted']='Chamados removidos';
 $hesklang['num_tickets_deleted']='<b>%d</b> chamados foram removidos';
-$hesklang['found_num_tickets']='Encontrados <b>%d</b> chamados. Páginas:';
 $hesklang['confirm_del_cat']='Tem certeza de que deseja remover esta categoria?';
 $hesklang['cat_intro']='Aqui você pode gerenciar as categorias. Categorias são úteis
 para categorizar chamados por relevância (por exemplo &quot;Vendas&quot;,
 &quot;Problemas de hardware&quot;, &quot;Problemas de PHP/MySQL&quot; etc) e para
 atribuir usuários a categorias (por exemplo, o seu vendedor pode ver somente
 chamados enviados para a categoria &quot;Vendas&quot;)';
+$hesklang['spam_req']='At least one SPAM prevention measure must be enabled!';
 $hesklang['cat_name']='Nome da categoria';
 $hesklang['remove']='Remover';
 $hesklang['add_cat']='Adicionar nova categoria';
@@ -528,11 +529,7 @@ $hesklang['s_ucrt']='Reabrir chamados';
 $hesklang['urate']='Responder avaliações';
 $hesklang['hesk_url']='URL da central de suporte';
 $hesklang['hesk_title']='Título da central de suporte';
-$hesklang['server_time']='Ajusta da hora do servidor';
-$hesklang['t_h']='horas';
 $hesklang['cid']='Código de identificação do caso';
-$hesklang['t_m']='minutos';
-$hesklang['day']='Horário de verão';
 $hesklang['tfor']='Formato da hora';
 $hesklang['prefix']='Prefixo da tabela';
 $hesklang['s_ekb']='Habilitar base de conhecimento';
@@ -810,7 +807,6 @@ $hesklang['thist5']='<li class="smaller">%s | bloqueado por %s</li>'; // %s = da
 $hesklang['thist6']='<li class="smaller">%s | desbloqueado por %s</li>'; // %s = date, user making change
 $hesklang['thist7']='<li class="smaller">%s | chamado criado por %s</li>'; // %s = date, user making change
 $hesklang['elocked']='Este chamado foi bloqueado ou removido.';
-$hesklang['nti']='+ Novo chamado';
 $hesklang['nti2']='Inserir um novo chamado';
 $hesklang['nti3']='Use este formulário para criar um novo chamado em nome do cliente. Digite as informações do <i>cliente</i> no formulário (nome do cliente, e-mail do cliente, ...) e NÃO seu nome! O chamado será criado como se o cliente o tivesse enviado.';
 $hesklang['addop']='Opções';
@@ -941,7 +937,6 @@ $hesklang['swyse']='Editor WYSIWYG';
 $hesklang['hrts']='Avaliar o HESK';
 $hesklang['hrts2']='Exibir o link Avalie este script no painel administrativo';
 $hesklang['emlpipe']='Filar por e-mail';
-$hesklang['emlsend']='Enviando e-mail';
 $hesklang['emlsend2']='Enviar e-mail usando';
 $hesklang['phpmail']='PHP mail()';
 $hesklang['smtp']='Servidor SMTP';
@@ -959,7 +954,7 @@ $hesklang['onlinep']='Usuários on-line'; // For display in footer
 $hesklang['sonline']='Usuários on-line'; // For settings page
 $hesklang['sonline2']='Exibir usuários on-line. Limite (minutos):'; // For settings page
 $hesklang['gb']='Agrupar por';
-$hesklang['dg']='Don\'Não agrupar';
+$hesklang['dg']='Não agrupar';
 $hesklang['err_dpi']='O banco de dados %s não contém todas as tabelas do HESK com o prefixo %s, nenhuma alteração salva.';
 $hesklang['err_dpi2']='Tabelas não encontradas:';
 $hesklang['sme']='Erro no SMTP';
@@ -982,6 +977,7 @@ $hesklang['cat_public']='Esta categoria é PÚBLICA (clique para tornar privada)
 $hesklang['cat_private']='Esta categoria é PRIVADA (cliaud para tornar pública)';
 $hesklang['cat_aa']='Atribuir automaticamente chamados nesta categoria.';
 $hesklang['cat_type']='Tornar esta categoria privada (apenas a equipe pode selecioná-la).';
+$hesklang['responses']='Responses';
 $hesklang['caaon']='A atribuição automática foi habilitada para a categoria selecionada';
 $hesklang['caaoff']='A atribuição automática foi desabilitada para a categoria selecionada';
 $hesklang['cpub']='Tipo da categoria alterado para PÚBLICA';
@@ -1162,23 +1158,11 @@ $hesklang['n2ex']='Nenhum chamado encontrado correspondendo ao seu critério, na
 $hesklang['sp']='Prevenção de SPAM'; // For settings page
 $hesklang['sit']='-&gt; Tipo de imagem';
 $hesklang['sis']='Imagem simples';
-$hesklang['sir']='API ReCaptcha V1 (antiga)';
 $hesklang['rcpb']='Chave do site (Chave pública)';
 $hesklang['rcpv']='Chave secreta (Chave privada)';
 $hesklang['pop3keep']='Manter uma cópia';
 
 // --> Text used by ReCaptcha
-$hesklang['visual_challenge']='Obter um desafio visual';
-$hesklang['audio_challenge']='obter um desafio de áudio';
-$hesklang['refresh_btn']='Obter um novo desafio';
-$hesklang['instructions_visual']='Digite as duas palavras:';
-$hesklang['instructions_context']='Digite as palavras nas caixas:';
-$hesklang['instructions_audio']='Digite o que você ouvir:';
-$hesklang['help_btn']='Ajuda';
-$hesklang['play_again']='Reproduzir o som novamente';
-$hesklang['cant_hear_this']='Baixar o som como MP3';
-$hesklang['incorrect_try_again']='Incorreto. Tente novamente.';
-$hesklang['image_alt_text']='Imagem de desafio do reCAPTCHA';
 $hesklang['recaptcha_error']='Resposta a prevenção de SPAM incorreta, por favor tente novamente.';
 
 // Added in version 2.6.0
@@ -1243,7 +1227,7 @@ $hesklang['ednote2']='Mensagem da observação salva';
 $hesklang['perm_deny']='Permissão negada';
 $hesklang['mis_note']='Identificação da observação não encontrada';
 $hesklang['no_note']='Observação com esta identificação não encontrada';
-$hesklang['sacl']='Salvar e continuar mais tarde';
+$hesklang['sacl']='Salvar e continuar depois';
 $hesklang['reply_saved']='Sua mensagem de resposta foi salva para depois.';
 $hesklang['submit_as']='Enviar como:';
 $hesklang['sasc']='enviar como resposta do cliente';
@@ -1374,7 +1358,6 @@ $hesklang['pjt2']='minutos após o início';
 $hesklang['nkba']='A pesquisa da base de conhecimento precisa de artigos únicos suficientes para funcionar adequadamente.<br /><br />Considere adicionar mais artigos na base de conhecimento para melhorar os resultados da pesquisa e das sugestões de artigos.';
 $hesklang['saa']='Artigos relevantes são exibidos no topo da lista de artigos';
 $hesklang['yhbr']='Você foi bloqueado do sistema por %s minutos devido a muitas resposta a um chamado.';
-$hesklang['sir2']='API ReCaptcha V2 (recomendada)';
 
 // Language for Google reCaptcha API version 2
 // Supported language codes: https://developers.google.com/recaptcha/docs/language
@@ -1451,7 +1434,7 @@ $hesklang['et_empty']='O modelo de e=mail não podem ficar em branco';
 $hesklang['et_saved']='Modelo de e-mail salvo';
 $hesklang['source']='Fonte';
 $hesklang['select_category']='Selecione uma categoria';
-$hesklang['select_category_text']='Em que podemos ajudá-lo?';
+$hesklang['select_category_text']='Em que podemos ajudar?';
 $hesklang['select_category_staff']='Selecione a categoria do chamado';
 $hesklang['scat']='Limite de seleção de categoria';
 $hesklang['scat2']='(uma caixa de combinação exibirá se o contador da categoria for maior)';
@@ -1547,6 +1530,366 @@ $hesklang['step1']='Passo 1';
 $hesklang['step2']='Passo 2';
 $hesklang['dffs']='Quando o download for concluído, remova o arquivo do servidor';
 $hesklang['fd']='Exportar arquivo removido do servidor';
+
+// Added in version 2.8.0
+$hesklang['TZ']='Timezone';
+$hesklang['thist17']='<li class="smaller">%s | enviado pelo buscador IMAP</li>';
+$hesklang['sir3']='reCAPTCHA Invisível';
+$hesklang['invisible']='invisível';
+$hesklang['imap_not']='O PHP não foi compilado com suporte a IMAP';
+$hesklang['imap_warning']='usuário %1$s tem o mesmo endereço de e-mail que o seu buscador IMAP: %2$s'; // %1$s = username, %2$s = email address
+$hesklang['pop3_warning']='usúario %1$s tem o mesmo endereço de e-mail que o seu buscador POP3: %2$s'; // %1$s = username, %2$s = email address
+$hesklang['fetch_warning']='Isso pode resultar em um loop de e-mail, onde novos tickets são criados pelas notificações de e-mail do usuário. Seu endereço de e-mail do buscador deve ser único e não deve ser usado por mais ninguém.';
+$hesklang['from_warning']='Hesk está usando um servidor SMTP para enviar notificações por e-mail. Seu &quot;%1$s&quot; na aba &quot;%2$s&quot; deve ser alterado para: %3$s'; // %1$s = "From email" text, %2$s = "General" tab text, %3$s = email address
+$hesklang['can_view_ass_by']='Pode visualizar tickets que ele/elaa associou a outros';
+$hesklang['can_privacy']='Pode anonimizar tickets';
+$hesklang['confirm_anony']='Anonimizar esse ticket';
+$hesklang['anon_selected']='Anonimizar tickets selecionados';
+$hesklang['privacy_anon_info']='Remover todas as informações que podem identificar pessoalmente o remetente de tickets (nome, e-mail, mensagem, anexos, IP...), mas conservar tickets na base de dados para estatísticas (para serem esquecidos).';
+$hesklang['success_anon']='Ticket anonimizado com sucesso';
+$hesklang['num_tickets_anon']='Número de tickets anonimizados: <b>%d</b>';
+$hesklang['anon_IP']='0.0.0.0'; // IP in anonymized tickets
+$hesklang['anon_name']='[Cliente]'; // Customer name in anonymized tickets
+$hesklang['anon_email']=''; // Customer email in anonymized tickets
+$hesklang['anon_subject']='[Assunto]'; // Ticket subject of anonymized tickets
+$hesklang['anon_message']='[Mensagem]'; // Ticket message in anonymized tickets
+$hesklang['thist18']='<li class="smaller">%s | anonimizado por %s</li>';
+$hesklang['print_selected']='Imprimir os tickets selecionados';
+$hesklang['with_selected']='Com a seleção:';
+$hesklang['assign_selected']='Associar selecionados para:';
+$hesklang['assign_no']='Sem proprietário selecionado, não foram feitas alterações';
+$hesklang['assign_1']='Os tickets selecionados foram alterados para Desassociados.';
+$hesklang['assign_2']='Ticket ID %1$s alterado para Desassociado'; // %1$s = ticket numerical ID
+$hesklang['assign_3']='%1$s erro: já está associado para %2$s'; // %1$s = ticket tracking ID, %2$s = owner name
+$hesklang['assign_4']='%1$s associado para %2$s'; // %1$s = ticket tracking ID, %2$s = owner name
+$hesklang['assign_5']='%1$s erro: %2$s não tem acesso à categoria do ticket'; // %1$s = ticket tracking ID, %2$s = owner name
+$hesklang['assign_log']='Resultado de associação em massa de tickets::<br /><br />Associado: %1$s<br />Erros: %2$s<br /><br />Log:<br /><pre>%3$s</pre>'; // %1$s = number of tickets assigned, %2$s = number of errors, %3$s = log
+$hesklang['IP_addr']='Endereço IP';
+$hesklang['moret']='Mais opções'; // More options button title
+$hesklang['btn_more']='Mais'; // More options button text
+$hesklang['btn_print']='Imprimir';
+$hesklang['btn_edit']='Editar';
+$hesklang['btn_lock']='Trancar ticket';
+$hesklang['btn_unlock']='Destrancar ticket';
+$hesklang['btn_tag']='Marcar ticket';
+$hesklang['btn_resend']='Reenviar notificação de e-mail';
+$hesklang['btn_untag']='Desmarcar ticket';
+$hesklang['btn_import_kb']='Importar para a Base de Conhecimento';
+$hesklang['btn_anony']='Anonimizar ticket';
+$hesklang['btn_delt']='Excluir ticket';
+$hesklang['btn_delr']='Excluir resposta';
+$hesklang['ernf']='Resposta não encontrada';
+$hesklang['tns']='Notificações do ticket foram reenviadas';
+$hesklang['rns']='Notificações de resposta foram reenviadas';
+$hesklang['fname']='Primeiro nome';
+$hesklang['export_selected']='Exportar tickets selecionados';
+$hesklang['btn_export']='Exportar para XML (Excel)';
+$hesklang['recaptcha']='reCAPTCHA';
+
+// Added in version 3.0.0
+$hesklang['team']='Team';
+$hesklang['sm_content']='Conteúdo';
+$hesklang['sm_settings']='Configurações';
+$hesklang['wizard_back']='Voltar'; // Create/Edit sidebar button to go back a step
+$hesklang['wizard_next']='Próximo'; // Create/Edit sidebar button to go forward a step
+$hesklang['sm_go_to_settings']='Voltar para as Configurações';
+$hesklang['sm_return_to_editing']='Retornar para Edição';
+$hesklang['email_tpl_title']='Título';
+$hesklang['edit_email_template']='Editar Modelo de E-mail';
+$hesklang['err_no_settings_section']='Nenhuma seção de configurações foi fornecida.';
+$hesklang['this_field_is_required']='Este campo é requerido.';
+$hesklang['reset_your_password']='Redefina sua senha';
+$hesklang['reset_password_instructions']='Por favor, preencha o formulário abaixo. Enviaremos um link para você redefinir sua senha.';
+$hesklang['enter_email']='Digite um e-mail';
+$hesklang['password_reset_check_your_email']='Verifique seu e-mail';
+$hesklang['password_reset_link_sent']='Enviamos um link para redefinir sua senha.';
+$hesklang['back_to_login']='Voltar para página de login';
+$hesklang['pager_first']='Primeira';
+$hesklang['pager_previous']='Anterior';
+$hesklang['pager_next']='Próxima';
+$hesklang['pager_last']='Última';
+$hesklang['new_team_member']='Novo Membro da Equipe';
+$hesklang['role']='Função';
+$hesklang['optional']='Opcional';
+$hesklang['edit_profile']='Editar Perfil';
+$hesklang['assigned_to']='Atribuído a';
+$hesklang['contact']='Contato';
+$hesklang['unban_email']='Desbanir este e-mail';
+$hesklang['unban_ip']='Desbanir este IP';
+$hesklang['show_previous_replies']='Mostrar respostas anteriores';
+$hesklang['type_your_message']='Digite sua mensagem'; // Used when there are no canned responses
+$hesklang['type_your_message_or_reply_from_template']='Digite sua mensagem ou %s'; // %s: "reply from template" (see $hesklang['reply_from_template'])
+$hesklang['reply_from_template']='resposta do modelo'; // See $hesklang['type_your_message_or_reply_from_template'] for usage
+$hesklang['close_button_text']='Fechar';
+$hesklang['create_new_ticket']='Criar Novo Chamado';
+$hesklang['delete_article']='Deletar artigo';
+$hesklang['view_existing_tickets']='Visualizar chamados existentes';
+$hesklang['how_can_we_help']='Olá, como podemos lhe ajudar?';
+$hesklang['search_for_articles']='Pesquisar por artigos';
+$hesklang['submit_a_support_request']='Enviar um Chamado';
+$hesklang['maximum_x_attachments']='Máximo %s anexos'; // %s = max number of attachments (specified in settings)
+$hesklang['verify_header']='Prevenção de SPAM';
+$hesklang['ticket_details']='Detalhes do Chamado';
+$hesklang['yes_title_case']='Sim';
+$hesklang['no_title_case']='Não';
+$hesklang['no_results_found']='Nenhum Resultado Encontrado';
+$hesklang['site_theme']='Tema do Site';
+$hesklang['test_theme_folder']='Testar Pasta de Temas';
+$hesklang['test_theme_folder_description']='Testar o diretório de temas para temas válidos. Somente temas que passem  por todos os testes são instalados corretamente.';
+$hesklang['err_site_theme']='Por favor, selecione um Tema do Hesk';
+$hesklang['confirm']='Confirmar';
+$hesklang['confirm_deletion']='Confirmar Remoção';
+$hesklang['confirm_delete_status']='Você tem certeza que deseja excluir esse status customizado?';
+$hesklang['help_desk']='Sistema de Chamados'; // Displayed on staff sidebar menu
+
+// Added in version 3.1.0
+$hesklang['TIMEAGO_LANG_FILE']='jquery.timeago.en.js'; // Name of the proper language file in folder /js/timeago/locales
+$hesklang['tdis']='Exibição de hora';
+$hesklang['tdisd']='Data e hora';
+$hesklang['tdisa']='Horas atrás (exemplo: há 5 horas)';
+$hesklang['nav_templates']='Templates'; // Admin panel navigation item
+$hesklang['hide_replies']='Esconder respostas do ticket';
+$hesklang['hide_replies_no']='Nunca, sempre mostrar todas as respostas';
+$hesklang['hide_replies_yes']='Esconder todas as respostas, exceto a última';
+$hesklang['hide_replies_def']='Mostrar apenas a última resposta da equipe e qualquer resposta subsequente do cliente';
+$hesklang['reply_by']='Respondido por'; // Reply by NAME
+$hesklang['btt']='Voltar ao topo';
+$hesklang['lwidth']='Limitar largura do ticket';
+$hesklang['lwidtall']='Usar o maior largura disponível';
+$hesklang['lwidtpx']='Largura máxima em pixels:';
+// 3-letter days of the week
+$hesklang['mon']='Seg';
+$hesklang['tue']='Ter';
+$hesklang['wed']='Qua';
+$hesklang['thu']='Qui';
+$hesklang['fri']='Sex';
+$hesklang['sat']='Sab';
+$hesklang['sun']='Dom';
+$hesklang['clear']='Limpar'; // delete field value
+$hesklang['first_day_of_week']='0'; // first day of week; 0 = Sunday, 1 = Monday, 2 = Tuesday, ...
+$hesklang['modules']='Módulos';
+$hesklang['modules_demo']='Este módulo somente está disponível em %s'; // %s = Hesk cloud link
+$hesklang['see_demo']='Teste o live demo aqui: %s'; // %s = Hesk demo link
+$hesklang['statistics']['tab']='Estatísticas';
+$hesklang['statistics']['intro']='Este relatório te dará informações sobre o uso do helpdesk e sobre a performance da equipe.';
+$hesklang['statistics']['ntsp']='Não há tickets no período selecionado.';
+$hesklang['statistics']['pie_title_ro']='Tickets Abertos X Resolvidos';
+$hesklang['statistics']['open']='Aberto';
+$hesklang['statistics']['resolved']='Resolvido';
+$hesklang['statistics']['pie_title_as']='Tickets abertos: Associados X Não associados';
+$hesklang['statistics']['ass']='Associado';
+$hesklang['statistics']['unas']='Não associado';
+$hesklang['statistics']['pie_title_au']='Tickets abertos: Respondidos vs. Sem resposta';
+$hesklang['statistics']['answered']='Respondido';
+$hesklang['statistics']['unanswered']='Sem resposta';
+$hesklang['statistics']['pie_title_so']='Status dos tickets abertos';
+$hesklang['statistics']['retic']='Tickets:';
+$hesklang['statistics']['chart_title_md']='Tickets por dia do mês';
+$hesklang['statistics']['chart_title_wd']='Tickets por dia da semana';
+$hesklang['statistics']['chart_title_hd']='Tickets por hora do dia';
+$hesklang['statistics']['chart_title_tfr']='Tempo até a primeira resposta da equipe';
+$hesklang['statistics']['chart_title_tfrc']='Tickets respondidos dentro de um intervalo de tempo';
+$hesklang['statistics']['chart_title_ttr']='Tempo do envio à solução do ticket';
+$hesklang['statistics']['chart_title_ttrc']='Tickets resolvidos dentro de um intervalo de tempo';
+$hesklang['statistics']['chart_title_sr']='Respostas da equipe';
+$hesklang['statistics']['chart_title_srt']='Respostas da equipe por ticket';
+$hesklang['statistics']['chart_title_srtr']='Respostas da equipe por ticket (somente tickets resolvidos)';
+$hesklang['statistics']['chart_title_srt1']='Respostas da equipe por ticket (tickets com pelo menos 1 resposta)';
+$hesklang['statistics']['ct_30']='30 minutos';
+$hesklang['statistics']['ct_1h']='1 hora';
+$hesklang['statistics']['ct_2h']='2 horas';
+$hesklang['statistics']['ct_4h']='4 horas';
+$hesklang['statistics']['ct_1d']='1 dia';
+$hesklang['statistics']['ct_2d']='2 dias';
+$hesklang['statistics']['ct_3d']='3 dias';
+$hesklang['statistics']['ct_1w']='1 semana';
+$hesklang['statistics']['ct_wp']='> 1 semana';
+$hesklang['statistics']['ct_1m']='1 mês';
+$hesklang['statistics']['ct_mp']='> 1 mês';
+$hesklang['statistics']['axis1']='% de tickets respondidos';
+$hesklang['statistics']['axis2']='% de tickets resolvidos';
+$hesklang['statistics']['axis3']='% de tickets';
+$hesklang['statistics']['axis4']='Tempo para primeira resposta';
+$hesklang['statistics']['axis5']='Tempo para resolvido';
+$hesklang['statistics']['axis6']='Numero de respostas';
+$hesklang['statistics']['axis7']='Numero de tickets';
+$hesklang['statistics']['axis8']='Dia da semana';
+$hesklang['statistics']['axis9']='Hora';
+$hesklang['statistics']['axis10']='Dia do mês';
+$hesklang['statistics']['tr_0']='Sem resposta';
+$hesklang['statistics']['tr_1']='1 resposta';
+$hesklang['statistics']['tr_2']='2 respostas';
+$hesklang['statistics']['tr_5']='3-5 respostas';
+$hesklang['statistics']['tr_10']='6-10 respostas';
+$hesklang['statistics']['tr_99']='> 10 respostas';
+$hesklang['statistics']['average']='Média';
+$hesklang['statistics']['atfr']='Média de horas e minutos para primeira resposta da equipe:';
+$hesklang['statistics']['attr']='Média de horas e minutos para resolver um ticket:';
+$hesklang['statistics']['about']='aproximadamente %s'; // approximate time; "about 5 days 3 hous"
+$hesklang['statistics']['na']='N/A';
+$hesklang['statistics']['trept']='Total de tickets respondidos pela equipe:';
+$hesklang['statistics']['trnr']='Total de tickets resolvidos sem uma resposta da equipe:';
+$hesklang['statistics']['tsr']='Total de respostas da equipe:';
+$hesklang['statistics']['tsrt']='Média de respostas da equipe por ticket:';
+$hesklang['statistics']['tsro']='Média de respostas da equipe por ticket (tickets com pelo menos 1 resposta da equipe):';
+$hesklang['statistics']['tsrc']='Média de respostas da equipe requeridas para solução de um ticket:';
+$hesklang['statistics']['tsrr']='Média de respostas da equipe requeridas para solução de um ticket (tickets com pelo menos 1 resposta da equipe):';
+$hesklang['sep_1000']='.'; // separator between every group of thousands: 1,000,000
+$hesklang['sep_dec']=','; // separator between full and decimal numbers: 0.99
+$hesklang['and_more']='e muito mais...'; // last item in a list
+
+// Added in version 3.2.0
+$hesklang['overdue_ticket']='[#%%TRACK_ID%%] Ticket vencido';
+$hesklang['ticket_escalated']='[#%%TRACK_ID%%] ESCALADO: %%SUBJECT%%';
+$hesklang['escalate']['tab']='Escalado'; // Menu link
+$hesklang['escalate']['page_title']='Tickets Escalados'; // Page H2 title
+$hesklang['escalate']['intro']='Este módulo o ajudará a escalar tickets que não são atendidos a tempo.';
+$hesklang['escalate']['feat1']='Tickets não atribuídos, respondidos ou resolvidos dentro de um prazo';
+$hesklang['escalate']['feat2']='tickets se aproximando da data de vencimento e tickets vencidos';
+$hesklang['escalate']['feat3']='alterar automaticamente a prioridade do ticket, reatribuir um ticket, enviar uma notificação por e-mail';
+$hesklang['escalate']['feat4']='aplicar regras com base na categoria do ticket, proprietário, status';
+$hesklang['escalate']['prefix']='Escalado'; // Email subject prefix, e.g. "Escalated: [XXX-XXX-XXXX] Test ticket"
+$hesklang['escalate']['active_rules']='Regras ativas';
+$hesklang['escalate']['new']='Nova regra de escalação';
+$hesklang['escalate']['no_rules']='Você não tem regras de escalonamento. Crie uma clicando no botão &quot;Nova regra de escalonamento&quot; botão acima.';
+$hesklang['escalate']['title']='Título da regra';
+$hesklang['escalate']['titlet']='Um título descritivo, por exemplo: Reatribuir tickets não respondidos em um dia';
+$hesklang['escalate']['default_title']='Regra de %1$s'; // Default rule title; %1$s = user name
+$hesklang['escalate']['trigger']='Gatilho de regra';
+$hesklang['escalate']['trigt']='Defina a condição que irá acionar (executar) esta regra.';
+$hesklang['escalate']['hits']='Êxitos'; // How many times a rule has been triggered
+$hesklang['escalate']['step1']='Condição'; // Title of step 1 when creating/editing a rule
+$hesklang['escalate']['step2']='Ação'; // Title of step 2 when creating/editing a rule
+$hesklang['escalate']['step3']='Aplicar a'; // Title of step 3 when creating/editing a rule
+$hesklang['escalate']['delete']='Deletar esta regra?';
+$hesklang['escalate']['edit']='Editando a regra de escalonamento ID %1$s'; // %1$s = rule ID number
+$hesklang['escalate']['ifat']='Um ticket de suporte é:'; // If a ticket is not (resolved) within X (minutes) of submitting, then (resend notification)
+$hesklang['escalate']['nrep']='não respondido pela equipe';
+$hesklang['escalate']['nrepc']='não respondido pelo cliente';
+$hesklang['escalate']['nass']='não atribuído';
+$hesklang['escalate']['nres']='não resolvido';
+$hesklang['escalate']['ndue']='se aproximando da data de vencimento';
+$hesklang['escalate']['odue']='atrasado';
+$hesklang['escalate']['within']='Dentro de';
+$hesklang['escalate']['minutes']='minutos';
+$hesklang['escalate']['hours']='houras';
+$hesklang['escalate']['days']='dias';
+$hesklang['escalate']['weeks']='semanas';
+$hesklang['escalate']['months']='meses';
+$hesklang['escalate']['years']='anos';
+$hesklang['escalate']['ofs']='de ser submetido';
+$hesklang['escalate']['resend']='Reenviar notificações por e-mail:';
+$hesklang['escalate']['force']='Sempre envie, desconsidere as configurações da equipe';
+$hesklang['escalate']['noforce']='Respeite as configurações de notificação da equipe';
+$hesklang['escalate']['setpri']='Defina a prioridade para:';
+$hesklang['escalate']['setsta']='Defina o status para:';
+$hesklang['escalate']['assto']='Atribuir ticket a:';
+$hesklang['escalate']['asm']='Outro membro da equipe';
+$hesklang['escalate']['notify']='Notificar membros da equipe ...';
+$hesklang['escalate']['ato']='Aplicar a';
+$hesklang['escalate']['tic']='Tickets na categoria:';
+$hesklang['escalate']['tat']='Tickets atribuídos para:';
+$hesklang['escalate']['tws']='Tickets com status:';
+$hesklang['escalate']['tall']='Aplique esta regra a tickets existentes e futuros';
+$hesklang['escalate']['tfn']='Aplique esta regra apenas a tickets futuros, ignore os tickets existentes';
+$hesklang['escalate']['tfi']='Aplique esta regra apenas a tickets com ID superior a:';
+$hesklang['escalate']['save']='Salvar regra';
+$hesklang['escalate']['e_tt']='O tempo deve estar entre 1 e 10000';
+$hesklang['escalate']['e_a']='Selecione pelo menos uma ação para executar em tickets correspondentes';
+$hesklang['escalate']['nocat']='Selecione pelo menos uma categoria';
+$hesklang['escalate']['nouser']='Selecione pelo menos um usuário';
+$hesklang['escalate']['nostatus']='Selecione pelo menos um status';
+$hesklang['escalate']['nocata']='%1$s não tem acesso a estas categorias:'; // %1$s = user name
+$hesklang['escalate']['rule_added']='Nova regra foi criada';
+$hesklang['escalate']['mdf']='As configurações da regra foram salvas';
+$hesklang['escalate']['e_id']='Nenhuma regra com este ID encontrada';
+$hesklang['escalate']['deleted']='A regra selecionada foi excluída';
+$hesklang['escalate']['edit_notice']='alterar o gatilho da regra não terá efeito em nenhum ticket já escalado por esta regra (a menos que você redefina a regra).';
+$hesklang['escalate']['reset']='Redefinir esta regra';
+$hesklang['escalate']['reset2']='Tem certeza de que deseja redefinir esta regra?<br><br>Os êxitos da regra irão para 0 e qualquer ticket que corresponda a essa regra será escalado novamente.';
+$hesklang['escalate']['reset3']='A regra selecionada foi redefinida';
+$hesklang['escalate']['log_title']='Regra #%1$s (%2$s)'; // Used in ticket history log. %1$s = rule ID, %2$s = rule title
+$hesklang['escalate']['thist1']='<li class="smaller">%1$s | escalado por %2$s:</li>'; // Used in ticket history log. %1$s = date, %2$s = rule log title (above)
+$hesklang['escalate']['thist2']='<li class="smaller">%1$s | - definir prioridade para %2$s</li>'; // %1$s = date, %2$s = priority
+$hesklang['escalate']['thist3']='<li class="smaller">%1$s | - atribuir a %2$s</li>'; // %1$s = date, %2$s = owner
+$hesklang['escalate']['thist4']='<li class="smaller">%1$s | - enviar notificação de equipe</li>';
+$hesklang['escalate']['thist5']='<li class="smaller">%1$s | - enviar notificação de equipe (forçado)</li>';
+$hesklang['escalate']['thist6']='<li class="smaller">%1$s | - erro: %2$s não tem acesso à categoria de tickets</li>'; // %1$s = date, %2$s = owner
+$hesklang['escalate']['thist7']='<li class="smaller">%1$s | - erro: %2$s não tem permissão para ver os tickets</li>'; // %1$s = date, %2$s = owner
+$hesklang['escalate']['thist8']='<li class="smaller">%1$s | - erro: nenhum outro usuário que pode ver este ticket</li>'; // %1$s = date
+$hesklang['escalate']['thist9']='<li class="smaller">%1$s | - aviso: prioridade já definida para %2$s</li>'; // %1$s = date, %2$s = priority
+$hesklang['escalate']['thist10']='<li class="smaller">%1$s | - aviso: já atribuído a %2$s</li>'; // %1$s = date, %2$s = owner
+$hesklang['escalate']['thist11']='<li class="smaller">%1$s | - notificar: %2$s</li>'; // %1$s = date, %2$s = list of users
+$hesklang['escalate']['thist12']='<li class="smaller">%1$s | - definir status para %2$s</li>'; // %1$s = date, %2$s = status
+$hesklang['escalate']['thist13']='<li class="smaller">%1$s | - aviso: status já definido para %2$s</li>'; // %1$s = date, %2$s = status
+$hesklang['escalate']['active']='Ativa'; // Is the rule active (live)?
+$hesklang['escalate']['activate']='Ative esta regra (começar a usá-la)';
+$hesklang['escalate']['activated']='A regra selecionada foi ativada'; // %1$s = rule log title
+$hesklang['escalate']['deactivate']='Desative esta regra (parar de usá-la)';
+$hesklang['escalate']['deactivated']='A regra selecionada foi desativada'; // %1$s = rule log title
+$hesklang['escalate']['no_active']='Sem regras de escalação ativas';
+$hesklang['escalate']['matched']='Número de tickets correspondentes encontrados: %1$s '; // %1$s = number of tickets
+$hesklang['escalate']['tools']='Ferramentas';
+$hesklang['escalate']['test']='Simule esta regra';
+$hesklang['escalate']['testa']='Simule todas as regras';
+$hesklang['escalate']['testaa']='Simule todas as regras ativas';
+$hesklang['escalate']['testr']='Resultados simulados';
+$hesklang['escalate']['rsim']='Repetir simulação';
+$hesklang['escalate']['tbef']='Antes de uma regra ser ativada, você precisa ativá-la clicando na caixa de seleção na coluna &quot;ATIVA&quot;.<br><br>
+                               Recomendamos enfaticamente que você <strong>simule</strong> cada regra clicando no %1$s (Simular esta regra) na tabela de regras para ver como 
+							   isso afetará seus tickets existentes antes de ativá-la.<br><br>
+                               <strong>As regras ativas são processadas a cada %2$s minutos. Um ticket só pode ser escalado uma vez para cada regra</strong>.'; // %1$s = replaced by icon, %2$s = number of minutes, usually 5 or more
+$hesklang['escalate']['sim']='MODO DE SIMULAÇÃO, sem alterações no banco de dados';
+$hesklang['escalate']['sic']='SIMULAÇÃO COMPLETA';
+$hesklang['escalate']['r']='[REGRA]';
+$hesklang['escalate']['i']='[INFORMAÇÃO]';
+$hesklang['multopt']='Dica: mantenha pressionada a tecla CTRL para selecionar várias opções';
+$hesklang['desc_ticket_escalated']='(Equipe) O ticket foi escalado'; // Email description in admin panel
+$hesklang['ticket_formatting_staff']='Formatação de Tickets (Equipe)';
+$hesklang['ticket_formatting_plaintext']='Texto Plano';
+$hesklang['ticket_formatting_rich_text']='Rich Text (HTML)';
+$hesklang['due_date']='Data de Vencimento';
+$hesklang['invalid_due_date']='Uma data de vencimento inválida foi inserida.';
+$hesklang['thist19']='<li class="smaller">%s | data de vencimento atualizada para %s em %s</li>'; // %s = date, new due date, user making change
+$hesklang['thist20']='<li class="smaller">%s | data de vencimento removida em %s</li>'; // %s = date, user making change
+$hesklang['due_date_updated']='A data de vencimento do ticket foi atualizada.';
+$hesklang['menu_kb_manage']='Gerenciar'; // Left admin menu Knowledgebase "Manage" tab
+$hesklang['menu_kb_view']='Visualizar'; // Left admin menu Knowledgebase "View" tab
+$hesklang['a_select']='Selecionar todos';
+$hesklang['a_deselect']='Desmarcar todos';
+$hesklang['a_toggle']='Alternar tudo';
+$hesklang['ql_all']='Todos os Tickets';
+$hesklang['ql_alo']='Todos os tickets abertos';
+$hesklang['ql_fit']='Tickets filtrados';
+$hesklang['ql_a2m']='Atribuídos a mim';
+$hesklang['ql_a2o']='Atribuídos a outros';
+$hesklang['ql_una']='Não atribuídos';
+$hesklang['ql_due']='Vencimento em breve';
+$hesklang['ql_ovr']='Atrasado';
+$hesklang['set_ds']='Mostrar como &quot;vencimento em breve&quot;'; // Settings page (title of setting)
+$hesklang['set_ds2']='dias antes da data de vencimento';
+$hesklang['not_aos']='Alguns tickets abertos aos quais você tem acesso não são exibidos devido aos seus filtros.';
+$hesklang['ntoverdue']='Um ticket está vencido com o proprietário:';
+$hesklang['ovdcron']='para que as notificações atrasadas funcionem, seu administrador deve habilitar um cron job.';
+$hesklang['instructions']='Instruções';
+$hesklang['desc_overdue_ticket']='(Equipe) Ticket em atraso';
+$hesklang['overdue_starting']='Iniciando processo de notificação de tickets vencidos';
+$hesklang['overdue_sim']='O envio de e-mails e a atualização de tickets estão desabilitados no modo SIMULAÇÃO.';
+$hesklang['overdue_ticket_count']='Foram encontrados %s tickets vencidos.'; // %s = Number of tickets
+$hesklang['overdue_finished']='Tickets Vencidos Concluídos. %s e-mails enviados. %s falha ao enviar e-mails.'; // %s = Successful emails, failed emails
+$hesklang['admin_css']='Admin CSS';
+$hesklang['admin_css2']='Carregue um arquivo de estilo personalizado extra para o painel de administração';
+$hesklang['noval_cert']='Não valide os certificados do servidor';
+$hesklang['chg_cat']='Clique para alterar a categoria do ticket';
+$hesklang['tlan']='Idioma do Ticket';
+$hesklang['uue']='Dois ou mais membros da equipe têm o mesmo endereço de e-mail. Recomendamos definir um endereço de e-mail exclusivo para cada usuário.';
+$hesklang['flood']='Limite de inundação';
+$hesklang['e_flood']='Opa, você já enviou uma resposta recentemente. Interrompemos essa solicitação para evitar inundação de respostas.';
+$hesklang['cookies']='Cookies';
+$hesklang['ukey']='Chave de acesso de URL'; // Key required to access certain files (like cron jobs) via an URL
+$hesklang['ukeyg']='Gerar uma chave de acesso de URL aleatória';
+$hesklang['ukeym']='Erro: para executar este arquivo via HTTP, você deve incluir sua chave de acesso de URL na solicitação. Exemplo:';
+$hesklang['ukeyw']='Erro: chave de acesso de URL errada';
 
 // DO NOT CHANGE BELOW
 if (!defined('IN_SCRIPT')) die('PHP syntax OK!');

@@ -2,7 +2,9 @@
 /*
  * smtp.php
  *
- * @(#) $Header: /opt2/ena/metal/smtp/smtp.php,v 1.51 2016/08/23 04:55:14 mlemos Exp $
+ * @(#) $Header: /opt2/ena/metal/smtp/smtp.php,v 1.52 2020/01/13 06:22:23 mlemos Exp $
+ * 
+ * Fixed PHP => 5.6.7 < 7.2 TLS compatibility for HESK
  *
  */
 
@@ -12,7 +14,7 @@
 
 	<package>net.manuellemos.smtp</package>
 
-	<version>@(#) $Id: smtp.php,v 1.51 2016/08/23 04:55:14 mlemos Exp $</version>
+	<version>@(#) $Id: smtp.php,v 1.52 2020/01/13 06:22:23 mlemos Exp $</version>
 	<copyright>Copyright (C) Manuel Lemos 1999-2011</copyright>
 	<title>Sending e-mail messages via SMTP protocol</title>
 	<author>Manuel Lemos</author>
@@ -122,6 +124,24 @@ class smtp_class
 {/metadocument}
 */
 	var $workstation="";
+	
+/*
+{metadocument}
+	<variable>
+		<name>token</name>
+		<type>STRING</type>
+		<value></value>
+		<documentation>
+			<purpose>Define the authentication token when sending messages
+				to a SMTP server.</purpose>
+			<usage>Set this variable to the token value when the SMTP
+				server requires authentication to pass an authorization
+				token.</usage>
+		</documentation>
+	</variable>
+{/metadocument}
+*/
+	var $token="";
 	
 /*
 {metadocument}
@@ -280,7 +300,7 @@ class smtp_class
 	<variable>
 		<name>user_agent</name>
 		<type>STRING</type>
-		<value>SMTP Class (http://www.phpclasses.org/smtpclass $Revision: 1.51 $)</value>
+		<value>SMTP Class (http://www.phpclasses.org/smtpclass $Revision: 1.52 $)</value>
 		<documentation>
 			<purpose>Set the user agent used when connecting via an HTTP proxy.</purpose>
 			<usage>Change this value only if for some reason you want emulate a
@@ -289,7 +309,7 @@ class smtp_class
 	</variable>
 {/metadocument}
 */
-	var $user_agent='SMTP Class (http://www.phpclasses.org/smtpclass $Revision: 1.51 $)';
+	var $user_agent='SMTP Class (http://www.phpclasses.org/smtpclass $Revision: 1.52 $)';
 
 /*
 {metadocument}
@@ -1004,6 +1024,8 @@ class smtp_class
 			$sasl->SetCredential("workstation",$credentials["workstation"]);
 		if(IsSet($credentials["mode"]))
 			$sasl->SetCredential("mode",$credentials["mode"]);
+		if(IsSet($credentials["token"]))
+			$sasl->SetCredential("token",$credentials["token"]);
 		do
 		{
 			$status=$sasl->Start($mechanisms,$message,$interactions);
@@ -1287,7 +1309,18 @@ class smtp_class
 				{
 					if($this->debug)
 						$this->OutputDebug('Starting TLS cryptograpic protocol');
-					if(!($success = @stream_socket_enable_crypto($this->connection, 1, STREAM_CRYPTO_METHOD_TLS_CLIENT)))
+
+                    // Allow the best TLS version(s) we can
+                    $crypto_method = STREAM_CRYPTO_METHOD_TLS_CLIENT;
+
+                    // PHP 5.6.7 dropped inclusion of TLS 1.1 and 1.2 in STREAM_CRYPTO_METHOD_TLS_CLIENT
+                    // so add them back in manually if we can
+                    if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) {
+                        $crypto_method |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+                        $crypto_method |= STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
+                    }
+
+					if(!($success = @stream_socket_enable_crypto($this->connection, 1, $crypto_method)))
 						$this->error = 'could not start TLS connection encryption protocol';
 					else
 					{
@@ -1320,12 +1353,14 @@ class smtp_class
 					}
 					$credentials=array(
 						"user"=>$this->user,
-						"password"=>$this->password
+						"password"=>$this->password,
 					);
 					if(strlen($this->realm))
 						$credentials["realm"]=$this->realm;
 					if(strlen($this->workstation))
 						$credentials["workstation"]=$this->workstation;
+					if(strlen($this->token))
+						$credentials["token"]=$this->token;
 					$success=$this->SASLAuthenticate($mechanisms,$credentials,$authenticated,$mechanism);
 					if(!$success
 					&& !strcmp($mechanism,"PLAIN"))
@@ -1908,5 +1943,3 @@ class smtp_class
 {/metadocument}
 
 */
-
-?>

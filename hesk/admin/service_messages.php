@@ -253,18 +253,7 @@ $num = hesk_dbNumRows($res);
 <?php
 if ($hesk_settings['kb_wysiwyg'])
 {
-    ?>
-    <script>
-        tinymce.init({
-            selector: '#content',
-            convert_urls: false,
-            branding: false,
-            browser_spellcheck: true,
-            toolbar: 'undo redo | styleselect fontselect fontsizeselect | bold italic underline | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent | link unlink image codesample code',
-            plugins: 'charmap code codesample image link lists table',
-        });
-    </script>
-    <?php
+    hesk_tinymce_init('#content');
 }
 ?>
 <div class="right-bar service-message-create" <?php if ($action === 'edit_sm' || isset($_SESSION['preview_sm']) || hesk_SESSION(array('new_sm','errors'))) {echo 'style="display: block"';} ?>>
@@ -289,7 +278,14 @@ if ($hesk_settings['kb_wysiwyg'])
 
         /* Do we have a service message to preview? */
         if (isset($_SESSION['preview_sm'])) {
-            hesk_service_message($_SESSION['new_sm']);
+            if (isset($_SESSION['new_sm']['message_preview'])) {
+                $tmp = $_SESSION['new_sm']['message'];
+                $_SESSION['new_sm']['message'] = $_SESSION['new_sm']['message_preview'];
+                hesk_service_message($_SESSION['new_sm']);
+                $_SESSION['new_sm']['message'] = $tmp;
+            } else {
+                hesk_service_message($_SESSION['new_sm']);
+            }
         }
         ?>
         <ul class="step-bar">
@@ -367,7 +363,7 @@ if ($hesk_settings['kb_wysiwyg'])
                             <select name="language">
                                 <option value=""><?php echo $hesklang['all']; ?></option>
                                 <?php foreach ($hesk_settings['languages'] as $lang => $v): ?>
-                                    <option <?php echo (isset($_SESSION['new_sm']['language']) && $_SESSION['new_sm']['language'] == $lang ? 'selected="selected"' : ''); ?>>
+                                    <option value="<?php echo hesk_htmlspecialchars($lang); ?>" <?php echo (isset($_SESSION['new_sm']['language']) && $_SESSION['new_sm']['language'] == $lang ? 'selected="selected"' : ''); ?>>
                                         <?php echo $lang; ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -429,8 +425,13 @@ function save_sm()
 	}
 
     $type  = empty($_POST['type']) ? 0 : 1;
+    $language = hesk_input( hesk_POST('language') );
+    if ( ! isset($hesk_settings['languages'][$language]))
+    {
+        $language = '';
+    }
     $title = hesk_input( hesk_POST('title') ) or $hesk_error_buffer[] = $hesklang['sm_e_title'];
-	$message = hesk_getHTML( hesk_POST('message') );
+    $message = $hesk_settings['kb_wysiwyg'] ? hesk_getHTML( hesk_POST('message') ) : nl2br( hesk_input( hesk_POST('message') ) );
 
     // Clean the HTML code
     require(HESK_PATH . 'inc/htmlpurifier/HeskHTMLPurifier.php');
@@ -446,6 +447,7 @@ function save_sm()
 		'id' => $id,
 		'style' => $style,
 		'type' => $type,
+        'language' => $language,
 		'title' => $title,
 		'message' => hesk_input( hesk_POST('message') ),
         'errors' => array('title')
@@ -472,8 +474,10 @@ function save_sm()
 		'id' => $id,
 		'style' => $style,
 		'type' => $type,
+        'language' => $language,
 		'title' => $title,
-		'message' => $message
+        'message' => hesk_input( hesk_POST('message') ),
+        'message_preview' => $message
 		);
 
 		header('Location: service_messages.php');
@@ -485,6 +489,7 @@ function save_sm()
 	`author` = '".intval($_SESSION['id'])."',
 	`title` = '".hesk_dbEscape($title)."',
 	`message` = '".hesk_dbEscape($message)."',
+    `language` = ".(strlen($language) ? "'".hesk_dbEscape($language)."'" : 'NULL').",
 	`style` = '{$style}',
 	`type` = '{$type}'
 	WHERE `id`={$id}");
@@ -509,6 +514,20 @@ function edit_sm()
     	hesk_error($hesklang['sm_not_found']);
 	}
 	$sm = hesk_dbFetchAssoc($res);
+
+    // If we're in plain text mode, convert any HTML message safely to text
+    if ( ! $hesk_settings['kb_wysiwyg'])
+    {
+            // Clean the HTML code and set the plaintext version
+            require(HESK_PATH . 'inc/htmlpurifier/HeskHTMLPurifier.php');
+            require(HESK_PATH . 'inc/html2text/html2text.php');
+            $purifier = new HeskHTMLPurifier($hesk_settings['cache_dir']);
+            $sm['message'] = $purifier->heskPurify($sm['message']);
+
+            $sm['message'] = convert_html_to_text($sm['message']);
+            $sm['message'] = fix_newlines($sm['message']);
+    }
+
     $sm['message'] = hesk_htmlspecialchars($sm['message']);
 
     $_SESSION['smord'] = $id;
@@ -614,7 +633,7 @@ function new_sm()
         $language = '';
     }
     $title = hesk_input( hesk_POST('title') ) or $hesk_error_buffer[] = $hesklang['sm_e_title'];
-	$message = hesk_getHTML( hesk_POST('message') );
+    $message = $hesk_settings['kb_wysiwyg'] ? hesk_getHTML( hesk_POST('message') ) : nl2br( hesk_input( hesk_POST('message') ) );
 
     // Clean the HTML code
     require(HESK_PATH . 'inc/htmlpurifier/HeskHTMLPurifier.php');
@@ -654,7 +673,8 @@ function new_sm()
 		'type' => $type,
         'language' => $language,
 		'title' => $title,
-		'message' => $message,
+        'message' => hesk_input( hesk_POST('message') ),
+        'message_preview' => $message
 		);
 
 		header('Location: service_messages.php');

@@ -154,8 +154,8 @@ function hesk_get_status_checkboxes($selected = array())
 
         echo '
         <div class="checkbox-custom">
-            <input type="checkbox" id="s'.$k.'" name="s'.$k.'" value="1" '.(isset($selected[$k]) ? 'checked' : '').'>
-            <label for="s'.$k.'">'.hesk_get_admin_ticket_status($k).'</label>
+            <input type="checkbox" id="status_'.$k.'" name="s'.$k.'" value="1" '.(isset($selected[$k]) ? 'checked' : '').'>
+            <label for="status_'.$k.'">'.hesk_get_admin_ticket_status($k).'</label>
         </div>';
 
         if ($i % 3 === 2) {
@@ -246,6 +246,7 @@ function hesk_print_status_select_box_jquery()
                     $("#ticket-status-div > div.dropdown-select > div.label > span").filter(function () {
                         return $(this).text() == "'.addslashes($data['name']).'";
                     }).addClass("'.$data['class'].'");'."\n";
+                echo '$("#submit-as-div > ul.dropdown-list > li[data-option=\'submit_as-'.$id.'\']").addClass("'.$data['class'].'");'."\n";
                 continue;
             }
 
@@ -257,6 +258,7 @@ function hesk_print_status_select_box_jquery()
                     $("#ticket-status-div > div.dropdown-select > div.label > span").filter(function () {
                         return $(this).text() == "'.addslashes($data['name']).'";
                     }).css("color", "'.$data['color'].'");'."\n";
+                echo '$("#submit-as-div > ul.dropdown-list > li[data-option=\'submit_as-'.$id.'\']").css("color", "'.$data['color'].'");'."\n";
             }
         }
         ?>

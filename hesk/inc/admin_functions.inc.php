@@ -30,6 +30,7 @@ $hesk_settings['possible_ticket_list'] = array(
 'staffreplies' => $hesklang['replies'] . ' (' . $hesklang['staff'] .')',
 'lastreplier' => $hesklang['last_replier'],
 'time_worked' => $hesklang['ts'],
+'due_date' => $hesklang['due_date']
 );
 
 define('HESK_NO_ROBOTS', true);
@@ -171,7 +172,7 @@ function hesk_mergeTickets($merge_these, $merge_into)
     	$this_id = intval($this_id) or hesk_error($hesklang['id_not_valid']);
 
         /* Get required ticket information */
-        $res = hesk_dbQuery("SELECT `id`,`trackid`,`category`,`name`,`message`,`dt`,`time_worked`,`attachments` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `id`='".intval($this_id)."' LIMIT 1");
+        $res = hesk_dbQuery("SELECT `id`,`trackid`,`category`,`name`,`message`,`message_html`,`dt`,`time_worked`,`attachments` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `id`='".intval($this_id)."' LIMIT 1");
 		if (hesk_dbNumRows($res) != 1)
 		{
 			continue;
@@ -185,7 +186,7 @@ function hesk_mergeTickets($merge_these, $merge_into)
         }
 
         /* Insert ticket message as a new reply to target ticket */
-		hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`name`,`message`,`dt`,`attachments`) VALUES ('".intval($ticket['id'])."','".hesk_dbEscape($row['name'])."','".hesk_dbEscape($row['message'])."','".hesk_dbEscape($row['dt'])."','".hesk_dbEscape($row['attachments'])."')");
+		hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`name`,`message`,`message_html`,`dt`,`attachments`) VALUES ('".intval($ticket['id'])."','".hesk_dbEscape(addslashes($row['name']))."','".hesk_dbEscape(addslashes($row['message']))."','".hesk_dbEscape(addslashes($row['message_html']))."','".hesk_dbEscape($row['dt'])."','".hesk_dbEscape($row['attachments'])."')");
 
 		/* Update attachments  */
 		hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` SET `ticket_id`='".hesk_dbEscape($ticket['trackid'])."' WHERE `ticket_id`='".hesk_dbEscape($row['trackid'])."'");
@@ -194,7 +195,7 @@ function hesk_mergeTickets($merge_these, $merge_into)
         $res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`='".intval($row['id'])."' ORDER BY `id` ASC");
         while ( $reply = hesk_dbFetchAssoc($res) )
         {
-			hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`name`,`message`,`dt`,`attachments`,`staffid`,`rating`,`read`) VALUES ('".intval($ticket['id'])."','".hesk_dbEscape($reply['name'])."','".hesk_dbEscape($reply['message'])."','".hesk_dbEscape($reply['dt'])."','".hesk_dbEscape($reply['attachments'])."','".intval($reply['staffid'])."','".intval($reply['rating'])."','".intval($reply['read'])."')");
+			hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`name`,`message`,`message_html`,`dt`,`attachments`,`staffid`,`rating`,`read`) VALUES ('".intval($ticket['id'])."','".hesk_dbEscape(addslashes($reply['name']))."','".hesk_dbEscape(addslashes($reply['message']))."','".hesk_dbEscape(addslashes($reply['message_html']))."','".hesk_dbEscape($reply['dt'])."','".hesk_dbEscape($reply['attachments'])."','".intval($reply['staffid'])."','".intval($reply['rating'])."','".intval($reply['read'])."')");
         }
 
 		/* Delete replies to the old ticket */
@@ -204,7 +205,7 @@ function hesk_mergeTickets($merge_these, $merge_into)
         $res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."notes` WHERE `ticket`='".intval($row['id'])."' ORDER BY `id` ASC");
         while ( $note = hesk_dbFetchAssoc($res) )
         {
-			hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."notes` (`ticket`,`who`,`dt`,`message`,`attachments`) VALUES ('".intval($ticket['id'])."','".intval($note['who'])."','".hesk_dbEscape($note['dt'])."','".hesk_dbEscape($note['message'])."','".hesk_dbEscape($note['attachments'])."')");
+			hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."notes` (`ticket`,`who`,`dt`,`message`,`attachments`) VALUES ('".intval($ticket['id'])."','".intval($note['who'])."','".hesk_dbEscape($note['dt'])."','".hesk_dbEscape(addslashes($note['message']))."','".hesk_dbEscape($note['attachments'])."')");
         }
 
 		/* Delete replies to the old ticket */
@@ -214,7 +215,7 @@ function hesk_mergeTickets($merge_these, $merge_into)
 		hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `id`='".intval($row['id'])."'");
 
 		/* Log that ticket has been merged */
-		$history .= sprintf($hesklang['thist13'],hesk_date(),$row['trackid'],$_SESSION['name'].' ('.$_SESSION['user'].')');
+		$history .= sprintf($hesklang['thist13'],hesk_date(),$row['trackid'],addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
 
         /* Add old ticket ID to target ticket "merged" field */
         $merged .= '#' . $row['trackid'];
@@ -736,43 +737,43 @@ function hesk_jsString($str)
 
 function hesk_myOwnership()
 {
+    // Admins can see all tickets
     if ( ! empty($_SESSION['isadmin']) )
     {
         return '1';
     }
 
+    // For staff, let's check permissions
     $can_view_unassigned = hesk_checkPermission('can_view_unassigned',0);
     $can_view_ass_others = hesk_checkPermission('can_view_ass_others',0);
     $can_view_ass_by     = hesk_checkPermission('can_view_ass_by', 0);
 
-    // Can view all
+    // Can see all assigned and unassigned tickets
     if ($can_view_unassigned && $can_view_ass_others)
     {
         return '1';
     }
 
-    $sql = '';
-
-    if ( ! $can_view_unassigned && ! $can_view_ass_others)
+    // Can see my tickets, unassigned and tickets I assigned to others
+    if ($can_view_unassigned && $can_view_ass_by)
     {
-        $sql .= "`owner`=" . intval($_SESSION['id']);
-    }
-    elseif ( ! $can_view_unassigned)
-    {
-        $sql .= "`owner` != 0 ";
-    }
-    elseif ( ! $can_view_ass_others)
-    {
-        $sql .= "`owner` IN (0, " . intval($_SESSION['id']) . ") ";
+        return " (`owner` IN ('0', '" . intval($_SESSION['id']) . "') OR `assignedby` = " . intval($_SESSION['id']) . ") ";
     }
 
-    // Include tickets he/she assigned to others?
-    if ($can_view_ass_by)
+    // Can see unassigned
+    if ($can_view_unassigned)
     {
-        return "(" . $sql . " OR `assignedby`=" . intval($_SESSION['id']) . ")";
+        return " `owner` IN ('0', '" . intval($_SESSION['id']) . "') ";
     }
 
-    return $sql;
+    // Can see my tickets and assigned to others
+    if ($can_view_ass_others)
+    {
+        return " `owner` != 0 ";
+    }
+
+    // Can see my tickets and tickets I assigned to others
+    return " (`owner` = " . intval($_SESSION['id']) . " OR `assignedby` = " . intval($_SESSION['id']) . ") ";
 
 } // END hesk_myOwnership()
 
