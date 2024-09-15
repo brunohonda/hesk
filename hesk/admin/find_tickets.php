@@ -25,6 +25,7 @@ hesk_dbConnect();
 hesk_isLoggedIn();
 
 define('CALENDAR',1);
+define('AUTO_RELOAD',1);
 $_SESSION['hide']['ticket_list'] = true;
 
 /* Check permissions for this feature */
@@ -142,7 +143,6 @@ $q = hesk_input( hesk_GET('q', '') );
 // No query entered?
 if ( ! strlen($q) )
 {
-	$hesk_error_buffer .= $hesklang['fsq'];
 	$no_query = 1;
 }
 
@@ -212,6 +212,42 @@ if ( ! $no_query)
     $sql_count .= $sql;
     $sql = $sql_previous . $sql;
 }
+// Some fields can be searched for empty (or NULL) values
+else
+{
+    $sql_previous = $sql;
+    $sql = " AND ";
+
+    switch ($what)
+    {
+        case 'email':
+             $sql  .= "`email` = '' ";
+             $no_query = 0;
+             break;
+        case 'message':
+            $sql  .= " `message` = '' ";
+            $no_query = 0;
+            break;
+        case 'ip':
+             $sql  .= "`ip` = '' ";
+             $no_query = 0;
+             break;
+        default:
+            if (isset($hesk_settings['custom_fields'][$what]) && $hesk_settings['custom_fields'][$what]['use'])
+            {
+                $sql .= "`".hesk_dbEscape($what)."` IS NULL OR `".hesk_dbEscape($what)."` = '' ";
+                $no_query = 0;
+            }
+    }
+
+    if ($no_query) {
+        $hesk_error_buffer .= $hesklang['fsq'];
+        $sql = "";
+    }
+
+    $sql_count .= $sql;
+    $sql = $sql_previous . $sql;
+}
 
 // Owner
 if ( $tmp = intval( hesk_GET('owner', 0) ) )
@@ -227,31 +263,25 @@ else
 }
 
 /* Date */
-/* -> Check for compatibility with old date format */
-if (preg_match("/(\d{4})-(\d{2})-(\d{2})/", hesk_GET('dt'), $m))
-{
-	$_GET['dt']=$m[2].$m[3].$m[1];
-}
+$date_input = hesk_GET('dt');
+$formatted_search_date = hesk_datepicker_get_date($date_input);
 
-/* -> Now process the date value */
-$dt = preg_replace('/[^0-9]/','', hesk_GET('dt') );
-if (strlen($dt) == 8)
-{
-	$date = substr($dt,4,4) . '-' . substr($dt,0,2) . '-' . substr($dt,2,2);
-	$date_input= substr($dt,0,2) . '/' . substr($dt,2,2) . '/' . substr($dt,4,4);
+if ($formatted_search_date !== false) {
+    $hesk_settings['datepicker'] = array();
+    $hesk_settings['datepicker']['#find-date']['timestamp'] = $formatted_search_date->getTimestamp();;
 
-	/* This search is valid even if no query is entered */
-	if ($no_query)
-	{
-		$hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
-	}
+    $formatted_search_date = $formatted_search_date->format('Y-m-d');
 
-	$sql .= " AND `dt` BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59' ";
-    $sql_count .= " AND `dt` BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59' ";
-}
-else
-{
-	$date = '';
+    // This search is valid even if no query is entered
+    if ($no_query) {
+        $hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
+    }
+
+	$sql .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+    $sql_count .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+
+} else {
+    $formatted_search_date = '';
     $date_input = '';
 }
 

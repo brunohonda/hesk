@@ -73,18 +73,16 @@ function hesk_profile_tab($session_array='new',$is_profile_page=true)
                 </div>
                 <?php
             }
+
+            if ( ! $is_profile_page || $hesk_settings['autoassign']):
             ?>
             <section class="item--section">
+                <?php if ( ! $is_profile_page): ?>
                 <h4>
                     <?php echo $hesklang['pass']; ?>
-                    <?php if ($is_profile_page): ?>
-                    <span>
-                        <?php echo $hesklang['optional']; ?>
-                    </span>
-                    <?php endif; ?>
                 </h4>
                 <div class="form-group">
-                    <label for="prof_newpass"><?php echo $is_profile_page ? $hesklang['new_pass'] : $hesklang['pass']; ?></label>
+                    <label for="prof_newpass"><?php echo $hesklang['pass']; ?></label>
                     <input type="password" id="prof_newpass" name="newpass" autocomplete="off" class="form-control <?php echo in_array('passwords', $errors) ? 'isError' : ''; ?>"
                            value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>"
                            onkeyup="hesk_checkPassword(this.value)">
@@ -96,11 +94,12 @@ function hesk_profile_tab($session_array='new',$is_profile_page=true)
                 </div>
                 <div class="form-group">
                     <label><?php echo $hesklang['pwdst']; ?></label>
-                    <div style="border: 1px solid #d4d6e3; width: 100%; height: 40px">
-                        <div id="progressBar" style="font-size: 1px; height: 38px; width: 0px; border: none;">
+                    <div style="border: 1px solid #d4d6e3; width: 100%; height: 14px">
+                        <div id="progressBar" style="font-size: 1px; height: 12px; width: 0px; border: none;">
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
                 <?php if (!$is_profile_page && $hesk_settings['autoassign']): ?>
                     <div class="form-switcher">
                         <label class="switch-checkbox">
@@ -121,6 +120,7 @@ function hesk_profile_tab($session_array='new',$is_profile_page=true)
                     </div>
                 <?php endif; ?>
             </section>
+            <?php endif; ?>
         </div>
         <?php if ($show_permissions): ?>
         <div class="step-item step-<?php echo $current_step++; ?>">

@@ -1,0 +1,19 @@
+.table thead {
+    height: 34px;
+}
+
+.table thead th.table__first_th {
+    padding: 6px 6px;
+}
+
+.table thead th {
+    padding: 6px 6px;
+}
+
+.table tbody tr .table__first_td {
+    padding: 6px 6px;
+}
+
+.table tbody td {
+    padding: 6px 6px;
+}

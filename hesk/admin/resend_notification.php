@@ -41,6 +41,7 @@ if (hesk_dbNumRows($res) != 1)
 	hesk_error($hesklang['ticket_not_found']);
 }
 $ticket = hesk_dbFetchAssoc($res);
+$opened_by = $ticket['openedby'];
 
 // Do we have permission to view this ticket?
 if ($ticket['owner'] && $ticket['owner'] != $_SESSION['id'] && ! hesk_checkPermission('can_view_ass_others',0))
@@ -74,6 +75,8 @@ if ($reply_id > 0)
     $reply = hesk_dbFetchAssoc($result);
 
     $ticket['message'] = $reply['message'];
+    $ticket['message_html'] = $reply['message_html'];
+    $ticket['attachments'] = $reply['attachments'];
 }
 
 /* --> Prepare message */
@@ -89,6 +92,7 @@ $info = array(
 'name'			=> $ticket['name'],
 'subject'		=> $ticket['subject'],
 'message'		=> $ticket['message'],
+'message_html'  => $ticket['message_html'],
 'attachments'	=> $ticket['attachments'],
 'dt'			=> hesk_date($ticket['dt'], true),
 'lastchange'	=> hesk_date($ticket['lastchange'], true),
@@ -130,7 +134,11 @@ if ($reply_id > 0)
 }
 
 // Notification of the original ticket
-hesk_notifyCustomer();
+if ($opened_by) {
+    hesk_notifyCustomer('new_ticket_by_staff');
+} else {
+    hesk_notifyCustomer();
+}
 
 // Notify staff?
 if ($ticket['owner'])

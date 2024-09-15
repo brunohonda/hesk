@@ -138,10 +138,11 @@ elseif ($is_quick_link == 'all')
 // No quick link
 else
 {
+    $is_quick_link = false;
     $total = $totals['filtered']['all'];
 }
 
-if ($total > 0 || $is_quick_link)
+if (true)
 {
 
 	/* This query string will be used to browse pages */
@@ -161,6 +162,11 @@ if ($total > 0 || $is_quick_link)
 		$query .= '&amp;s_my='.$s_my[1];
 		$query .= '&amp;s_ot='.$s_ot[1];
 		$query .= '&amp;s_un='.$s_un[1];
+
+        $query .= '&amp;duedate_option='.$duedate_search_type;
+        $query .= '&amp;duedate_specific_date='.urlencode($duedate_input);
+        $query .= '&amp;duedate_amount_value='.$duedate_amount_value;
+        $query .= '&amp;duedate_amount_unit='.$duedate_amount_unit;
 
 		$query .= '&amp;cot='.$cot;
 		$query .= '&amp;g='.$group;
@@ -226,6 +232,11 @@ if ($total > 0 || $is_quick_link)
 		$query .= '&amp;page=1';
 		#$query .= '&amp;sort=';
 
+        $query .= '&amp;duedate_option='.$duedate_search_type;
+        $query .= '&amp;duedate_specific_date='.urlencode($duedate_input);
+        $query .= '&amp;duedate_amount_value='.$duedate_amount_value;
+        $query .= '&amp;duedate_amount_unit='.$duedate_amount_unit;
+
 		$query .= '&amp;cot='.$cot;
 		$query .= '&amp;g='.$group;
 
@@ -268,7 +279,7 @@ if ($total > 0 || $is_quick_link)
         hesk_show_info($hesklang['not_aos'], ' ', false, 'no-padding-top');
     }
 	?>
-    <section style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px">
+    <section class="quick-links">
         <div class="filters__listing">
             <!--
             <a href="<?php echo $href . '?' . $query_for_quick_links . '&amp;ql=all&amp;s_my=1&amp;s_ot=1&amp;s_un=1&amp;category=0'; ?>" class="btn btn-transparent <?php if ($is_quick_link == 'all') echo 'is-bold is-selected'; ?>"><span><?php echo $hesklang['ql_all']; ?></span> <span class="filters__btn-value"><?php echo $totals['all']; ?></span></a>
@@ -296,7 +307,7 @@ if ($total > 0 || $is_quick_link)
             <a href="<?php echo $href . '?' . $query_for_quick_links . '&amp;ql=ovr&amp;s_my=1&amp;s_ot=1&amp;s_un=1'; ?>" class="btn btn-transparent is-overdue <?php if ($is_quick_link == 'ovr') echo 'is-bold is-selected'; ?>"><span><?php echo $hesklang['ql_ovr']; ?></span> <span class="filters__btn-value"><?php echo $totals['filtered']['overdue']; ?></span></a>
         </div>
 
-        <div class="checkbox-custom">
+        <div class="checkbox-custom auto-reload">
             <input type="checkbox" id="reloadCB" onclick="toggleAutoRefresh(this);">
             <label for="reloadCB"><?php echo $hesklang['arp']; ?></label>&nbsp;<span id="timer"></span>
             <script type="text/javascript">heskCheckReloading();</script>
@@ -379,10 +390,10 @@ if ($total > 0 || $is_quick_link)
 
 		// Start ticket row
 		echo '
-		<tr title="'.$ticket['message'].'" class="'.($ticket['owner'] ? '' : 'new').($ticket['priority'] == 'critical' ? ' bg-critical' : '').'">
+		<tr title="'.$ticket['message'].'" class="status-'. $ticket['status'] .' '.($ticket['owner'] ? '' : 'new').($ticket['priority'] == 'critical' ? ' bg-critical' : '').'">
 		<td class="table__first_th sindu_handle">
             <div class="checkbox-custom">
-                <input type="checkbox" id="ticket_check_'.$ticket['id'].'" name="id[]" value="'.$ticket['id'].'">
+                <input type="checkbox" id="ticket_check_'.$ticket['id'].'" name="id[]" value="'.$ticket['id'].'" class="group' . $hesk_settings['hesk-group-count'] . '">
                 <label for="ticket_check_'.$ticket['id'].'">&nbsp;</label>
             </div>
         </td>
@@ -410,11 +421,17 @@ if ($total > 0 || $is_quick_link)
 			switch ($hesk_settings['submittedformat'])
 			{
 	        	case 1:
-					$ticket['dt'] = hesk_formatDate($ticket['dt']);
+					$ticket['dt'] = hesk_date($ticket['dt'], true, true, true, $hesk_settings['format_timestamp']);
 					break;
 				case 2:
 					$ticket['dt'] = hesk_time_lastchange($ticket['dt']);
 					break;
+                case 3:
+                    $ticket['dt'] = hesk_date($ticket['dt'], true, true, true, $hesk_settings['format_date']);
+                    break;
+                case 4:
+                    $ticket['dt'] = hesk_date($ticket['dt'], true, true, true, $hesk_settings['format_submitted']);
+                    break;
 				default:
 					$ticket['dt'] = hesk_time_since( strtotime($ticket['dt']) );
 			}
@@ -427,11 +444,17 @@ if ($total > 0 || $is_quick_link)
 			switch ($hesk_settings['updatedformat'])
 			{
 	        	case 1:
-					$ticket['lastchange'] = hesk_formatDate($ticket['lastchange']);
+					$ticket['lastchange'] = hesk_date($ticket['lastchange'], true, true, true, $hesk_settings['format_timestamp']);
 					break;
 				case 2:
 					$ticket['lastchange'] = hesk_time_lastchange($ticket['lastchange']);
 					break;
+                case 3:
+                    $ticket['lastchange'] = hesk_date($ticket['lastchange'], true, true, true, $hesk_settings['format_date']);
+                    break;
+                case 4:
+                    $ticket['lastchange'] = hesk_date($ticket['lastchange'], true, true, true, $hesk_settings['format_updated']);
+                    break;
 				default:
 					$ticket['lastchange'] = hesk_time_since( strtotime($ticket['lastchange']) );
 			}
@@ -454,7 +477,7 @@ if ($total > 0 || $is_quick_link)
 		// Print customer email
 		if ( hesk_show_column('email') )
 		{
-			echo '<td><a href="mailto:'.$ticket['email'].'">'.$hesklang['clickemail'].'</a></td>';
+			echo '<td>' . (strlen($ticket['email']) ? '<a href="mailto:'.$ticket['email'].'">'.$hesklang['clickemail'].'</a>' : '') . '</td>';
 		}
 
 		// Print subject and link to the ticket page
@@ -519,11 +542,10 @@ if ($total > 0 || $is_quick_link)
 
 		// Print due date
         if (hesk_show_column('due_date')) {
-            $dateformat = substr($hesk_settings['timeformat'], 0, strpos($hesk_settings['timeformat'], ' '));
             $due_date = $hesklang['none'];
             if ($ticket['due_date'] != null) {
                 $due_date = hesk_date($ticket['due_date'], false, true, false);
-                $due_date = date($dateformat, $due_date);
+                $due_date = date($hesk_settings['format_date'], $due_date);
             }
 
             echo '<td>'.$due_date.'</td>';
@@ -688,7 +710,7 @@ if ($total > 0 || $is_quick_link)
                     <option value="high"><?php echo $hesklang['set_pri_to'].' '.$hesklang['high']; ?></option>
                     <option value="critical"><?php echo $hesklang['set_pri_to'].' '.$hesklang['critical']; ?></option>
                     <?php
-                    if ( hesk_checkPermission('can_resolve', 0) )
+                    if ( hesk_checkPermission('can_resolve', 0) && ! defined('HESK_DEMO') )
                     {
                         ?>
                         <option value="close"><?php echo $hesklang['close_selected']; ?></option>
@@ -776,6 +798,22 @@ if ($total > 0 || $is_quick_link)
 	</form>
 	<?php
     } // END ticket list if total > 0
+    elseif (!isset($is_search) && $href != 'find_tickets.php' && !$is_quick_link)
+    {
+        // No tickets in the DB? Show a welcome message
+        $res = hesk_dbQuery("SELECT COUNT(*) FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets`");
+        $num = hesk_dbResult($res,0,0);
+        if ($num == 0)
+        {
+            hesk_show_notice(
+                $hesklang['welcome1'] . '<br><br>' .
+                sprintf(
+                    $hesklang['welcome2'],
+                    '<a href="https://www.hesk.com/knowledgebase/?article=109" target="_blank">' . $hesklang['welcome3'] . '</a>'
+                ), ' ', false
+            );
+        }
+    }
 } // END ticket list if total > 0 or if this is a quick link
 else
 {
@@ -783,16 +821,19 @@ else
     {
         hesk_show_notice($hesklang['no_tickets_crit']);
     }
-    else
-    {
-        echo '<p>&nbsp;<br />&nbsp;<b><i>'.$hesklang['no_tickets_open'].'</i></b><br />&nbsp;</p>';
-    }
 }
 
 
 function hesk_print_list_head()
 {
 	global $hesk_settings, $href, $query, $sort_possible, $hesklang;
+
+    // Make sure selecting works correctly when tickets are grouped
+    if (isset($hesk_settings['hesk-group-count'])) {
+        $hesk_settings['hesk-group-count']++;
+    } else {
+        $hesk_settings['hesk-group-count'] = 1;
+    }
 	?>
     <div class="table-wrap">
 	<table class="table sindu-table ticket-list sindu_origin_table" id="default-table">
@@ -800,8 +841,8 @@ function hesk_print_list_head()
     <tr>
         <th class="table__first_th sindu_handle">
             <div class="checkbox-custom">
-                <input type="checkbox" id="ticket_checkall" name="checkall" value="2" onclick="hesk_changeAll(this)">
-                <label for="ticket_checkall">&nbsp;</label>
+                <input type="checkbox" id="ticket_checkall<?php echo $hesk_settings['hesk-group-count']; ?>" name="checkall" value="2" onclick="hesk_changeAll(this, '<?php echo 'group' . $hesk_settings['hesk-group-count'] . "'"; ?>)">
+                <label for="ticket_checkall<?php echo $hesk_settings['hesk-group-count']; ?>">&nbsp;</label>
             </div>
         </th>
         <?php
@@ -902,10 +943,10 @@ function hesk_time_lastchange($original)
 	global $hesk_settings, $hesklang;
 
 	// Save time format setting so we can restore it later
-	$copy = $hesk_settings['timeformat'];
+	$copy = $hesk_settings['format_timestamp'];
 
 	// We need this time format for this function
-	$hesk_settings['timeformat'] = 'Y-m-d H:i:s';
+	$hesk_settings['format_timestamp'] = 'Y-m-d H:i:s';
 
 	// Get HESK time-adjusted start of today if not already
 	if ( ! defined('HESK_TIME_TODAY') )
@@ -936,7 +977,7 @@ function hesk_time_lastchange($original)
 	}
 
 	// Restore original time format setting
-	$hesk_settings['timeformat'] = $copy;
+	$hesk_settings['format_timestamp'] = $copy;
 
 	// Return value to display
 	return $day;

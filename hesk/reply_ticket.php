@@ -85,19 +85,33 @@ else
 	$hesk_error_buffer[] = $hesklang['enter_message'];
 }
 
+/* Connect to database */
+hesk_dbConnect();
+
 /* Attachments */
+$use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 if ($hesk_settings['attachments']['use'])
 {
     require(HESK_PATH . 'inc/attachments.inc.php');
     $attachments = array();
-    for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-    {
-        $att = hesk_uploadFile($i);
-        if ($att !== false && !empty($att))
-        {
-            $attachments[$i] = $att;
-        }
-    }
+	if ($use_legacy_attachments) {
+		for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+			$att = hesk_uploadFile($i);
+			if ($att !== false && !empty($att)) {
+				$attachments[$i] = $att;
+			}
+		}
+	} else {
+		// The user used the new drag-and-drop system.
+		$temp_attachment_names = hesk_POST_array('attachments');
+		foreach ($temp_attachment_names as $temp_attachment_name) {
+			$temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+			if ($temp_attachment !== null) {
+				$attachments[] = $temp_attachment;
+			}
+		}
+	}
 }
 $myattachments='';
 
@@ -115,7 +129,12 @@ if (count($hesk_error_buffer)!=0)
 	// Remove any successfully uploaded attachments
 	if ($hesk_settings['attachments']['use'])
 	{
-		hesk_removeAttachments($attachments);
+		if ($use_legacy_attachments) {
+			hesk_removeAttachments($attachments);
+		} else {
+			$_SESSION['r_attachments'] = $attachments;
+		}
+
 	}
 
     $tmp = '';
@@ -128,9 +147,6 @@ if (count($hesk_error_buffer)!=0)
     $hesk_error_buffer = $hesklang['pcer'].'<br /><br /><ul>'.$hesk_error_buffer.'</ul>';
     hesk_process_messages($hesk_error_buffer,'ticket.php');
 }
-
-/* Connect to database */
-hesk_dbConnect();
 
 // Check if this IP is temporarily locked out
 $res = hesk_dbQuery("SELECT `number` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."logins` WHERE `ip`='".hesk_dbEscape(hesk_getClientIP())."' AND `last_attempt` IS NOT NULL AND DATE_ADD(`last_attempt`, INTERVAL ".intval($hesk_settings['attempt_banmin'])." MINUTE ) > NOW() LIMIT 1");
@@ -180,6 +196,11 @@ if (hesk_dbNumRows($res) > 0)
 /* Insert attachments */
 if ($hesk_settings['attachments']['use'] && !empty($attachments))
 {
+	// Delete temp attachment records and set the new filename
+	if (!$use_legacy_attachments) {
+		$attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+	}
+
     foreach ($attachments as $myatt)
     {
         hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('{$trackingID}','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -230,7 +251,10 @@ foreach ($hesk_settings['custom_fields'] as $k => $v)
 	$info[$k] = $v['use'] ? $ticket[$k] : '';
 }
 
-// 3. Make sure all values are properly formatted for email
+// 3. Add HTML message to the array
+$info['message_html'] = $info['message'];
+
+// 4. Make sure all values are properly formatted for email
 $ticket = hesk_ticketToPlain($info, 1, 0);
 
 // --> If ticket is assigned just notify the owner
@@ -246,6 +270,7 @@ else
 
 /* Clear unneeded session variables */
 hesk_cleanSessionVars('ticket_message');
+hesk_cleanSessionVars('r_attachments');
 
 /* Show the ticket and the success message */
 hesk_process_messages($hesklang['reply_submitted_success'],'ticket.php','SUCCESS');

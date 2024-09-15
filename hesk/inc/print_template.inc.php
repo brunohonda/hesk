@@ -63,7 +63,7 @@ foreach ($tickets as $ticket) {
     // Custom fields
     $custom_fields = array();
     foreach ($hesk_settings['custom_fields'] as $k=>$v) {
-        if (($v['use'] == 1 || (!empty($_SESSION['id']) && $v['use'] == 2)) && hesk_is_custom_field_in_category($k, $ticket['category'])) {
+        if (($v['use'] == 1 || (!empty($_SESSION['id']) && $v['use'] == 2)) && (strlen($ticket[$k]) || hesk_is_custom_field_in_category($k, $ticket['category']))) {
             if ($v['type'] == 'date') {
                 $ticket[$k] = hesk_custom_date_display_format($ticket[$k], $v['value']['date_format']);
             }

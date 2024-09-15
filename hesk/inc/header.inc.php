@@ -34,6 +34,17 @@ $onload='';
     <meta name="msapplication-config" content="<?php echo HESK_PATH; ?>img/favicon/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
     <meta name="format-detection" content="telephone=no">
+
+    <?php
+    // Do we need to load JS/CSS for attachments? Needs to go before our app.css
+    if (defined('ATTACHMENTS')) {
+        ?>
+        <link rel="stylesheet" href="<?php echo HESK_PATH; ?>css/dropzone.min.css?<?php echo $hesk_settings['hesk_version']; ?>" type="text/css" />
+        <script src="<?php echo HESK_PATH; ?>js/dropzone.min.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+        <?php
+    }
+    ?>
+
     <link rel="stylesheet" media="all" href="<?php echo HESK_PATH; ?>css/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.css?<?php echo $hesk_settings['hesk_version']; ?>">
     <script src="<?php echo HESK_PATH; ?>js/jquery-3.5.1.min.js"></script>
 	<script type="text/javascript" src="<?php echo HESK_PATH; ?>js/hesk_javascript<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
@@ -49,11 +60,11 @@ $onload='';
 	}
 
 	/* If page requires WYSIWYG editor include TinyMCE Javascript */
-	if (defined('WYSIWYG') && ($hesk_settings['staff_ticket_formatting'] == 2 || $hesk_settings['kb_wysiwyg']))
+	if (defined('WYSIWYG') && ($hesk_settings['staff_ticket_formatting'] == 2 || $hesk_settings['kb_wysiwyg'] || defined('HTML_EMAIL_TEMPLATE')))
 	{
         require(HESK_PATH . 'inc/tiny_mce/tinymce.inc.php');
 		?>
-		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tiny_mce/5.7.0/tinymce.min.js"></script>
+		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tiny_mce/5.10.9/tinymce.min.js"></script>
 		<?php
 	}
 
@@ -104,7 +115,7 @@ $onload='';
 	}
 
 	// Auto reload
-	if (defined('AUTO_RELOAD') && hesk_checkPermission('can_view_tickets',0) && ! isset($_SESSION['hide']['ticket_list']) )
+	if (defined('AUTO_RELOAD') && hesk_checkPermission('can_view_tickets',0))
 	{
 		?>
 		<script type="text/javascript">
@@ -214,7 +225,6 @@ $onload='';
         new $.Zebra_Tooltips($('.tooltip'), {animation_offset: 0, animation_speed: 100, hide_delay: 0, show_delay: 0, vertical_alignment: 'above', vertical_offset: 5});
     });
     </script>
-
     <?php if ($hesk_settings['admin_css']): ?>
     <link rel="stylesheet" href="<?php echo $hesk_settings['admin_css_url']; ?>">
     <?php endif; ?>

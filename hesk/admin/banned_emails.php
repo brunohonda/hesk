@@ -120,7 +120,7 @@ hesk_handle_messages();
                 <tr <?php echo $table_row; ?>>
                     <td><?php echo $ban['email']; ?></td>
                     <td><?php echo isset($admins[$ban['banned_by']]) ? $admins[$ban['banned_by']] : $hesklang['e_udel']; ?></td>
-                    <td><?php echo $ban['dt']; ?></td>
+                    <td><?php echo hesk_date($ban['dt']); ?></td>
                     <?php if ($can_unban): ?>
                     <td class="unban">
                         <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
@@ -164,6 +164,11 @@ function ban_email()
 	// Only allow one email to be entered
 	$email = ($index = strpos($email, ',')) ? substr($email, 0,  $index) : $email;
 	$email = ($index = strpos($email, ';')) ? substr($email, 0,  $index) : $email;
+
+    // We don't need *@ to ban domains, remove the star if present
+    if (strpos($email, '*@') === 0) {
+        $email = ltrim($email, '*');
+    }
 
 	// Validate email address
 	$hesk_settings['multi_eml'] = 0;

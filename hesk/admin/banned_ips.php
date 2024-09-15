@@ -168,7 +168,7 @@ hesk_handle_messages();
                     <td><?php echo $ban['ip_display']; ?></td>
                     <td><?php echo $ban['ip_to'] == $ban['ip_from'] ? long2ip($ban['ip_to']) : long2ip($ban['ip_from']) . ' - ' . long2ip($ban['ip_to']); ?></td>
                     <td><?php echo isset($admins[$ban['banned_by']]) ? $admins[$ban['banned_by']] : $hesklang['e_udel']; ?></td>
-                    <td><?php echo $ban['dt']; ?></td>
+                    <td><?php echo hesk_date($ban['dt']); ?></td>
                     <?php if ($can_unban): ?>
                         <td class="unban">
                             <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],

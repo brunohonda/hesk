@@ -105,7 +105,17 @@ function print_add_ticket()
 	// Priority
 	if ( isset($_REQUEST['priority']) )
 	{
-		$_SESSION['c_priority'] = intval($_REQUEST['priority']);
+        switch ($_REQUEST['priority'])
+        {
+            case 1:
+                $_SESSION['c_priority'] = 'high';
+                break;
+            case 2:
+                $_SESSION['c_priority'] = 'medium';
+                break;
+            default:
+                $_SESSION['c_priority'] = 'low';
+        }
 	}
 
 	// Subject
@@ -412,6 +422,57 @@ function forgot_tid()
 
 	require(HESK_PATH . 'inc/email_functions.inc.php');
 
+    // Check anti-SPAM image
+    if ($hesk_settings['secimg_use'])
+    {
+        // Using reCAPTCHA?
+        if ($hesk_settings['recaptcha_use'])
+        {
+            require(HESK_PATH . 'inc/recaptcha/recaptchalib_v2.php');
+
+            $resp = null;
+            $reCaptcha = new ReCaptcha($hesk_settings['recaptcha_private_key']);
+
+            // Was there a reCAPTCHA response?
+            if ( isset($_POST["g-recaptcha-response"]) )
+            {
+                $resp = $reCaptcha->verifyResponse(hesk_getClientIP(), hesk_POST("g-recaptcha-response") );
+            }
+
+            if ($resp != null && $resp->success)
+            {
+                // OK
+            }
+            else
+            {
+                hesk_process_messages($hesklang['recaptcha_error'],'ticket.php?remind=1');
+            }
+        }
+        // Using PHP generated image
+        else
+        {
+            $mysecnum = intval( hesk_POST('mysecnum', 0) );
+
+            if ( empty($mysecnum) )
+            {
+                hesk_process_messages($hesklang['sec_miss'],'ticket.php?remind=1');
+            }
+            else
+            {
+                require(HESK_PATH . 'inc/secimg.inc.php');
+                $sc = new PJ_SecurityImage($hesk_settings['secimg_sum']);
+                if ( isset($_SESSION['checksum']) && $sc->checkCode($mysecnum, $_SESSION['checksum']) )
+                {
+                    // OK
+                }
+                else
+                {
+                    hesk_process_messages($hesklang['sec_wrng'],'ticket.php?remind=1');
+                }
+            }
+        }
+    }
+
 	$email = hesk_emailCleanup( hesk_validateEmail( hesk_POST('email'), 'ERR' ,0) ) or hesk_process_messages($hesklang['enter_valid_email'],'ticket.php?remind=1');
 
 	if ( isset($_POST['open_only']) )
@@ -424,7 +485,7 @@ function forgot_tid()
 	hesk_dbConnect();
 
     // Get tickets from the database
-	$res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'tickets` FORCE KEY (`statuses`) WHERE ' . ($hesk_settings['open_only'] ? "`status` IN ('0','1','2','4','5') AND " : '') . ' ' . hesk_dbFormatEmail($email) . ' ORDER BY `status` ASC, `lastchange` DESC ');
+	$res = hesk_dbQuery('SELECT * FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'tickets` FORCE KEY (`statuses`) WHERE ' . ($hesk_settings['open_only'] ? "`status` <> '3' AND " : '') . ' ' . hesk_dbFormatEmail($email) . ' ORDER BY `status` ASC, `lastchange` DESC ');
 
 	$num = hesk_dbNumRows($res);
 	if ($num < 1)
@@ -440,6 +501,7 @@ function forgot_tid()
 	}
 
 	$tid_list = '';
+    $tid_list_html = '';
 	$name = '';
 
     $email_param = $hesk_settings['email_view_ticket'] ? '&e='.rawurlencode($email) : '';
@@ -451,22 +513,30 @@ $tid_list .= "
 $hesklang[trackID]: "	. $my_ticket['trackid'] . "
 $hesklang[subject]: "	. hesk_msgToPlain($my_ticket['subject'], 1, 0) . "
 $hesklang[status]: "	. hesk_get_status_name($my_ticket['status']) . "
-$hesk_settings[hesk_url]/ticket.php?track={$my_ticket['trackid']}{$email_param}
+$hesk_settings[hesk_url]/ticket.php?track={$my_ticket['trackid']}{$email_param} " . "
+";
+
+$tid_list_html .= "
+$hesklang[trackID]: "   . $my_ticket['trackid'] . "
+$hesklang[subject]: "   . hesk_msgToPlain($my_ticket['subject'], 1, 0) . "
+$hesklang[status]: "    . hesk_get_status_name($my_ticket['status']) . "
+<a href=\"$hesk_settings[hesk_url]/ticket.php?track={$my_ticket['trackid']}" . str_replace('&e=', '&amp;e=', $email_param) . "\">{$hesklang['view_ticket']}</a>
 ";
 	}
 
 	/* Get e-mail message for customer */
-	$msg = hesk_getEmailMessage('forgot_ticket_id','',0,0,1);
-	$msg = str_replace('%%NAME%%',			$name,												$msg);
-	$msg = str_replace('%%NUM%%',			$num,												$msg);
-	$msg = str_replace('%%LIST_TICKETS%%',	$tid_list,											$msg);
-	$msg = str_replace('%%SITE_TITLE%%',	hesk_msgToPlain($hesk_settings['site_title'], 1),	$msg);
-	$msg = str_replace('%%SITE_URL%%',		$hesk_settings['site_url'],							$msg);
+	list($msg, $html_msg) = hesk_getEmailMessage('forgot_ticket_id','',0,0,1);
+    list($msg, $html_msg) = hesk_replace_email_tag('%%NAME%%', $name, $msg, $html_msg);
+    list($msg, $html_msg) = hesk_replace_email_tag('%%NUM%%', $num, $msg, $html_msg);
+    list($msg, $html_msg) = hesk_replace_email_tag('%%LIST_TICKETS%%', $tid_list, $msg, $html_msg, true, $tid_list_html);
+    list($msg, $html_msg) = hesk_replace_email_tag('%%SITE_TITLE%%',	hesk_msgToPlain($hesk_settings['site_title'], 1),	$msg, $html_msg);
+    list($msg, $html_msg) = hesk_replace_email_tag('%%SITE_URL%%', $hesk_settings['site_url'], $msg, $html_msg);
+    list($msg, $html_msg) = hesk_replace_email_tag('%%FIRST_NAME%%', hesk_full_name_to_first_name($name), $msg, $html_msg);
 
     $subject = hesk_getEmailSubject('forgot_ticket_id');
 
 	/* Send e-mail */
-	hesk_mail($email, $subject, $msg);
+	hesk_mail($email, $subject, $msg, $html_msg);
 
 	/* Show success message */
 	$tmp  = '<b>'.$hesklang['tid_sent'].'!</b>';

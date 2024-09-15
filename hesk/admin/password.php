@@ -140,16 +140,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 			require(HESK_PATH . 'inc/email_functions.inc.php');
 
 			// Get the email message
-			$msg = hesk_getEmailMessage('reset_password',array(),1,0,1);
+			list($msg, $html_msg) = hesk_getEmailMessage('reset_password',array(),1,0,1);
 
 			// Replace message special tags
-			$msg = str_replace('%%NAME%%',				hesk_msgToPlain($row['name'],1,1),	$msg);
-			$msg = str_replace('%%SITE_URL%%',			$hesk_settings['site_url'],			$msg);
-			$msg = str_replace('%%SITE_TITLE%%',   		$hesk_settings['site_title'],		$msg);
-			$msg = str_replace('%%PASSWORD_RESET%%',	$hesk_settings['hesk_url'].'/'.$hesk_settings['admin_dir'].'/password.php?h='.$hash, $msg);
+            $staff_name = hesk_msgToPlain($row['name'], 1, 0);
+            list($msg, $html_msg) = hesk_replace_email_tag('%%NAME%%', $staff_name, $msg, $html_msg);
+            list($msg, $html_msg) = hesk_replace_email_tag('%%SITE_URL%%', $hesk_settings['site_url'], $msg, $html_msg);
+            list($msg, $html_msg) = hesk_replace_email_tag('%%SITE_TITLE%%', $hesk_settings['site_title'], $msg, $html_msg);
+            list($msg, $html_msg) = hesk_replace_email_tag('%%FIRST_NAME%%', hesk_full_name_to_first_name($staff_name), $msg, $html_msg);
+            list($msg, $html_msg) = hesk_replace_email_tag('%%PASSWORD_RESET%%',
+                $hesk_settings['hesk_url'].'/'.$hesk_settings['admin_dir'].'/password.php?h='.$hash,
+                $msg,
+                $html_msg);
+
+            // Check two additional tags (avoid a bug in 3.3.0)
+            list($msg, $html_msg) = hesk_replace_email_tag('%25%25PASSWORD_RESET%25%25',
+                $hesk_settings['hesk_url'].'/'.$hesk_settings['admin_dir'].'/password.php?h='.$hash,
+                $msg,
+                $html_msg);
+            list($msg, $html_msg) = hesk_replace_email_tag('%%TRACK_URL%%',
+                $hesk_settings['hesk_url'].'/'.$hesk_settings['admin_dir'].'/password.php?h='.$hash,
+                $msg,
+                $html_msg);
 
 			// Send email
-			hesk_mail($email, $hesklang['reset_password'], $msg);
+			hesk_mail($email, $hesklang['reset_password'], $msg, $html_msg);
 
 			// Show success
             $show_sent_email_message = true;
@@ -222,8 +237,11 @@ elseif ( isset($_GET['h']) )
 				$_SESSION['categories']=explode(',',$_SESSION['categories']);
 			}
 
+            // Allow password reset without typing in the current password
+            $_SESSION['password_reset'] = true;
+
 			// Redirect to the profile page
-			hesk_process_messages($hesklang['resim'],'profile.php','NOTICE');
+            header('Location: profile.php');
 			exit();
 
 		} // End IP matches
@@ -284,16 +302,13 @@ $login_wrapper = true;
                             <?php } else {
                                 $cls = in_array('mysecnum',$_SESSION['a_iserror']) ? ' class="form-control isError" ' : ' class="form-control" ';
 
-                                /*echo $hesklang['sec_enter'].'<br>&nbsp;<br><img src="'.HESK_PATH.'print_sec_img.php?'.rand(10000,99999).'" width="150" height="40" alt="'.$hesklang['sec_img'].'" title="'.$hesklang['sec_img'].'" border="1" name="secimg" style="vertical-align:text-bottom"> '.
-                                     '<a href="javascript:void(0)" onclick="javascript:document.form1.secimg.src=\''.HESK_PATH.'print_sec_img.php?\'+ ( Math.floor((90000)*Math.random()) + 10000);"><img src="'.HESK_PATH.'img/reload.png" height="24" width="24" alt="'.$hesklang['reload'].'" title="'.$hesklang['reload'].'" border="0" style="vertical-align:text-bottom"></a>'.
-                                     '<br>&nbsp;<br><input type="text" name="mysecnum" size="20" maxlength="5" '.$cls.'>';*/
                                 echo '<div class="form-group"><label>'.$hesklang['sec_enter'].'</label><img src="'.HESK_PATH.'print_sec_img.php?'.rand(10000,99999).'" width="150" height="40" alt="'.$hesklang['sec_img'].'" title="'.$hesklang['sec_img'].'" border="1" name="secimg" style="vertical-align:middle" /> '.
                                     '<a style="vertical-align: middle; display: inline" class="btn btn-refresh" href="javascript:" onclick="document.form1.secimg.src=\''.HESK_PATH.'print_sec_img.php?\'+ ( Math.floor((90000)*Math.random()) + 10000);">
                                             <svg class="icon icon-refresh">
                                                 <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-refresh"></use>
                                             </svg>
                                          </a>'.
-                                    '<br><br><input type="text" name="mysecnum" size="20" maxlength="5" '.$cls.'></div>';
+                                    '<br><br><input type="text" name="mysecnum" size="20" maxlength="5" autocomplete="off" '.$cls.'></div>';
                             }
                         } ?>
                         <div class="form__submit">

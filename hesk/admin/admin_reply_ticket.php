@@ -105,8 +105,9 @@ if (strlen($message))
         $message = convert_html_to_text($message_html);
         $message = fix_newlines($message);
 
-        // Re-encode the message
+        // Prepare plain message for storage as HTML
         $message = hesk_htmlspecialchars($message);
+        // nl2br done after adding signature
     } elseif ($hesk_settings['staff_ticket_formatting'] == 0) {
         $message_html = hesk_makeURL($message_html);
         $message_html = nl2br($message_html);
@@ -179,16 +180,28 @@ else
 }
 
 /* Attachments */
+$use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 if ($hesk_settings['attachments']['use'])
 {
     require(HESK_PATH . 'inc/attachments.inc.php');
     $attachments = array();
-    for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-    {
-        $att = hesk_uploadFile($i);
-        if ($att !== false && !empty($att))
-        {
-            $attachments[$i] = $att;
+
+    if ($use_legacy_attachments) {
+        for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+            $att = hesk_uploadFile($i);
+            if ($att !== false && !empty($att)) {
+                $attachments[$i] = $att;
+            }
+        }
+    } else {
+        // The user used the new drag-and-drop system.
+        $temp_attachment_names = hesk_POST_array('attachments');
+        foreach ($temp_attachment_names as $temp_attachment_name) {
+            $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+            if ($temp_attachment !== null) {
+                $attachments[] = $temp_attachment;
+            }
         }
     }
 }
@@ -206,7 +219,12 @@ if (count($hesk_error_buffer)!=0)
 	// Remove any successfully uploaded attachments
 	if ($hesk_settings['attachments']['use'])
 	{
-		hesk_removeAttachments($attachments);
+        if ($use_legacy_attachments) {
+            hesk_removeAttachments($attachments);
+        } else {
+            $_SESSION['ar_attachments'] = $attachments;
+        }
+
 	}
 
     $tmp = '';
@@ -222,6 +240,11 @@ if (count($hesk_error_buffer)!=0)
 
 if ($hesk_settings['attachments']['use'] && !empty($attachments))
 {
+    // Delete temp attachment records and set the new filename
+    if (!$use_legacy_attachments) {
+        $attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+    }
+
     foreach ($attachments as $myatt)
     {
         hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($trackingID)."','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -306,6 +329,9 @@ else
                 break;
             }
 
+            // Update "Closed at"
+            $sql_status .= " , `closedat`=NOW(), `closedby`=".intval($_SESSION['id'])." ";
+
             // Lock the ticket if customers are not allowed to reopen tickets
             if ($hesk_settings['custopen'] != 1)
             {
@@ -362,6 +388,12 @@ if ( ! empty($_POST['assign_self']) && hesk_checkPermission('can_assign_self',0)
     $sql .= " , `owner`=".intval($_SESSION['id']).", `history`=CONCAT(`history`,'".hesk_dbEscape($revision)."') ";
 }
 
+// If ticket is re-opened, clear "closed at" and "closed by"
+if ($ticket['status'] == 3 && $new_status != 3)
+{
+    $sql .= ' , `closedat`=NULL, `closedby`=NULL ';
+}
+
 $sql .= " $priority_sql ";
 $sql .= " $sql_status ";
 
@@ -412,7 +444,14 @@ foreach ($hesk_settings['custom_fields'] as $k => $v)
 	$info[$k] = $v['use'] ? $ticket[$k] : '';
 }
 
-// 3. Make sure all values are properly formatted for email
+// 3. Add HTML message to the array
+if (isset($message_html)) {
+    $info['message_html'] = stripslashes($message_html);
+} else {
+    $info['message_html'] = $info['message'];
+}
+
+// 4. Make sure all values are properly formatted for email
 $ticket = hesk_ticketToPlain($info, 1, 0);
 
 // Notify the assigned staff?

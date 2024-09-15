@@ -21,7 +21,8 @@ define('NO_HTTP_HEADER',1);
 // Get required files and functions
 require(HESK_PATH . 'hesk_settings.inc.php');
 require(HESK_PATH . 'inc/common.inc.php');
-
+require(HESK_PATH . 'inc/oauth_functions.inc.php');
+require(HESK_PATH . 'inc/mail/imap/HeskIMAP.php');
 //============================================================================//
 //                           OPTIONAL MODIFICATIONS                           //
 //============================================================================//
@@ -60,12 +61,6 @@ hesk_authorizeNonCLI();
 if (empty($hesk_settings['imap']))
 {
 	die($hesklang['ifd']);
-}
-
-// Is IMAP available?
-if ( ! function_exists('imap_open'))
-{
-	die($hesklang['iei']);
 }
 
 // Are we in maintenance mode?
@@ -113,54 +108,133 @@ require(HESK_PATH . 'inc/pipe_functions.inc.php');
 // Tell Hesk we are in IMAP mode
 define('HESK_IMAP', true);
 
-// IMAP mailbox based on required encryption
-switch ($hesk_settings['imap_enc'])
-{
-    case 'ssl':
-        $hesk_settings['imap_mailbox'] = '{'.$hesk_settings['imap_host_name'].':'.$hesk_settings['imap_host_port'].'/imap/ssl'.($hesk_settings['imap_noval_cert'] ? '/novalidate-cert' : '').'}';
-        break;
-    case 'tls':
-        $hesk_settings['imap_mailbox'] = '{'.$hesk_settings['imap_host_name'].':'.$hesk_settings['imap_host_port'].'/imap/tls'.($hesk_settings['imap_noval_cert'] ? '/novalidate-cert' : '').'}';
-        break;
-    default:
-        $hesk_settings['imap_mailbox'] = '{'.$hesk_settings['imap_host_name'].':'.$hesk_settings['imap_host_port'].'}';
+// Connect to the database
+hesk_dbConnect();
+
+// Are we in test mode?
+$hesk_settings['TEST-MODE'] = (hesk_GET('test_mode') == 1) ? true : false;
+
+$imap = new HeskIMAP();
+$imap->host = $hesk_settings['imap_host_name'];
+$imap->port = $hesk_settings['imap_host_port'];
+$imap->username = $hesk_settings['imap_user'];
+if ($hesk_settings['imap_conn_type'] === 'basic') {
+    $imap->password = hesk_htmlspecialchars_decode($hesk_settings['imap_password']);
+    $imap->useOAuth = false;
+} elseif ($hesk_settings['imap_conn_type'] === 'oauth') {
+    $access_token = hesk_fetch_access_token($hesk_settings['imap_oauth_provider']);
+    if (!$access_token) {
+        echo "<pre>" . $hesklang['oauth_error_retrieve'] . "</pre>";
+        if ($hesk_settings['imap_job_wait']) {
+            unlink($job_file);
+        }
+        return null;
+    }
+
+    $imap->accessToken = $access_token;
+    $imap->useOAuth = true;
+    $imap->password = null;
 }
 
-// Connect to IMAP
-$imap = @imap_open($hesk_settings['imap_mailbox'], $hesk_settings['imap_user'], hesk_htmlspecialchars_decode($hesk_settings['imap_password']));
+$imap->readOnly = $hesk_settings['TEST-MODE'];
+$imap->ignoreCertificateErrors = $hesk_settings['imap_noval_cert'];
+$imap->connectTimeout = 15;
+$imap->responseTimeout = 15;
 
-// Connection successful?
-if ($imap !== false)
+if ($hesk_settings['imap_enc'] === 'ssl')
 {
-    echo $hesk_settings['debug_mode'] ? "<pre>Connected to the IMAP server &quot;" . $hesk_settings['imap_mailbox'] . "&quot;.</pre>\n" : '';
+    $imap->ssl = true;
+    $imap->tls = false;
+}
+elseif ($hesk_settings['imap_enc'] === 'tls')
+{
+    $imap->ssl = false;
+    $imap->tls = true;
+}
+else
+{
+    $imap->ssl = false;
+    $imap->tls = false;
+}
 
-    if($emails = imap_search($imap, 'UNSEEN'))
+// We don't want the script to run forever if we can't connect to IMAP...
+set_time_limit($imap->connectTimeout * 4);
+
+// Connect to IMAP
+if ($imap->login())
+{
+    echo $hesk_settings['debug_mode'] ? "<pre>Connected to the IMAP server &quot;" . $imap->host . ":" . $imap->port . "&quot;.</pre>\n" : '';
+
+    if ($imap->hasUnseenMessages())
     {
-        echo $hesk_settings['debug_mode'] ? "<pre>Unread messages found: " . count($emails) . "</pre>\n" : '';
+        $emails = $imap->getUnseenMessageIDs();
+        $emails_found = count($emails);
+        echo $hesk_settings['debug_mode'] ? "<pre>Unread messages found: $emails_found</pre>\n" : '';
+        //print_r($emails);
 
-        // Connect to the database
-        hesk_dbConnect();
+        if ($hesk_settings['TEST-MODE'])
+        {
+            $imap->logout();
+            echo $hesk_settings['debug_mode'] ? "<pre>TEST MODE, NO EMAILS PROCESSED\n\nDisconnected from the IMAP server.</pre>\n" : '';
+            if ($hesk_settings['imap_job_wait'])
+            {
+                unlink($job_file);
+            }
+            return null;
+        }
+
+        $this_email = 0;
+
+        // This is a bit tricky - we don't want the fetching to run forever, but we also don't want it to end prematurely
+        // Let's try to figure out a reasonable time limit:
+        // - let it run at least 300 seconds (5 minutes) per unseen email, to handle large attachments
+        // - let it run least 1800 seconds (30 minutes) in total
+        // - if it runs for over 3600 seconds (60 minutes) in total, something probably went wrong
+        if (function_exists('set_time_limit'))
+        {
+            $time_limit = $emails_found * 300;
+            if ($time_limit < 1800)
+            {
+                $time_limit = 1800;
+            }
+            elseif ($time_limit > 3600)
+            {
+                $time_limit = 3600;
+            }
+
+            $time_limit = 3600;
+
+            set_time_limit($time_limit);
+            echo $hesk_settings['debug_mode'] ? "<pre>Time limit set to {$time_limit} seconds.</pre>\n" : '';
+        }
 
         // Download and parse each email
         foreach($emails as $email_number)
         {
+            $this_email++;
+            echo $hesk_settings['debug_mode'] ? "<pre>Parsing message $this_email of $emails_found.</pre>\n" : '';
+
             // Parse email from the stream
-            $results = parser();
+            if (($results = parser()) === false)
+            {
+                echo $hesk_settings['debug_mode'] ? "<pre>Error parsing email, see debug log. Aborting fetching.</pre>\n" : '';
+                break;
+            }
 
             // Convert email into a ticket (or new reply)
             if ( $id = hesk_email2ticket($results, 2, $set_category, $set_priority) )
             {
                 echo $hesk_settings['debug_mode'] ? "<pre>Ticket $id created/updated.</pre>\n" : '';
             }
-            else
+            elseif (isset($hesk_settings['DEBUG_LOG']['PIPE']))
             {
-                echo $hesk_settings['debug_mode'] ? "<pre>Ticket NOT inserted - may be duplicate, blocked or an error.</pre>\n" : '';
+                echo "<pre>Ticket NOT inserted: " . $hesk_settings['DEBUG_LOG']['PIPE'] . "</pre>\n";
             }
 
             // Queue message to be deleted on connection close
             if ( ! $hesk_settings['imap_keep'])
             {
-                imap_delete($imap, $email_number);
+                $imap->delete($email_number);
             }
 
             echo $hesk_settings['debug_mode'] ? "<br /><br />\n\n" : '';
@@ -168,7 +242,8 @@ if ($imap !== false)
 
         if ( ! $hesk_settings['imap_keep'])
         {
-            imap_expunge($imap);
+            $imap->expunge();
+            echo $hesk_settings['debug_mode'] ? "<pre>Expunged mail folder.</pre>\n" : '';
         }
     }
     else
@@ -176,13 +251,15 @@ if ($imap !== false)
         echo $hesk_settings['debug_mode'] ? "<pre>No unread messages found.</pre>\n" : '';
     }
 
-    // Close IMAP connection
-    imap_close($imap);
+    $imap->logout();
     echo $hesk_settings['debug_mode'] ? "<pre>Disconnected from the IMAP server.</pre>\n" : '';
 }
+elseif (!$hesk_settings['debug_mode'])
+{
+    echo "<p>Unable to connect to the IMAP server.</p>\n";
+}
 
-// Any error messages?
-if($errors = imap_errors())
+if($errors = $imap->getErrors())
 {
     if ($hesk_settings['debug_mode'])
     {
@@ -193,9 +270,11 @@ if($errors = imap_errors())
     }
     else
     {
-        	echo "<h2>An error occured.</h2><p>For details turn <b>Debug mode</b> ON in settings and run this script again.</p>\n";
+        echo "<h2>An error occured.</h2><p>For details turn <b>Debug mode</b> ON in settings and run this script again.</p>\n";
     }
 }
+
+unset($imap);
 
 // Remove active IMAP fetching log file
 if ($hesk_settings['imap_job_wait'])

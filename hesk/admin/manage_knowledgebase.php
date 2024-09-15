@@ -52,6 +52,7 @@ if ( ! $hesk_settings['kb_enable'])
 
 /* This will tell the header to include WYSIWYG editor Javascript */
 define('WYSIWYG',1);
+define('ATTACHMENTS',1);
 
 /* What should we do? */
 if ( $action = hesk_REQUEST('a') )
@@ -462,19 +463,19 @@ if (!isset($_SESSION['hide']['new_article']))
                     </label>
                 </div>
                 <?php
-                if ($hesk_settings['attachments']['use'])
-                {
+                if ($hesk_settings['attachments']['use']) {
+                    require_once(HESK_PATH . 'inc/attachments.inc.php');
                 ?>
-                <div style="margin-top: 16px">
+                <div class="attachments">
                     <svg class="icon icon-attach">
                         <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
                     </svg>
-                    <?php echo $hesklang['attachments']; ?> (<a href="Javascript:void(0)" onclick="hesk_window('../file_limits.php',250,500);return false;"><?php echo $hesklang['ful']; ?></a>)
+                    <?php echo $hesklang['attachments']; ?>
                     <?php
-                    for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                    {
-                        echo '<div><input type="file" name="attachment['.$i.']"></div>';
-                    }
+                    build_dropzone_markup(true);
+                    display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                    dropzone_display_existing_files(hesk_SESSION_array('edit_attachments'));
+                    hesk_cleanSessionVars('edit_attachments');
                     ?>
                 </div>
                     <?php
@@ -1144,20 +1145,33 @@ function save_article()
 	define('KB',1);
     require_once(HESK_PATH . 'inc/posting_functions.inc.php');
     $attachments = array();
+    $use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 	$myattachments='';
 
 	if ($hesk_settings['attachments']['use'])
 	{
 		require_once(HESK_PATH . 'inc/attachments.inc.php');
 
-		for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
-		{
-			$att = hesk_uploadFile($i);
-			if ( ! empty($att))
-			{
-				$attachments[$i] = $att;
-			}
-		}
+        if ($use_legacy_attachments) {
+            for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
+            {
+                $att = hesk_uploadFile($i);
+                if ( ! empty($att))
+                {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_names = hesk_POST_array('attachments');
+            foreach ($temp_attachment_names as $temp_attachment_name) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
+            }
+        }
 	}
 
     /* Any errors? */
@@ -1166,7 +1180,11 @@ function save_article()
 		// Remove any successfully uploaded attachments
 		if ($hesk_settings['attachments']['use'])
 		{
-			hesk_removeAttachments($attachments);
+            if ($use_legacy_attachments) {
+                hesk_removeAttachments($attachments);
+            } else {
+                $_SESSION['edit_attachments'] = $attachments;
+            }
 		}
 
 		$_SESSION['edit_article'] = array(
@@ -1195,6 +1213,10 @@ function save_article()
 	/* Add to database */
 	if (!empty($attachments))
 	{
+        if (!$use_legacy_attachments) {
+            $attachments = hesk_migrateTempAttachments($attachments);
+        }
+
 	    foreach ($attachments as $myatt)
 	    {
 	        hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_attachments` (`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($myatt['saved_name'])."', '".hesk_dbEscape($myatt['real_name'])."', '".intval($myatt['size'])."')");
@@ -1506,11 +1528,11 @@ function edit_article()
                 if ( ! empty($article['attachments']) || $hesk_settings['attachments']['use'])
                 {
                     ?>
-                    <div style="margin-top: 16px">
+                    <div class="attachments">
                         <svg class="icon icon-attach">
                             <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
                         </svg>
-                        <?php echo $hesklang['attachments']; ?> (<a href="Javascript:void(0)" onclick="hesk_window('../file_limits.php',250,500);return false;"><?php echo $hesklang['ful']; ?></a>)<br>
+                        <?php echo $hesklang['attachments']; ?><br>
                         <?php
                         // Existing attachments
                         if ( ! empty($article['attachments']))
@@ -1537,10 +1559,12 @@ function edit_article()
                         // New attachments
                         if ($hesk_settings['attachments']['use'])
                         {
-                            for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                            {
-                                echo '<input type="file" name="attachment['.$i.']" size="50"><br>';
-                            }
+                            require_once(HESK_PATH . 'inc/attachments.inc.php');
+
+                            build_dropzone_markup(true);
+                            display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                            dropzone_display_existing_files(hesk_SESSION_array('edit_attachments'));
+                            hesk_cleanSessionVars('edit_attachments');
                         }
                         ?>
                     </div>
@@ -2096,20 +2120,33 @@ function new_article()
 	define('KB',1);
 	require_once(HESK_PATH . 'inc/posting_functions.inc.php');
     $attachments = array();
+    $use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 	$myattachments='';
 
 	if ($hesk_settings['attachments']['use'])
 	{
 		require_once(HESK_PATH . 'inc/attachments.inc.php');
 
-		for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
-		{
-			$att = hesk_uploadFile($i);
-			if ( ! empty($att))
-			{
-				$attachments[$i] = $att;
-			}
-		}
+        if ($use_legacy_attachments) {
+            for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
+            {
+                $att = hesk_uploadFile($i);
+                if ( ! empty($att))
+                {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_names = hesk_POST_array('attachments');
+            foreach ($temp_attachment_names as $temp_attachment_name) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
+            }
+        }
 	}
 
     /* Any errors? */
@@ -2118,7 +2155,11 @@ function new_article()
 		// Remove any successfully uploaded attachments
 		if ($hesk_settings['attachments']['use'])
 		{
-			hesk_removeAttachments($attachments);
+            if ($use_legacy_attachments) {
+                hesk_removeAttachments($attachments);
+            } else {
+                $_SESSION['edit_attachments'] = $attachments;
+            }
 		}
 
 		$_SESSION['new_article'] = array(
@@ -2146,6 +2187,10 @@ function new_article()
 	/* Add to database */
 	if ( ! empty($attachments))
 	{
+        if (!$use_legacy_attachments) {
+            $attachments = hesk_migrateTempAttachments($attachments);
+        }
+
 	    foreach ($attachments as $myatt)
 	    {
 	        hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_attachments` (`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");

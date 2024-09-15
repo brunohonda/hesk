@@ -15,8 +15,8 @@
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 // We will be installing this HESK version:
-define('HESK_NEW_VERSION','3.2.2');
-define('REQUIRE_PHP_VERSION','5.3.0');
+define('HESK_NEW_VERSION','3.4.6');
+define('REQUIRE_PHP_VERSION','5.6.0');
 define('REQUIRE_MYSQL_VERSION','5.0.7');
 
 // Other required files and settings
@@ -75,7 +75,7 @@ function hesk_iTestDatabaseConnection($use_existing_settings = false)
 	{
 		$hesk_settings['db_host'] = hesk_input( hesk_POST('host') );
 		$hesk_settings['db_name'] = hesk_input( hesk_POST('name') );
-		$hesk_settings['db_user'] = hesk_input( hesk_POST('user') );
+		$hesk_settings['db_user'] = str_replace('&amp;', '&', hesk_input( hesk_POST('user') ) );
 		$hesk_settings['db_pass'] = str_replace('&amp;', '&', hesk_input( hesk_POST('pass') ) );
 
 		if (INSTALL_PAGE == 'install.php')
@@ -94,15 +94,25 @@ function hesk_iTestDatabaseConnection($use_existing_settings = false)
     // Connect to database
     if ($use_mysqli)
     {
+        mysqli_report(MYSQLI_REPORT_OFF);
+
 		// Do we need a special port? Check and connect to the database
 		if ( strpos($hesk_settings['db_host'], ':') )
 		{
 			list($hesk_settings['db_host_no_port'], $hesk_settings['db_port']) = explode(':', $hesk_settings['db_host']);
-			$hesk_db_link = mysqli_connect($hesk_settings['db_host_no_port'], $hesk_settings['db_user'], $hesk_settings['db_pass'], $hesk_settings['db_name'], intval($hesk_settings['db_port']) ) or $db_success=0;
+            try {
+                $hesk_db_link = mysqli_connect($hesk_settings['db_host_no_port'], $hesk_settings['db_user'], $hesk_settings['db_pass'], $hesk_settings['db_name'], intval($hesk_settings['db_port']) );
+            } catch (Exception $e) {
+                $db_success=0;
+            }
 		}
 		else
 		{
-			$hesk_db_link = mysqli_connect($hesk_settings['db_host'], $hesk_settings['db_user'], $hesk_settings['db_pass'], $hesk_settings['db_name']) or $db_success=0;
+            try {
+                $hesk_db_link = mysqli_connect($hesk_settings['db_host'], $hesk_settings['db_user'], $hesk_settings['db_pass'], $hesk_settings['db_name']);
+            } catch (Exception $e) {
+                $db_success=0;
+            }
 		}
     }
     else
@@ -132,6 +142,10 @@ function hesk_iTestDatabaseConnection($use_existing_settings = false)
     }
 
 	ob_end_clean();
+
+    if (!isset($hesk_db_link) || $hesk_db_link === false) {
+        $db_success=0;
+    }
 
 	// Test DB permissions
 	if ($db_success)
@@ -188,6 +202,9 @@ function hesk_iTestDatabaseConnection($use_existing_settings = false)
 		hesk_iDatabase(5);
 	}
 
+    // We need utf-8
+    hesk_dbSetNames();
+
 	return $hesk_db_link;
 
 } // END hesk_iTestDatabaseConnection()
@@ -214,8 +231,6 @@ $hesk_settings[\'site_url\']=\'' . $set['site_url'] . '\';
 $hesk_settings[\'hesk_title\']=\'' . $set['hesk_title'] . '\';
 $hesk_settings[\'hesk_url\']=\'' . $set['hesk_url'] . '\';
 $hesk_settings[\'webmaster_mail\']=\'' . $set['webmaster_mail'] . '\';
-$hesk_settings[\'noreply_mail\']=\'' . $set['noreply_mail'] . '\';
-$hesk_settings[\'noreply_name\']=\'' . $set['noreply_name'] . '\';
 $hesk_settings[\'site_theme\']=\'' . $set['site_theme'] . '\';
 $hesk_settings[\'admin_css\']=' . $set['admin_css'] . ';
 $hesk_settings[\'admin_css_url\']=\'' . $set['admin_css_url'] . '\';
@@ -233,7 +248,6 @@ $hesk_settings[\'db_name\']=\'' . $set['db_name'] . '\';
 $hesk_settings[\'db_user\']=\'' . $set['db_user'] . '\';
 $hesk_settings[\'db_pass\']=\'' . $set['db_pass'] . '\';
 $hesk_settings[\'db_pfix\']=\'' . $set['db_pfix'] . '\';
-$hesk_settings[\'db_vrsn\']=' . $set['db_vrsn'] . ';
 
 
 // ==> HELP DESK
@@ -294,6 +308,8 @@ $hesk_settings[\'x_frame_opt\']=' . $set['x_frame_opt'] . ';
 $hesk_settings[\'samesite\']=\'' . $set['samesite'] . '\';
 $hesk_settings[\'force_ssl\']=' . $set['force_ssl'] . ';
 $hesk_settings[\'url_key\']=\'' . $set['url_key'] . '\';
+$hesk_settings[\'require_mfa\']=' . $set['require_mfa'] . ';
+$hesk_settings[\'elevator_duration\']=\'' . $set['elevator_duration'] . '\';
 
 // --> Attachments
 $hesk_settings[\'attachments\']=array (
@@ -328,27 +344,22 @@ $hesk_settings[\'kb_related\']=' . $set['kb_related'] . ';
 // ==> EMAIL
 
 // --> Email sending
+$hesk_settings[\'noreply_mail\']=\'' . $set['noreply_mail'] . '\';
+$hesk_settings[\'noreply_name\']=\'' . $set['noreply_name'] . '\';
+$hesk_settings[\'email_formatting\']=' . $set['email_formatting'] . ';
 $hesk_settings[\'smtp\']=' . $set['smtp'] . ';
 $hesk_settings[\'smtp_host_name\']=\'' . $set['smtp_host_name'] . '\';
 $hesk_settings[\'smtp_host_port\']=' . $set['smtp_host_port'] . ';
 $hesk_settings[\'smtp_timeout\']=' . $set['smtp_timeout'] . ';
-$hesk_settings[\'smtp_ssl\']=' . $set['smtp_ssl'] . ';
-$hesk_settings[\'smtp_tls\']=' . $set['smtp_tls'] . ';
+$hesk_settings[\'smtp_enc\']=\'' . $set['smtp_enc'] . '\';
+$hesk_settings[\'smtp_noval_cert\']=' . $set['smtp_noval_cert'] . ';
 $hesk_settings[\'smtp_user\']=\'' . $set['smtp_user'] . '\';
 $hesk_settings[\'smtp_password\']=\'' . $set['smtp_password'] . '\';
+$hesk_settings[\'smtp_conn_type\']=\'' . $set['smtp_conn_type'] . '\';
+$hesk_settings[\'smtp_oauth_provider\']=' . $set['smtp_oauth_provider'] . ';
 
 // --> Email piping
 $hesk_settings[\'email_piping\']=' . $set['email_piping'] . ';
-
-// --> POP3 Fetching
-$hesk_settings[\'pop3\']=' . $set['pop3'] . ';
-$hesk_settings[\'pop3_job_wait\']=' . $set['pop3_job_wait'] . ';
-$hesk_settings[\'pop3_host_name\']=\'' . $set['pop3_host_name'] . '\';
-$hesk_settings[\'pop3_host_port\']=' . $set['pop3_host_port'] . ';
-$hesk_settings[\'pop3_tls\']=' . $set['pop3_tls'] . ';
-$hesk_settings[\'pop3_keep\']=' . $set['pop3_keep'] . ';
-$hesk_settings[\'pop3_user\']=\'' . $set['pop3_user'] . '\';
-$hesk_settings[\'pop3_password\']=\'' . $set['pop3_password'] . '\';
 
 // --> IMAP Fetching
 $hesk_settings[\'imap\']=' . $set['imap'] . ';
@@ -360,8 +371,29 @@ $hesk_settings[\'imap_noval_cert\']=' . $set['imap_noval_cert'] . ';
 $hesk_settings[\'imap_keep\']=' . $set['imap_keep'] . ';
 $hesk_settings[\'imap_user\']=\'' . $set['imap_user'] . '\';
 $hesk_settings[\'imap_password\']=\'' . $set['imap_password'] . '\';
+$hesk_settings[\'imap_conn_type\']=\'' . $set['imap_conn_type'] . '\';
+$hesk_settings[\'imap_oauth_provider\']=' . $set['imap_oauth_provider'] . ';
 
-// --> Email loops
+// --> POP3 Fetching
+$hesk_settings[\'pop3\']=' . $set['pop3'] . ';
+$hesk_settings[\'pop3_job_wait\']=' . $set['pop3_job_wait'] . ';
+$hesk_settings[\'pop3_host_name\']=\'' . $set['pop3_host_name'] . '\';
+$hesk_settings[\'pop3_host_port\']=' . $set['pop3_host_port'] . ';
+$hesk_settings[\'pop3_tls\']=' . $set['pop3_tls'] . ';
+$hesk_settings[\'pop3_keep\']=' . $set['pop3_keep'] . ';
+$hesk_settings[\'pop3_user\']=\'' . $set['pop3_user'] . '\';
+$hesk_settings[\'pop3_password\']=\'' . $set['pop3_password'] . '\';
+$hesk_settings[\'pop3_conn_type\']=\'' . $set['pop3_conn_type'] . '\';
+$hesk_settings[\'pop3_oauth_provider\']=' . $set['pop3_oauth_provider'] . ';
+
+$hesk_settings[\'strip_quoted\']=' . $set['strip_quoted'] . ';
+$hesk_settings[\'eml_req_msg\']=' . $set['eml_req_msg'] . ';
+$hesk_settings[\'save_embedded\']=' . $set['save_embedded'] . ';
+
+// --> Ignore emails
+$hesk_settings[\'pipe_block_noreply\']=' . $set['pipe_block_noreply'] . ';
+$hesk_settings[\'pipe_block_returned\']=' . $set['pipe_block_returned'] . ';
+$hesk_settings[\'pipe_block_duplicate\']=' . $set['pipe_block_duplicate'] . ';
 $hesk_settings[\'loop_hits\']=' . $set['loop_hits'] . ';
 $hesk_settings[\'loop_time\']=' . $set['loop_time'] . ';
 
@@ -376,9 +408,6 @@ $hesk_settings[\'notify_spam_tags\']=array(' . $set['notify_spam_tags'] . ');
 $hesk_settings[\'notify_closed\']=' . $set['notify_closed'] . ';
 
 // --> Other
-$hesk_settings[\'strip_quoted\']=' . $set['strip_quoted'] . ';
-$hesk_settings[\'eml_req_msg\']=' . $set['eml_req_msg'] . ';
-$hesk_settings[\'save_embedded\']=' . $set['save_embedded'] . ';
 $hesk_settings[\'multi_eml\']=' . $set['multi_eml'] . ';
 $hesk_settings[\'confirm_email\']=' . $set['confirm_email'] . ';
 $hesk_settings[\'open_only\']=' . $set['open_only'] . ';
@@ -391,14 +420,20 @@ $hesk_settings[\'ticket_list\']=array(\'' . implode('\',\'',$set['ticket_list'])
 // --> Other
 $hesk_settings[\'submittedformat\']=' . $set['submittedformat'] . ';
 $hesk_settings[\'updatedformat\']=' . $set['updatedformat'] . ';
+$hesk_settings[\'format_submitted\']=\'' . $set['format_submitted'] . '\';
+$hesk_settings[\'format_updated\']=\'' . $set['format_updated'] . '\';
 
 
 // ==> MISC
 
 // --> Date & Time
 $hesk_settings[\'timezone\']=\'' . $set['timezone'] . '\';
-$hesk_settings[\'timeformat\']=\'' . $set['timeformat'] . '\';
+$hesk_settings[\'format_time\']=\'' . $set['format_time'] . '\';
+$hesk_settings[\'format_date\']=\'' . $set['format_date'] . '\';
+$hesk_settings[\'format_timestamp\']=\'' . $set['format_timestamp'] . '\';
 $hesk_settings[\'time_display\']=\'' . $set['time_display'] . '\';
+$hesk_settings[\'format_datepicker_js\']=\'' . $set['format_datepicker_js'] . '\';
+$hesk_settings[\'format_datepicker_php\']=\'' . $set['format_datepicker_php'] . '\';
 
 // --> Other
 $hesk_settings[\'ip_whois\']=\'' . $set['ip_whois'] . '\';
@@ -502,11 +537,11 @@ function hesk_iDatabase($problem=0)
 	</tr>
 	<tr>
 	<td width="200">Database User (login):</td>
-	<td><input type="text" name="user" value="<?php echo $hesk_settings['db_user']; ?>" size="40" autocomplete="off" /></td>
+	<td><input type="text" name="user" value="<?php echo str_replace('&', '&amp;', $hesk_settings['db_user']); ?>" size="40" autocomplete="off" /></td>
 	</tr>
 	<tr>
 	<td width="200">User Password:</td>
-	<td><input type="text" name="pass" value="<?php echo $hesk_settings['db_pass']; ?>" size="40" autocomplete="off" /></td>
+	<td><input type="text" name="pass" value="<?php echo str_replace('&', '&amp;', $hesk_settings['db_pass']); ?>" size="40" autocomplete="off" /></td>
 	</tr>
 	<?php
 	if (INSTALL_PAGE == 'install.php')
@@ -525,7 +560,7 @@ function hesk_iDatabase($problem=0)
 		function hesk_randomPassword()                                                            
 		{
 			chars = '23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ!@#$%*()_+-={}[]:?,.';
-			length = Math.floor(Math.random() * (5)) + 8;
+			length = Math.floor(Math.random() * (5)) + 10;
 			var result = '';
 			for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
 			return result;
@@ -535,9 +570,19 @@ function hesk_iDatabase($problem=0)
 
 		<h3>HESK login details</h3>
 
-		<p>Username and password you will use to login into HESK administration.</p>
+        <p>Set the name, email, username and password of the main HESK Administrator.</p>
 
 		<table>
+        <tr>
+        <td width="200">Admin name:</td>
+        <td><input type="text" name="admin_name" value="<?php echo isset($_SESSION['admin_name']) ? stripslashes($_SESSION['admin_name']) : 'Your name'; ?>" size="40" autocomplete="off" /></td>
+        </tr>
+        <tr>
+        <tr>
+        <td width="200">Admin email:</td>
+        <td><input type="text" name="admin_email" value="<?php echo isset($_SESSION['admin_email']) ? stripslashes($_SESSION['admin_email']) : 'you@example.com'; ?>" size="40" autocomplete="off" /></td>
+        </tr>
+        <tr>
 		<tr>
 		<td width="200">Choose a Username:</td>
 		<td><input type="text" name="admin_user" value="<?php echo isset($_SESSION['admin_user']) ? stripslashes($_SESSION['admin_user']) : 'Administrator'; ?>" size="40" autocomplete="off" /></td>

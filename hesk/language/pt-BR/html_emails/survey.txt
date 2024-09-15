@@ -1,0 +1,6 @@
+<p>Caro %%NAME%%,</p>
+<p>Estamos entrando em contato sobre seu chamado recente <a href="%%TRACK_URL%%">%%SUBJECT%%</a>. Para nos ajudar a atendê-lo melhor, adoraríamos ouvir sobre sua experiência com nossa equipe de suporte.</p>
+<p>Por favor, deixe-nos saber como foi fácil resolver seu problema <a href="%%SURVEY_URL%%"> clicando aqui</a>.</p>
+<p>Agradecemos seu feedback. E, como sempre, se houver mais alguma coisa que possamos fazer por você no futuro, não hesite em entrar em contato novamente..</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

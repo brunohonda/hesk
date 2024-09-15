@@ -37,11 +37,13 @@ require_once(HESK_PATH . 'inc/custom_fields.inc.php');
 
 // Load calendar JS and CSS
 define('CALENDAR',1);
+define('ATTACHMENTS',1);
 
 if ($hesk_settings['staff_ticket_formatting'] == 2) {
     define('WYSIWYG',1);
 }
 
+$hesk_settings['datepicker'] = array();
 $is_reply = 0;
 $tmpvar = array();
 
@@ -93,16 +95,28 @@ if (isset($_POST['save']))
 	$hesk_error_buffer = array();
 
     // Add attachments?
+    $use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
     if ($hesk_settings['attachments']['use'] && $number_of_attachments < $hesk_settings['attachments']['max_number'])
     {
         require(HESK_PATH . 'inc/attachments.inc.php');
         $attachments = array();
-        for ($i=$number_of_attachments+1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-        {
-            $att = hesk_uploadFile($i);
-            if ($att !== false && !empty($att))
-            {
-                $attachments[$i] = $att;
+
+        if ($use_legacy_attachments) {
+            for ($i = $number_of_attachments + 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+                $att = hesk_uploadFile($i);
+                if ($att !== false && !empty($att)) {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_ids = hesk_POST_array('attachments');
+            foreach ($temp_attachment_ids as $temp_attachment_id) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_id);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
             }
         }
     }
@@ -124,6 +138,10 @@ if (isset($_POST['save']))
 
             $tmpvar['message'] = convert_html_to_text($tmpvar['message_html']);
             $tmpvar['message'] = fix_newlines($tmpvar['message']);
+
+            // Prepare plain message for storage as HTML
+            $tmpvar['message'] = hesk_htmlspecialchars($tmpvar['message']);
+            $tmpvar['message'] = nl2br($tmpvar['message']);
         } else {
             // `message` already contains a HTML friendly version. May as well just re-use it
             $tmpvar['message'] = hesk_makeURL($tmpvar['message']);
@@ -137,7 +155,12 @@ if (isset($_POST['save']))
             // Remove any successfully uploaded attachments
             if ($hesk_settings['attachments']['use'] && isset($attachments))
             {
-                hesk_removeAttachments($attachments);
+                if ($use_legacy_attachments) {
+                    hesk_removeAttachments($attachments);
+                } else {
+                    $_SESSION['edit_attachments'] = $attachments;
+                }
+
             }
 
 	    	$myerror = '<ul>';
@@ -151,6 +174,10 @@ if (isset($_POST['save']))
 
         if ($hesk_settings['attachments']['use'] && !empty($attachments))
         {
+            if (!$use_legacy_attachments) {
+                $attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+            }
+
             foreach ($attachments as $myatt)
             {
                 hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($trackingID)."','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -182,6 +209,13 @@ if (isset($_POST['save']))
             }
         }
 
+        // Set Ticket Language
+        if (($tmpvar['set_language'] = hesk_input( hesk_POST('set_language') ))) {
+            $language_SQL = "`language`='".hesk_dbEscape($tmpvar['set_language'])."',";
+        } else {
+            $language_SQL = '';
+        }
+
 		$tmpvar['subject'] = hesk_input( hesk_POST('subject') ) or $hesk_error_buffer[]=$hesklang['enter_ticket_subject'];
 		$tmpvar['message'] = hesk_input( hesk_POST('message') );
         $tmpvar['message_html'] = $tmpvar['message'];
@@ -202,8 +236,9 @@ if (isset($_POST['save']))
             $tmpvar['message'] = convert_html_to_text($tmpvar['message_html']);
             $tmpvar['message'] = fix_newlines($tmpvar['message']);
 
-            // Re-encode the message
+            // Prepare plain message for storage as HTML
             $tmpvar['message'] = hesk_htmlspecialchars($tmpvar['message']);
+            $tmpvar['message'] = nl2br($tmpvar['message']);
         } else {
             // `message` already contains a HTML friendly version. May as well just re-use it
             $tmpvar['message'] = hesk_makeURL($tmpvar['message']);
@@ -217,112 +252,123 @@ if (isset($_POST['save']))
 			$tmpvar['email'] = 'hidden@demo.com';
 		}
 
-// Custom fields
-foreach ($hesk_settings['custom_fields'] as $k=>$v)
-{
-	if ($v['use'] && hesk_is_custom_field_in_category($k, $ticket['category']))
-    {
-        if ($v['type'] == 'checkbox')
+        // Custom fields
+        foreach ($hesk_settings['custom_fields'] as $k=>$v)
         {
-			$tmpvar[$k]='';
-
-        	if (isset($_POST[$k]) && is_array($_POST[$k]))
+            if ($v['use'])
             {
-				foreach ($_POST[$k] as $myCB)
-				{
-					$tmpvar[$k] .= ( is_array($myCB) ? '' : hesk_input($myCB) ) . '<br />';;
-				}
-				$tmpvar[$k]=substr($tmpvar[$k],0,-6);
-            }
-            else
-            {
-            	if ($v['req'] == 2)
-                {
-					$hesk_error_buffer[$k]=$hesklang['fill_all'].': '.$v['name'];
+                // Don't overwrite existing not used fields, but don't require them either if not required by category
+                if ( ! hesk_is_custom_field_in_category($k, $ticket['category'])) {
+                    $v['req'] = 0;
                 }
-            	$_POST[$k] = '';
-            }
-        }
-        elseif ($v['type'] == 'date')
-        {
-        	$tmpvar[$k] = hesk_POST($k);
-            $_SESSION["as_$k"] = '';
 
-			if (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $tmpvar[$k]))
-			{
-            	$date = strtotime($tmpvar[$k] . ' t00:00:00 UTC');
-                $dmin = strlen($v['value']['dmin']) ? strtotime($v['value']['dmin'] . ' t00:00:00 UTC') : false;
-                $dmax = strlen($v['value']['dmax']) ? strtotime($v['value']['dmax'] . ' t00:00:00 UTC') : false;
+                if ($v['type'] == 'checkbox')
+                {
+                    $tmpvar[$k]='';
 
-                $_SESSION["as_$k"] = $tmpvar[$k];
+                    if (isset($_POST[$k]) && is_array($_POST[$k]))
+                    {
+                        foreach ($_POST[$k] as $myCB)
+                        {
+                            $tmpvar[$k] .= ( is_array($myCB) ? '' : hesk_input($myCB) ) . '<br />';;
+                        }
+                        $tmpvar[$k]=substr($tmpvar[$k],0,-6);
+                    }
+                    else
+                    {
+                        if ($v['req'] == 2)
+                        {
+                            $hesk_error_buffer[$k]=$hesklang['fill_all'].': '.$v['name'];
+                        }
+                        $_POST[$k] = '';
+                    }
+                }
+                elseif ($v['type'] == 'date')
+                {
+                    $tmpvar[$k] = hesk_POST($k);
+                    $_SESSION["as_$k"] = '';
 
-	            if ($dmin && $dmin > $date)
-	            {
-					$hesk_error_buffer[$k] = sprintf($hesklang['d_emin'], $v['name'], hesk_custom_date_display_format($dmin, $v['value']['date_format']));
-	            }
-	            elseif ($dmax && $dmax < $date)
-	            {
-					$hesk_error_buffer[$k] = sprintf($hesklang['d_emax'], $v['name'], hesk_custom_date_display_format($dmax, $v['value']['date_format']));
-	            }
+                    if ($date = hesk_datepicker_get_date($tmpvar[$k], false, 'UTC'))
+                    {
+                        $_SESSION["as_$k"] = $tmpvar[$k];
+
+                        $date->setTime(0, 0);
+                        $dmin = strlen($v['value']['dmin']) ? new DateTime($v['value']['dmin'] . ' t00:00:00 UTC') : false;
+                        $dmax = strlen($v['value']['dmax']) ? new DateTime($v['value']['dmax'] . ' t00:00:00 UTC') : false;
+
+                        if ($dmin && $dmin->format('Y-m-d') > $date->format('Y-m-d'))
+                        {
+                            $hesk_error_buffer[$k] = sprintf($hesklang['d_emin'], $v['name'], hesk_translate_date_string($dmin->format($hesk_settings['format_datepicker_php'])));
+                        }
+                        elseif ($dmax && $dmax->format('Y-m-d') < $date->format('Y-m-d'))
+                        {
+                            $hesk_error_buffer[$k] = sprintf($hesklang['d_emax'], $v['name'], hesk_translate_date_string($dmax->format($hesk_settings['format_datepicker_php'])));
+                        }
+                        else
+                        {
+                            $tmpvar[$k] = $date->getTimestamp();
+                        }
+                    }
+                    else
+                    {
+                        $tmpvar[$k] = '';
+
+                        if ($v['req'] == 2)
+                        {
+                            $hesk_error_buffer[$k]=$hesklang['fill_all'].': '.$v['name'];
+                        }
+                    }
+                }
+                elseif ($v['type'] == 'email')
+                {
+                    $tmp = $hesk_settings['multi_eml'];
+                    $hesk_settings['multi_eml'] = $v['value']['multiple'];
+                    $tmpvar[$k] = hesk_validateEmail( hesk_POST($k), 'ERR', 0);
+                    $hesk_settings['multi_eml'] = $tmp;
+
+                    if ($tmpvar[$k] != '')
+                    {
+                        $_SESSION["as_$k"] = hesk_input($tmpvar[$k]);
+                    }
+                    else
+                    {
+                        $_SESSION["as_$k"] = '';
+
+                        if ($v['req'] == 2)
+                        {
+                            $hesk_error_buffer[$k] = $v['value']['multiple'] ? sprintf($hesklang['cf_noem'], $v['name']) : sprintf($hesklang['cf_noe'], $v['name']);
+                        }
+                    }
+                }
+                elseif ($v['req'] == 2)
+                {
+                    $tmpvar[$k]=hesk_makeURL(nl2br(hesk_input( hesk_POST($k) )));
+                    if ($tmpvar[$k] == '')
+                    {
+                        $hesk_error_buffer[$k]=$hesklang['fill_all'].': '.$v['name'];
+                    }
+                }
                 else
                 {
-                	$tmpvar[$k] = $date;
+                    $tmpvar[$k]=hesk_makeURL(nl2br(hesk_input(hesk_POST($k))));
                 }
-			}
-            else
-            {
-				if ($v['req'] == 2)
-				{
-					$hesk_error_buffer[$k]=$hesklang['fill_all'].': '.$v['name'];
-				}
-            }
-        }
-        elseif ($v['type'] == 'email')
-        {
-			$tmp = $hesk_settings['multi_eml'];
-            $hesk_settings['multi_eml'] = $v['value']['multiple'];
-			$tmpvar[$k] = hesk_validateEmail( hesk_POST($k), 'ERR', 0);
-            $hesk_settings['multi_eml'] = $tmp;
-
-            if ($tmpvar[$k] != '')
-            {
-				$_SESSION["as_$k"] = hesk_input($tmpvar[$k]);
             }
             else
             {
-            	$_SESSION["as_$k"] = '';
-
-                if ($v['req'] == 2)
-                {
-            		$hesk_error_buffer[$k] = $v['value']['multiple'] ? sprintf($hesklang['cf_noem'], $v['name']) : sprintf($hesklang['cf_noe'], $v['name']);
-                }
+                $tmpvar[$k] = '';
             }
         }
-		elseif ($v['req'] == 2)
-        {
-        	$tmpvar[$k]=hesk_makeURL(nl2br(hesk_input( hesk_POST($k) )));
-            if ($tmpvar[$k] == '')
-            {
-            	$hesk_error_buffer[$k]=$hesklang['fill_all'].': '.$v['name'];
-            }
-        }
-        else
-        {
-    		$tmpvar[$k]=hesk_makeURL(nl2br(hesk_input(hesk_POST($k))));
-        }
-	}
-    else
-    {
-    	$tmpvar[$k] = '';
-    }
-}
 
 	    if (count($hesk_error_buffer))
 	    {
             // Remove any successfully uploaded attachments
             if ($hesk_settings['attachments']['use'] && isset($attachments))
             {
-                hesk_removeAttachments($attachments);
+                if ($use_legacy_attachments) {
+                    hesk_removeAttachments($attachments);
+                } else {
+                    $_SESSION['edit_attachments'] = $attachments;
+                }
             }
 
 	    	$myerror = '<ul>';
@@ -336,6 +382,10 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
 
         if ($hesk_settings['attachments']['use'] && !empty($attachments))
         {
+            if (!$use_legacy_attachments) {
+                $attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+            }
+
             foreach ($attachments as $myatt)
             {
                 hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($trackingID)."','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -357,6 +407,7 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
 		`message`='".hesk_dbEscape($tmpvar['message'])."',
 		`message_html`='".hesk_dbEscape($tmpvar['message_html'])."',
         `attachments`=CONCAT(`attachments`, '".hesk_dbEscape($myattachments)."'),
+        $language_SQL
 		$custom_SQL
 		WHERE `id`='".intval($ticket['id'])."'");
     }
@@ -398,14 +449,14 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
                 </div>
                 <?php
                 foreach ($hesk_settings['custom_fields'] as $k=>$v) {
-                    if ($v['use'] && $v['place']==0 && hesk_is_custom_field_in_category($k, $ticket['category']) ) {
+                    if ($v['use'] && $v['place']==0 && (strlen($ticket[$k]) || hesk_is_custom_field_in_category($k, $ticket['category'])) ) {
                         $k_value  = $ticket[$k];
 
                         if ($v['type'] == 'checkbox') {
                             $k_value = explode('<br />',$k_value);
                         }
 
-                        $v['req'] = $v['req']==2 ? '<span class="important">*</span>' : '';
+                        $v['req'] = ($v['req']==2 && hesk_is_custom_field_in_category($k, $ticket['category'])) ? '<span class="important">*</span>' : '';
 
                         switch ($v['type']) {
                             /* Radio box */
@@ -528,7 +579,14 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 
                             // Date
                             case 'date':
-                                $k_value = hesk_custom_date_display_format($k_value, 'm/d/Y');
+                                $cls = in_array($k,$_SESSION['iserror']) ? 'isErrorStr' : '';
+                                $datepicker_date = '';
+                                if ($k_value != '') {
+                                    $date = new DateTime('@' . $k_value);
+                                    $datepicker_date = hesk_datepicker_format_date($date->getTimestamp(), 'UTC');
+                                    $hesk_settings['datepicker']['#'.$k]['timestamp'] = $date->getTimestamp();
+                                    $hesk_settings['datepicker']['#'.$k]['fromDB'] = true;
+                                }
 
                                 echo '
                                 <section class="param calendar">
@@ -539,12 +597,12 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-calendar"></use>
                                             </svg>
                                         </button>
-                                        <input name="'. $k .'"
-                                               value="'. $k_value .'"
+                                        <input name="'. $k .'" id="'. $k .'"
+                                               value="'. $datepicker_date .'"
                                                type="text" class="datepicker">
                                     </div>
-                                    <div class="calendar--value" '. ($k_value ? 'style="display: block"' : '') . '>
-                                        <span>'. $k_value .'</span>
+                                    <div class="calendar--value" '. ($datepicker_date ? 'style="display: block"' : '') . '>
+                                        <span class="'. $cls .'"><i>'. $datepicker_date .'</i></span>
                                         <i class="close">
                                             <svg class="icon icon-close">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-close"></use>
@@ -732,7 +790,14 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 
                             // Date
                             case 'date':
-                                $k_value = hesk_custom_date_display_format($k_value, 'm/d/Y');
+                                $cls = in_array($k,$_SESSION['iserror']) ? 'isErrorStr' : '';
+                                $datepicker_date = '';
+                                if ($k_value != '') {
+                                    $date = new DateTime('@' . $k_value);
+                                    $datepicker_date = hesk_datepicker_format_date($date->getTimestamp(), 'UTC');
+                                    $hesk_settings['datepicker']['#'.$k]['timestamp'] = $date->getTimestamp();
+                                    $hesk_settings['datepicker']['#'.$k]['fromDB'] = true;
+                                }
 
                                 echo '
                                 <section class="param calendar">
@@ -743,12 +808,12 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-calendar"></use>
                                             </svg>
                                         </button>
-                                        <input name="'. $k .'"
-                                               value="'. $k_value .'"
+                                        <input name="'. $k .'" id="'. $k .'"
+                                               value="'. $datepicker_date .'"
                                                type="text" class="datepicker">
                                     </div>
-                                    <div class="calendar--value" '. ($k_value ? 'style="display: block"' : '') . '>
-                                        <span>'. $k_value .'</span>
+                                    <div class="calendar--value" '. ($datepicker_date ? 'style="display: block"' : '') . '>
+                                        <span class="'. $cls .'"><i>'. $datepicker_date .'</i></span>
                                         <i class="close">
                                             <svg class="icon icon-close">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-close"></use>
@@ -794,12 +859,15 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
             // attachments
             if ($hesk_settings['attachments']['use'] && $number_of_attachments < $hesk_settings['attachments']['max_number'])
             {
-                echo '<div class="form-group">';
+                require_once(HESK_PATH . 'inc/attachments.inc.php');
+                echo '<div class="form-group attachments">';
                 echo '<label>' . $hesklang['attachments'] . ': (<a class="link" href="javascript:" onclick="hesk_window(\'../file_limits.php\',250,500);return false;">' . $hesklang['ful'] . '</a>)</label>';
-                for ($i=$number_of_attachments+1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                {
-                    echo '<input type="file" name="attachment['.$i.']" size="50" /><br />';
-                }
+                build_dropzone_markup(true, 'filedrop', $number_of_attachments + 1);
+                display_dropzone_field(HESK_PATH . 'upload_attachment.php',
+                    true,
+                    'filedrop',
+                    $hesk_settings['attachments']['max_number'] - $number_of_attachments);
+                dropzone_display_existing_files(hesk_SESSION_array('edit_attachments'));
                 echo '</div>';
             }
             ?>
@@ -811,6 +879,29 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
             {
                 ?>
                 <input type="hidden" name="reply" value="<?php echo $tmpvar['id']; ?>" />
+                <?php
+            }
+
+            if ($hesk_settings['can_sel_lang']) {
+                ?>
+                <div class="form-group">
+                    <label for="set-language"><?php echo $hesklang['set_lang']; ?>:</label>
+                    <select name="set_language" id="set-language">
+                        <option value="0">----</option>
+                        <?php
+                        foreach ($hesk_settings['languages'] as $setting_lang_key => $setting_lang) {
+                            if ( ! empty($ticket['language']) && $ticket['language'] === $setting_lang_key) {
+                                echo '<option value="'.$setting_lang_key.'" selected="selected">'.$setting_lang_key.'</option>';
+                            } else {
+                                echo '<option value="'.$setting_lang_key.'">'.$setting_lang_key.'</option>';
+                            }
+                        }
+                        ?>
+                    </select>
+                </div>
+                <script>
+                    $('#set-language').selectize();
+                </script>
                 <?php
             }
             ?>
@@ -827,6 +918,7 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 <p>&nbsp;</p>
 
 <?php
+hesk_cleanSessionVars('edit_attachments');
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
 

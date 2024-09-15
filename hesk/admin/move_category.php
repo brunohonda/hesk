@@ -137,6 +137,7 @@ $info = array(
 'name'			=> $ticket['name'],
 'subject'		=> $ticket['subject'],
 'message'		=> $ticket['message'],
+'message_html'  => $ticket['message_html'],
 'attachments'	=> $ticket['attachments'],
 'dt'			=> hesk_date($ticket['dt'], true),
 'lastchange'	=> hesk_date($ticket['lastchange'], true),

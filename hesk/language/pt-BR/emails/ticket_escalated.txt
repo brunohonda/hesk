@@ -1,0 +1,19 @@
+Olá,
+
+Um ticket de suporte foi escalado por %%ESCALATED_BY_RULE%%:
+
+Assunto: %%SUBJECT%%
+Categgoria: %%CATEGORY%%
+Prioridade: %%PRIORITY%%
+Status: %%STATUS%%
+Atribuído a: %%OWNER%%
+ID de Rastreamento: %%TRACK_ID%%
+
+Você pode ver este ticket aqui:
+%%TRACK_URL%%
+
+
+Cumprimentos,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

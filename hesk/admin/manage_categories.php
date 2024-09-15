@@ -29,24 +29,20 @@ hesk_checkPermission('can_man_cat');
 
 // Possible priorities
 $priorities = array(
-	'low' => array('id' => 3, 'value' => 'low', 'text' => $hesklang['low'],		'formatted' => $hesklang['low']),
-	'medium' => array('id' => 2, 'value' => 'medium', 'text' => $hesklang['medium'],		'formatted' => $hesklang['medium']),
-	'high' => array('id' => 1, 'value' => 'high', 'text' => $hesklang['high'],		'formatted' => $hesklang['high']),
-	'critical' => array('id' => 0, 'value' => 'critical', 'text' => $hesklang['critical'],	'formatted' => $hesklang['critical']),
+	3 => array('id' => 3, 'value' => 'low', 'text' => $hesklang['low'],		'formatted' => $hesklang['low']),
+	2 => array('id' => 2, 'value' => 'medium', 'text' => $hesklang['medium'],		'formatted' => $hesklang['medium']),
+	1 => array('id' => 1, 'value' => 'high', 'text' => $hesklang['high'],		'formatted' => $hesklang['high']),
+	0 => array('id' => 0, 'value' => 'critical', 'text' => $hesklang['critical'],	'formatted' => $hesklang['critical']),
 );
 
 /* What should we do? */
-if ( $action = hesk_REQUEST('a') )
-{
-	if ($action == 'linkcode')       {generate_link_code();}
-	elseif ( defined('HESK_DEMO') )  {hesk_process_messages($hesklang['ddemo'], 'manage_categories.php', 'NOTICE');}
-	elseif ($action == 'new')        {new_cat();}
-	elseif ($action == 'rename')     {rename_cat();}
+if ( $action = hesk_REQUEST('a') ) {
+	if ( defined('HESK_DEMO') )  {hesk_process_messages($hesklang['ddemo'], 'manage_categories.php', 'NOTICE');}
 	elseif ($action == 'remove')     {remove();}
 	elseif ($action == 'order')      {order_cat();}
-	elseif ($action == 'autoassign') {toggle_autoassign();}
 	elseif ($action == 'type')       {toggle_type();}
 	elseif ($action == 'priority')   {change_priority();}
+	elseif ($action == 'due-date')   {change_default_due_date();}
 }
 
 /* Print header */
@@ -75,9 +71,9 @@ if (!hesk_SESSION('error')) {
                 </div>
             </div>
         </h2>
-        <button class="btn btn btn--blue-border" ripple="ripple" data-action="category-create">
+        <a href="manage_category.php" class="btn btn btn--blue-border" ripple="ripple">
             <?php echo $hesklang['add_cat']; ?>
-        </button>
+        </a>
     </section>
     <div class="table-wrap">
         <div class="table">
@@ -110,6 +106,7 @@ if (!hesk_SESSION('error')) {
                     <?php if ($hesk_settings['autoassign']): ?>
                     <th><?php echo $hesklang['aass']; ?></th>
                     <?php endif; ?>
+                    <th class="due-date"><?php echo $hesklang['category_default_due_date'] ?></th>
                     <th></th>
                 </tr>
                 </thead>
@@ -128,14 +125,18 @@ if (!hesk_SESSION('error')) {
 
                 /* Get list of categories */
                 $res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` ORDER BY `cat_order` ASC");
+                $keyed_categories = array();
                 $options='';
 
                 $i=1;
                 $j=0;
                 $num = hesk_dbNumRows($res);
 
-                while ($mycat=hesk_dbFetchAssoc($res))
-                {
+                while ($mycat=hesk_dbFetchAssoc($res)) {
+                    $keyed_categories[$mycat['id']] = $mycat;
+                }
+
+                foreach ($keyed_categories as $id => $mycat) {
                     $j++;
 
                     $table_row = '';
@@ -167,37 +168,15 @@ if (!hesk_SESSION('error')) {
 
 
                     ?>
-                    <tr <?php echo $table_row; ?> data-category-id="<?php echo $mycat['id']; ?>">
+                    <tr <?php echo $table_row; ?> data-category-id="<?php echo $mycat['id']; ?>" data-autoassign-enabled="<?php echo $mycat['autoassign'] ?>" data-autoassign-config="<?php echo hesk_stripslashes($mycat['autoassign_config']); ?>">
                         <td><?php echo $mycat['id']; ?></td>
                         <td>
                             <span class="category-name"><?php echo $mycat['name']; ?></span>
-                            <div class="rename-link tooltype right out-close" data-modal=".rename-category" data-callback="initRenameCategoryModal">
-                                <svg class="icon icon-edit">
-                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-edit"></use>
-                                </svg>
-                                <div class="tooltype__content">
-                                    <div class="tooltype__wrapper">
-                                        <?php echo $hesklang['ren_cat']; ?>
-                                    </div>
-                                </div>
-                            </div>
                         </td>
                         <td>
-                            <div class="dropdown-select center out-close priority" data-type="form-submit-change">
-                                <form action="manage_categories.php" method="post">
-                                    <select name="priority" onchange="this.form.submit()">
-                                        <?php foreach ($priorities as $id => $priority): ?>
-                                            <option value="<?php echo $priority['value']; ?>"
-                                                <?php if ($priority['id'] === intval($mycat['priority'])): ?>selected<?php endif; ?>>
-                                                <?php echo $priority['text']; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <input type="hidden" name="a" value="priority" />
-                                    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-                                    <input type="hidden" name="catid" value="<?php echo $mycat['id']; ?>" />
-                                </form>
-                            </div>
+                            <span class="priority<?php echo $mycat['priority']; ?>">
+                                <?php echo $priorities[$mycat['priority']]['text']; ?>
+                            </span>
                         </td>
                         <td>
                             <?php
@@ -209,46 +188,46 @@ if (!hesk_SESSION('error')) {
                             </a>
                         </td>
                         <td>
-                            <div class="dropdown-select center out-close">
-                                <form action="manage_categories.php" method="get">
-                                    <select name="s" onchange="this.form.submit()">
-                                        <option value="0" <?php if ($mycat['type'] == 0): ?>selected<?php endif; ?>>
-                                            <?php echo $hesklang['cat_public']; ?>
-                                        </option>
-                                        <option value="1" <?php if ($mycat['type'] == 1): ?>selected<?php endif; ?>>
-                                            <?php echo $hesklang['cat_private']; ?>
-                                        </option>
-                                    </select>
-                                    <input type="hidden" name="a" value="type">
-                                    <input type="hidden" name="catid" value="<?php echo $mycat['id']; ?>">
-                                    <input type="hidden" name="token" value="<?php echo hesk_token_echo(); ?>">
-                                </form>
-                            </div>
+                            <?php echo $mycat['type'] == 0 ? $hesklang['cat_public'] : $hesklang['cat_private']; ?>
                         </td>
                         <?php if ($hesk_settings['autoassign']): ?>
                         <td class="assign">
-                            <label class="switch-checkbox">
-                                <a class="tooltip" data-ztt_vertical_offset="-5" id="autoassign-<?php echo $mycat['id']; ?>" href="manage_categories.php?a=autoassign&amp;s=<?php echo ($mycat['autoassign'] ? '0' : '1'); ?>&amp;catid=<?php echo $mycat['id']; ?>&amp;token=<?php echo hesk_token_echo(0); ?>" title="<?php echo ($mycat['autoassign'] ? $hesklang['aaon'] : $hesklang['aaoff']); ?>">
-                                    <input type="checkbox" <?php if ($mycat['autoassign']): ?>checked<?php endif; ?>>
-                                    <div class="switch-checkbox__bullet">
-                                        <i>
-                                            <svg class="icon icon-close">
-                                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
-                                            </svg>
-                                            <svg class="icon icon-tick">
-                                                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
-                                            </svg>
-                                        </i>
-                                    </div>
-                                </a>
-                            </label>
+                            <?php
+                            if ($mycat['autoassign']) {
+                                echo $hesklang['on'];
+                            } else {
+                                echo $hesklang['off'];
+                            } ?>
+                            <?php if (($display = hesk_getAutoAssignConfigDisplay($mycat['autoassign_config'])) !== '') { ?>
+                                <div class="autoassign-config-display">
+                                    (<?php echo $display; ?>)
+                                </div>
+                            <?php } ?>
                         </td>
                         <?php endif; ?>
+                        <td class="due-date">
+                            <?php if ($mycat['default_due_date_amount'] === null && $mycat['default_due_date_unit'] === null) {
+                                echo $hesklang['none'];
+                            } else {
+                                echo $mycat['default_due_date_amount'] . ' ' . $hesklang["d_{$mycat['default_due_date_unit']}"];
+                            } ?>
+                        </td>
                         <td class="nowrap generate">
-                            <a href="javascript:"
+                            <a class="tooltip" href="javascript:"
+                               title="<?php echo $hesklang['geco']; ?>"
                                <?php echo $mycat['type'] == 1 ? 'style="visibility: hidden"' : '' ?>
                                data-action="generate-link"
-                               data-link="<?php echo htmlspecialchars($hesk_settings['hesk_url']) . '/index.php?a=add&catid=' . intval($mycat['id']); ?>"><?php echo $hesklang['geco']; ?></a>
+                               data-link="<?php echo htmlspecialchars($hesk_settings['hesk_url']) . '/index.php?a=add&catid=' . intval($mycat['id']); ?>">
+                                <svg class="icon icon-export">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-export"></use>
+                                </svg>
+                            </a>
+                            <a class="tooltip" href="manage_category.php?id=<?php echo $mycat['id']; ?>"
+                               title="<?php echo $hesklang['edit']; ?>">
+                                <svg class="icon icon-edit-ticket">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-edit-ticket"></use>
+                                </svg>
+                            </a>
                             <?php
                             if ($num > 1) {
                                 if ($j == 1) {
@@ -301,11 +280,28 @@ if (!hesk_SESSION('error')) {
                             ?>
                             <?php
                             if ($mycat['id'] != 1):
+                                $modal_body = $hesklang['confirm_del_cat'];
+                                if ($all > 0) {
+                                    //-- $j - 2 because $j is 1-indexed and the first category can't be deleted
+                                    $modal_body .= '<br><br>'.
+                                        '<div><b>'.sprintf($hesklang['select_new_category'], $all).'</b></div>'.
+                                        '<select id="targetCat'.($j - 2).'" name="modal-dropdown" onchange="hesk_updateDeleteCategoryUrl('.($j - 2).')">';
+
+                                    foreach ($keyed_categories as $potential_transfer_id => $dropdown_category) {
+                                        //-- Don't allow transferring to self
+                                        if ($potential_transfer_id === $id) {
+                                            continue;
+                                        }
+
+                                        $modal_body .= '<option value="'.$potential_transfer_id.'">'.$dropdown_category['name'].'</option>';
+                                    }
+                                    $modal_body .= '</select>';
+                                }
                                 $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
-                                    $hesklang['confirm_del_cat'],
-                                    'manage_categories.php?a=remove&catid='. $mycat['id'] .'&token='. hesk_token_echo(0));
+                                    $modal_body,
+                                    'manage_categories.php?a=remove&catid='. $mycat['id'] .'&token='. hesk_token_echo(0).'&targetCategory=1');
                                 ?>
-                            <a class="tooltip" title="<?php echo $hesklang['delcat']; ?>" href="javascript:" class="delete" data-modal="[data-modal-id='<?php echo $modal_id; ?>']">
+                            <a class="tooltip delete" title="<?php echo $hesklang['delcat']; ?>" href="javascript:" data-modal="[data-modal-id='<?php echo $modal_id; ?>']">
                                 <svg class="icon icon-delete">
                                     <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-delete"></use>
                                 </svg>
@@ -330,124 +326,6 @@ if (!hesk_SESSION('error')) {
     <div class="notification--title"><?php echo $hesklang['genl']; ?></div>
     <div class="notification--text"><?php echo $hesklang['genl2']; ?></div>
 </div>
-<div class="modal rename-category">
-    <div class="modal__body">
-        <form action="manage_categories.php" method="post">
-            <i class="modal__close" data-action="modal-close">
-                <svg class="icon icon-close">
-                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
-                </svg>
-            </i>
-            <h3><?php echo $hesklang['ren_cat']; ?></h3>
-            <div class="modal__description form">
-                <div class="form-group">
-                    <label style="text-align: left"><?php echo $hesklang['cat_name']; ?>:</label>
-                    <input type="text"
-                           name="name"
-                           id="renamecat"
-                           class="form-control"
-                           size="40"
-                           maxlength="100"
-                           <?php if (isset($_SESSION['catname2'])): ?>value="<?php echo $_SESSION['catname2']; ?>"<?php endif; ?>>
-                    <input type="hidden" name="catid">
-                    <input type="hidden" name="a" value="rename">
-                    <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-                </div>
-            </div>
-            <div class="modal__buttons">
-                <button class="btn btn-border" ripple="ripple" data-action="cancel"><?php echo $hesklang['cancel']; ?></button>
-                <button class="btn btn-full" ripple="ripple" type="submit"><?php echo $hesklang['ren_cat']; ?></button>
-            </div>
-        </form>
-    </div>
-</div>
-<div class="right-bar category-create" <?php echo hesk_SESSION('error') ? 'style="display: block"' : ''; ?>>
-    <form action="manage_categories.php" method="post">
-        <div class="right-bar__body form">
-            <h3>
-                <a href="javascript:">
-                    <svg class="icon icon-back">
-                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
-                    </svg>
-                    <span><?php echo $hesklang['add_cat']; ?></span>
-                </a>
-            </h3>
-            <?php
-            if (hesk_SESSION('error')) {
-                echo '<div style="margin: -24px -24px 0 -16px;">';
-                hesk_handle_messages();
-                echo '</div>';
-            }
-            ?>
-            <div class="form-group">
-                <label><?php echo $hesklang['cat_name']; ?>:</label>
-                <input type="text"
-                       name="name"
-                       class="form-control"
-                       id="add_cat_name"
-                       maxlength="100"
-                       <?php if (isset($_SESSION['catname'])): ?>value="<?php echo $_SESSION['catname']; ?>"<?php endif; ?>>
-            </div>
-            <?php
-            if (!isset($_SESSION['cat_priority'])) {
-                $_SESSION['cat_priority'] = 3;
-            }
-            ?>
-            <div class="category-create__select">
-                <span><?php echo $hesklang['def_pri']; ?></span>
-                <div class="dropdown-select center out-close priority">
-                    <select name="priority">
-                        <?php foreach ($priorities as $id => $priority): ?>
-                            <option value="<?php echo $priority['value']; ?>" <?php if ($_SESSION['cat_priority'] == $id): ?>selected<?php endif; ?>>
-                                <?php echo $priority['text']; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <?php if ($hesk_settings['autoassign']): ?>
-                <div class="category-create__autoassign">
-                    <label class="switch-checkbox">
-                        <input value="Y" name="autoassign" type="checkbox" id="autoassign" <?php if (!isset($_SESSION['cat_autoassign']) || $_SESSION['cat_autoassign'] == 1) { echo 'checked'; } ?>>
-                        <div class="switch-checkbox__bullet">
-                            <i>
-                                <svg class="icon icon-close">
-                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
-                                </svg>
-                                <svg class="icon icon-tick">
-                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
-                                </svg>
-                            </i>
-                        </div>
-                        <span><?php echo $hesklang['cat_aa']; ?></span>
-                    </label>
-                </div>
-            <?php endif; ?>
-            <div class="category-create__select">
-                <span><?php echo $hesklang['cat_type']; ?>:</span>
-                <div class="dropdown-select center out-close">
-                    <select name="type" id="category-create-type">
-                        <option value="0" <?php if (!isset($_SESSION['cat_type']) || $_SESSION['cat_type'] == 0) {echo 'checked';} ?>><?php echo $hesklang['cat_public']; ?></option>
-                        <option value="1" <?php if (isset($_SESSION['cat_type']) && $_SESSION['cat_type'] == 1) {echo 'checked';} ?>><?php echo $hesklang['cat_private']; ?></option>
-                    </select>
-                </div>
-            </div>
-            <input type="hidden" name="a" value="new" />
-            <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
-            <button class="btn btn-full" type="submit" ripple="ripple"><?php echo $hesklang['create_cat']; ?></button>
-        </div>
-    </form>
-</div>
-
-<script language="Javascript" type="text/javascript"><!--
-
-function initRenameCategoryModal($clickedElement) {
-    $('.rename-category')
-        .find('input[name="name"]').val($clickedElement.parent().find('.category-name').text()).end()
-        .find('input[name="catid"]').val($clickedElement.parent().parent().attr('data-category-id')).end();
-}
-//-->
-</script>
 <?php
 hesk_cleanSessionVars('error');
 require_once(HESK_PATH . 'inc/footer.inc.php');
@@ -455,129 +333,6 @@ exit();
 
 
 /*** START FUNCTIONS ***/
-
-function change_priority()
-{
-	global $hesk_settings, $hesklang, $priorities;
-
-	/* A security check */
-	hesk_token_check('POST');
-
-	$_SERVER['PHP_SELF'] = 'manage_categories.php?catid='.intval( hesk_POST('catid') );
-
-	$catid = hesk_isNumber( hesk_POST('catid'), $hesklang['choose_cat_ren'], $_SERVER['PHP_SELF']);
-	$_SESSION['selcat'] = $catid;
-	$_SESSION['selcat2'] = $catid;
-
-    $priority = hesk_POST('priority', 'low');
-    if ( ! array_key_exists($priority, $priorities) )
-    {
-        $priority = 'low';
-    }
-
-	$priority_id = $priorities[$priority]['id'];
-
-	hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` SET `priority`='{$priority_id}' WHERE `id`='".intval($catid)."'");
-
-    hesk_cleanSessionVars('cat_ch_priority');
-
-	hesk_process_messages($hesklang['cat_pri_ch'].' '.$priorities[$priority]['formatted'],$_SERVER['PHP_SELF'],'SUCCESS');
-} // END change_priority()
-
-
-function new_cat()
-{
-	global $hesk_settings, $hesklang, $priorities;
-
-	/* A security check */
-	hesk_token_check('POST');
-
-    /* Options */
-    $_SESSION['cat_autoassign'] = hesk_POST('autoassign') == 'Y' ? 1 : 0;
-    $_SESSION['cat_type'] = hesk_POST('type') === '1' ? 1 : 0;
-
-	// Default priority
-	$_SESSION['cat_priority'] = hesk_POST('priority', 'low');
-    if ( ! array_key_exists($_SESSION['cat_priority'], $priorities) )
-    {
-        $_SESSION['cat_priority'] = 'low';
-    }
-    $priority_id = $priorities[$_SESSION['cat_priority']]['id'];
-
-    /* Category name */
-    $catname = hesk_input(hesk_POST('name'));
-
-    if ($catname == '') {
-        $_SESSION['error'] = 1;
-    }
-	$catname = hesk_input( hesk_POST('name') , $hesklang['enter_cat_name'], 'manage_categories.php');
-
-    /* Do we already have a category with this name? */
-	$res = hesk_dbQuery("SELECT `id` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE `name` LIKE '".hesk_dbEscape( hesk_dbLike($catname) )."' LIMIT 1");
-    if (hesk_dbNumRows($res) != 0)
-    {
-		$_SESSION['catname'] = stripslashes($catname);
-		hesk_process_messages($hesklang['cndupl'],'manage_categories.php');
-    }
-
-	/* Get the latest cat_order */
-	$res = hesk_dbQuery("SELECT `cat_order` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` ORDER BY `cat_order` DESC LIMIT 1");
-	$row = hesk_dbFetchRow($res);
-	$my_order = isset($row[0]) ? intval($row[0]) + 10 : 10;
-
-	hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` (`name`,`cat_order`,`autoassign`,`type`, `priority`) VALUES ('".hesk_dbEscape($catname)."','".intval($my_order)."','".intval($_SESSION['cat_autoassign'])."','".intval($_SESSION['cat_type'])."','{$priority_id}')");
-
-    hesk_cleanSessionVars('catname');
-    hesk_cleanSessionVars('cat_autoassign');
-    hesk_cleanSessionVars('cat_type');
-    hesk_cleanSessionVars('cat_priority');
-    hesk_cleanSessionVars('error');
-
-    $_SESSION['selcat2'] = hesk_dbInsertID();
-
-	hesk_process_messages(sprintf($hesklang['cat_name_added'],'<i>'.stripslashes($catname).'</i>'),'manage_categories.php','SUCCESS');
-} // End new_cat()
-
-
-function rename_cat()
-{
-	global $hesk_settings, $hesklang;
-
-	/* A security check */
-	hesk_token_check('POST');
-
-    $_SERVER['PHP_SELF'] = 'manage_categories.php?catid='.intval( hesk_POST('catid') );
-
-	$catid = hesk_isNumber( hesk_POST('catid'), $hesklang['choose_cat_ren'], $_SERVER['PHP_SELF']);
-	$_SESSION['selcat'] = $catid;
-    $_SESSION['selcat2'] = $catid;
-
-	$catname = hesk_input( hesk_POST('name'), $hesklang['cat_ren_name'], $_SERVER['PHP_SELF']);
-    $_SESSION['catname2'] = stripslashes($catname);
-
-	$res = hesk_dbQuery("SELECT `id` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE `name` LIKE '".hesk_dbEscape( hesk_dbLike($catname) )."' LIMIT 1");
-    if (hesk_dbNumRows($res) != 0)
-    {
-    	$old = hesk_dbFetchAssoc($res);
-        if ($old['id'] == $catid)
-        {
-        	hesk_process_messages($hesklang['noch'],$_SERVER['PHP_SELF'],'NOTICE');
-        }
-        else
-        {
-    		hesk_process_messages($hesklang['cndupl'],$_SERVER['PHP_SELF']);
-        }
-    }
-
-	hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` SET `name`='".hesk_dbEscape($catname)."' WHERE `id`='".intval($catid)."'");
-
-    unset($_SESSION['selcat']);
-    unset($_SESSION['catname2']);
-
-    hesk_process_messages($hesklang['cat_renamed_to'].' <i>'.stripslashes($catname).'</i>',$_SERVER['PHP_SELF'],'SUCCESS');
-} // End rename_cat()
-
-
 function remove()
 {
 	global $hesk_settings, $hesklang;
@@ -599,10 +354,11 @@ function remove()
     	hesk_error("$hesklang[int_error]: $hesklang[cat_not_found].");
     }
 
+    $new_category = hesk_GET('targetCategory', 1);
     // Don't update resolved tickets "Last modified"
-    hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `category`=1, `lastchange`=`lastchange` WHERE `category`='".intval($mycat)."' AND `status` = '3'");
+    hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `category`=".intval($new_category).", `lastchange`=`lastchange` WHERE `category`='".intval($mycat)."' AND `status` = '3'");
     // For unresolved tickets, update the "Last modified"
-	hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `category`=1 WHERE `category`='".intval($mycat)."'");
+	hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `category`=".intval($new_category)." WHERE `category`='".intval($mycat)."'");
 
     hesk_process_messages($hesklang['cat_removed_db'],$_SERVER['PHP_SELF'],'SUCCESS');
 } // End remove()
@@ -639,70 +395,4 @@ function order_cat()
     header('Location: manage_categories.php');
     exit();
 } // End order_cat()
-
-
-function toggle_autoassign()
-{
-	global $hesk_settings, $hesklang;
-
-	/* A security check */
-	hesk_token_check();
-
-	$catid = intval( hesk_GET('catid') ) or hesk_error($hesklang['cat_move_id']);
-	$_SESSION['selcat2'] = $catid;
-
-    if ( intval( hesk_GET('s') ) )
-    {
-		$autoassign = 1;
-        $tmp = $hesklang['caaon'];
-    }
-    else
-    {
-        $autoassign = 0;
-        $tmp = $hesklang['caaoff'];
-    }
-
-	/* Update auto-assign settings */
-	hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` SET `autoassign`='".intval($autoassign)."' WHERE `id`='".intval($catid)."'");
-	if (hesk_dbAffectedRows() != 1)
-    {
-        hesk_process_messages($hesklang['int_error'].': '.$hesklang['cat_not_found'],'./manage_categories.php');
-    }
-
-    hesk_process_messages($tmp,'./manage_categories.php','SUCCESS');
-
-} // End toggle_autoassign()
-
-
-function toggle_type()
-{
-	global $hesk_settings, $hesklang;
-
-	/* A security check */
-	hesk_token_check();
-
-	$catid = intval( hesk_GET('catid') ) or hesk_error($hesklang['cat_move_id']);
-	$_SESSION['selcat2'] = $catid;
-
-    if ( intval( hesk_GET('s') ) )
-    {
-		$type = 1;
-        $tmp = $hesklang['cpriv'];
-    }
-    else
-    {
-        $type = 0;
-        $tmp = $hesklang['cpub'];
-    }
-
-	/* Update auto-assign settings */
-	hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` SET `type`='{$type}' WHERE `id`='".intval($catid)."'");
-	if (hesk_dbAffectedRows() != 1)
-    {
-        hesk_process_messages($hesklang['int_error'].': '.$hesklang['cat_not_found'],'./manage_categories.php');
-    }
-
-    hesk_process_messages($tmp,'./manage_categories.php','SUCCESS');
-
-} // End toggle_type()
 ?>

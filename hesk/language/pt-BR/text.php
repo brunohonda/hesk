@@ -3,7 +3,7 @@
 *
 * Language file for Help Desk Software HESK (https://www.hesk.com)
 * Language: Português Brasileiro (Brazilian Portuguese)
-* Version: 3.2.x
+* Version: 3.4.x
 *
 * ==> CONTRIBUTORS
 *
@@ -13,6 +13,7 @@
 * Fabio Bmed (http://www.fabiobmed.com.br)
 * Bruno Andrade da Silva
 * Felipe Rozelio
+* Luka Sabino
 *
 * ==> HOW TO TRANSLATE THIS FILE
 *
@@ -148,15 +149,15 @@ $hesklang['date_posted']='Data de publicação';
 $hesklang['category']='Categoria';
 $hesklang['any_cat']='Qualquer categoria';
 $hesklang['order']='Ordem';
-$hesklang['ascending']='ascendente';
-$hesklang['descending']='descendente';
+$hesklang['ascending']='Ascendente';
+$hesklang['descending']='Descendente';
 $hesklang['display']='Exibir';
-$hesklang['tickets_page']='chamados por página';
+$hesklang['tickets_page']='Chamados por página';
 $hesklang['find_ticket']='Procurar chamado';
 $hesklang['yyyy_mm_dd']='AAAA-MM-DD';
 $hesklang['results_page']='resultados por página';
-$hesklang['opened']='aberto'; // The ticket has been OPENED
-$hesklang['closed']='resolvido'; // Ticket has been RESOLVED
+$hesklang['opened']='Aberto'; // The ticket has been OPENED
+$hesklang['closed']='Resolvido'; // Ticket has been RESOLVED
 $hesklang['ticket']='Chamado';
 $hesklang['tickets']='Chamados';
 $hesklang['ticket_been']='Este chamado foi';
@@ -190,7 +191,7 @@ para categorizar chamados por relevância (por exemplo &quot;Vendas&quot;,
 &quot;Problemas de hardware&quot;, &quot;Problemas de PHP/MySQL&quot; etc) e para
 atribuir usuários a categorias (por exemplo, o seu vendedor pode ver somente
 chamados enviados para a categoria &quot;Vendas&quot;)';
-$hesklang['spam_req']='At least one SPAM prevention measure must be enabled!';
+$hesklang['spam_req']='Pelo menos uma medida de prevenção de SPAM deve estar habilitada!';
 $hesklang['cat_name']='Nome da categoria';
 $hesklang['remove']='Remover';
 $hesklang['add_cat']='Adicionar nova categoria';
@@ -1079,7 +1080,6 @@ $hesklang['conok']='Conectado com sucesso!';
 $hesklang['conokn']='Entretanto, se seu servidor exigir usuário e senha o e-mail não será enviado!';
 $hesklang['saving']='Salvando configurações, por favor aguarde...';
 $hesklang['sns']='As configurações foram salvas, mas algumas funções foram desabilitadas devido a falhas nos testes.';
-$hesklang['loops']='Repetição de e-mails';
 $hesklang['looph']='Máximo de envios';
 $hesklang['loopt']='Intervalo de tempo';
 $hesklang['didum']='Você quis dizer %s?'; // %s changes to email; did you mean someone@example.com?
@@ -1230,7 +1230,7 @@ $hesklang['no_note']='Observação com esta identificação não encontrada';
 $hesklang['sacl']='Salvar e continuar depois';
 $hesklang['reply_saved']='Sua mensagem de resposta foi salva para depois.';
 $hesklang['submit_as']='Enviar como:';
-$hesklang['sasc']='enviar como resposta do cliente';
+$hesklang['sasc']='Enviar como resposta do cliente';
 $hesklang['creb']='Resposta do cliente inserida por:';
 $hesklang['show_select']='Exibir &quot;Clique para selecionar&quot; como opção padrão';
 // Settings
@@ -1540,7 +1540,6 @@ $hesklang['imap_not']='O PHP não foi compilado com suporte a IMAP';
 $hesklang['imap_warning']='usuário %1$s tem o mesmo endereço de e-mail que o seu buscador IMAP: %2$s'; // %1$s = username, %2$s = email address
 $hesklang['pop3_warning']='usúario %1$s tem o mesmo endereço de e-mail que o seu buscador POP3: %2$s'; // %1$s = username, %2$s = email address
 $hesklang['fetch_warning']='Isso pode resultar em um loop de e-mail, onde novos tickets são criados pelas notificações de e-mail do usuário. Seu endereço de e-mail do buscador deve ser único e não deve ser usado por mais ninguém.';
-$hesklang['from_warning']='Hesk está usando um servidor SMTP para enviar notificações por e-mail. Seu &quot;%1$s&quot; na aba &quot;%2$s&quot; deve ser alterado para: %3$s'; // %1$s = "From email" text, %2$s = "General" tab text, %3$s = email address
 $hesklang['can_view_ass_by']='Pode visualizar tickets que ele/elaa associou a outros';
 $hesklang['can_privacy']='Pode anonimizar tickets';
 $hesklang['confirm_anony']='Anonimizar esse ticket';
@@ -1618,8 +1617,6 @@ $hesklang['unban_email']='Desbanir este e-mail';
 $hesklang['unban_ip']='Desbanir este IP';
 $hesklang['show_previous_replies']='Mostrar respostas anteriores';
 $hesklang['type_your_message']='Digite sua mensagem'; // Used when there are no canned responses
-$hesklang['type_your_message_or_reply_from_template']='Digite sua mensagem ou %s'; // %s: "reply from template" (see $hesklang['reply_from_template'])
-$hesklang['reply_from_template']='resposta do modelo'; // See $hesklang['type_your_message_or_reply_from_template'] for usage
 $hesklang['close_button_text']='Fechar';
 $hesklang['create_new_ticket']='Criar Novo Chamado';
 $hesklang['delete_article']='Deletar artigo';
@@ -1627,7 +1624,6 @@ $hesklang['view_existing_tickets']='Visualizar chamados existentes';
 $hesklang['how_can_we_help']='Olá, como podemos lhe ajudar?';
 $hesklang['search_for_articles']='Pesquisar por artigos';
 $hesklang['submit_a_support_request']='Enviar um Chamado';
-$hesklang['maximum_x_attachments']='Máximo %s anexos'; // %s = max number of attachments (specified in settings)
 $hesklang['verify_header']='Prevenção de SPAM';
 $hesklang['ticket_details']='Detalhes do Chamado';
 $hesklang['yes_title_case']='Sim';
@@ -1643,7 +1639,7 @@ $hesklang['confirm_delete_status']='Você tem certeza que deseja excluir esse st
 $hesklang['help_desk']='Sistema de Chamados'; // Displayed on staff sidebar menu
 
 // Added in version 3.1.0
-$hesklang['TIMEAGO_LANG_FILE']='jquery.timeago.en.js'; // Name of the proper language file in folder /js/timeago/locales
+$hesklang['TIMEAGO_LANG_FILE']='jquery.timeago.pt-br.js'; // Name of the proper language file in folder /js/timeago/locales
 $hesklang['tdis']='Exibição de hora';
 $hesklang['tdisd']='Data e hora';
 $hesklang['tdisa']='Horas atrás (exemplo: há 5 horas)';
@@ -1890,6 +1886,257 @@ $hesklang['ukey']='Chave de acesso de URL'; // Key required to access certain fi
 $hesklang['ukeyg']='Gerar uma chave de acesso de URL aleatória';
 $hesklang['ukeym']='Erro: para executar este arquivo via HTTP, você deve incluir sua chave de acesso de URL na solicitação. Exemplo:';
 $hesklang['ukeyw']='Erro: chave de acesso de URL errada';
+
+// Added in version 3.3.0
+$hesklang['new_ticket_by_staff']='[#%%TRACK_ID%%] Chamado recebido: %%SUBJECT%%';
+$hesklang['mfa_verification']='%%VERIFICATION_CODE%% é o seu código de verificação';
+$hesklang['follow_up_email']='Seja honesto - como faremos?';
+$hesklang['mfa']='Autenticação de multifator (MFA)';
+$hesklang['mfa_short']='MFA';
+$hesklang['mfa_enabled_question']='MFA Habilitado?';
+$hesklang['mfa_required']='Exigir autenticação multifator';
+$hesklang['mfa_manage_profile']='Gerenciar MFA';
+$hesklang['mfa_disabled']='Autenticação de multifatores está desabilitada';
+$hesklang['mfa_enabled']='Autenticação de multifaotres está habilitada (%s)'; // %s = MFA type
+$hesklang['mfa_method_none']='Nenhum';
+$hesklang['mfa_method_none_subtext']='Remova a autenticação de multifator da sua conta.';
+$hesklang['mfa_method_email']='Email';
+$hesklang['mfa_method_email_subtext']='O helpdesk enviará um e-mail com um código de login aleatório para <strong>%s</strong> ao fazer login.'; // %s = User's email address
+$hesklang['mfa_method_auth_app']='Authenticator App';
+$hesklang['mfa_method_auth_app_short']='App';
+$hesklang['mfa_method_auth_app_subtext']='Use um aplicativo de smartphone, como Authy ou Google Authenticator, para gerar um código de login aleatório ao fazer login.';
+$hesklang['mfa_step_method']='Metódo';
+$hesklang['mfa_step_verification']='Verificação';
+$hesklang['mfa_step_complete']='Completo';
+$hesklang['mfa_introduction']='A autenticação multifator melhora a segurança da conta exigindo que você verifique seu login usando um método de verificação adicional, como e-mail ou um aplicativo autenticador (como Authy ou Google Authenticator).';
+$hesklang['mfa_reset_warning']='Você já tem a autenticação multifator habilitada. Completar isso novamente irá redefinir seu dispositivo de autenticação multi-facção (se ativado).';
+$hesklang['mfa_select_method_colon']='Selecione um metódo de autenticação:';
+$hesklang['mfa_verification_header']='Verificação - %s'; // %s = MFA type
+$hesklang['mfa_verification_email_intro']='Um email acabou de ser enviado para  <strong>%s</strong> contendo um código de verificação de seis digitos. Cole o código que acabou de receber abaixo para continuar.'; // %s = User's email address
+$hesklang['mfa_verification_auth_app_intro']='&raquo; Passo 1: Escaneie a imagem abaixo com um aplicado de autenticação no seu dispositivo.';
+$hesklang['mfa_verification_auth_app_cant_scan']='Não pode escanear a imagem? Insira este código manualamente no seu dispositivo: <b>%s</b>'; // %s = Secret code
+$hesklang['mfa_verification_auth_app_enter_code']='&raquo; Passo 2: Insira o código de seis digitos apresentado no seu aplicativo para verificar seu dipositivo.';
+$hesklang['mfa_verify']='Verificado';
+$hesklang['mfa_invalid_method']='Foi recebido um metódo de autenticação multifator inválido.';
+$hesklang['mfa_invalid_verification_code']='O código inserido está inválido ou expirado.';
+$hesklang['mfa_configured']='Autenticação multifator foi habilitado na sua conta!';
+$hesklang['mfa_removed']='Autenticação multifator foi desabilitado da sua conta!';
+$hesklang['mfa_verification_needed']='Autenticação multifator está habilitado nesta conta.';
+$hesklang['mfa_verification_needed_email']='Por favor, insira o código que foi enviado para seu email.';
+$hesklang['mfa_verification_needed_auth_app']='Por favor, insira o código mostrado no seu aplicativo de autenticação.';
+$hesklang['mfa_verification_code']='Código de verificação';
+$hesklang['mfa_server_time_issue']='A hora do seu servidor parece imprecisa: %s'; // %s = exception message
+$hesklang['mfa_reset_to_default']='Redefinir a autenticação multifator';
+$hesklang['mfa_reset_confirm']='Você tem certeza que deseja redefiner o MFA para este usuário?';
+$hesklang['mfa_reset_yes']='Redefinir';
+$hesklang['mfa_reset']='Autenticação multifator foi redefinada para este usuário.';
+$hesklang['desc_mfa_verification']='(Equipe) Código de autenticação multifator';
+$hesklang['mfa_code']='Código:';
+$hesklang['mfa_backup_codes_header']='SALVE SEUS CÓDIGOS DE RECUPERAÇÃO!';
+$hesklang['mfa_backup_codes_description']='Mantenha esses códigos de backup em algum lugar seguro, mas acessível. Caso perca o acesso ao seu dispositivo de MFA ou e-mail, você pode inserir um dos seguintes códigos de backup para fazer login.<br><br><strong>Certifique-se de tratar esses códigos de backup como senhas. Você não poderá ver esses códigos novamente!</strong>';
+$hesklang['mfa_verify_another_way']='Verifique sua conta de outra maneira'; // %s = masked email address
+$hesklang['mfa_verify_another_way_email']='Receba um código de verificação no %s';
+$hesklang['mfa_verify_another_way_code']='Digite um dos seus códigos de backup de 8 caracteres';
+$hesklang['mfa_verify_another_way_admin']='Entre em contato com o administrador do suporte técnico para obter ajuda';
+$hesklang['mfa_verify_another_way_reset']='Redefina sua autenticação multifator fazendo upload de um arquivo para o servidor';
+$hesklang['mfa_send_another_email']='Enviar outro email.';
+$hesklang['mfa_sent']='Um email com o novo código de verificação foi enviado para seu endereço de email';
+$hesklang['mfa_backup_code']='Código de backup';
+$hesklang['mfa_backup_codes']='Códigos de backup';
+$hesklang['mfa_backup_codes_info']='Códigos de uso único para passar na verificação multifator quando não conseguir acessar seu e-mail ou aplicativo autenticador. Depois de usar um código de backup para fazer login, esse código fica inativo.';
+$hesklang['mfa_backup_codes_num']='Você pode obter um novo conjunto de 10 códigos de backup sempre que quiser. Quando você cria um novo conjunto de códigos, o conjunto antigo fica automaticamente inativo.';
+$hesklang['mfa_backup_codes_num2']='Quantidade de códigos ativos: %s';
+$hesklang['mfa_invalid_backup_code']='O código de backup inserido está incorreto ou já foi usado.';
+$hesklang['mfa_del_codes']='Apague meus códigos de backup';
+$hesklang['mfa_del_codes2']='Todos os seus códigos de backup foram excluídos.';
+$hesklang['mfa_new_codes']='Gerar novos códigos de backup';
+$hesklang['mfa_new_codes2']='Novos códigos de backup foram gerados';
+$hesklang['old_php_version']='Erro: versão PHP não suportada';
+$hesklang['category_default_due_date']='Data de vencimento padrão';
+$hesklang['category_change_default_due_date']='Coloque uma data de vencimento padrão';
+$hesklang['category_leave_blank_for_no_default_due_date']='(em branco caso não tenha data de vencimento padrão)';
+$hesklang['category_default_due_date_updated']='Data de vencimento padrão foi atualizada.';
+$hesklang['email_formatting']='Formato do e-mail';
+$hesklang['email_formatting_html_and_plaintext']='HTML com alternativa de texto simples do modelo de texto simples (padrão)';
+$hesklang['email_formatting_html_and_plaintext_auto']='HTML com alternativa de texto simples gerada a partir do modelo HTML';
+$hesklang['email_formatting_html']='Somente HTML';
+$hesklang['email_formatting_plaintext']='Somente texto';
+$hesklang['email_formatting_note']='Sua seleção em %1$s &gt; %2$s &gt; %3$s está configurado para: <i>%4$s</i>'; // %1$s = Settings, %2$s = Email, %3$s = Email formatting, %3$4 = setting description
+$hesklang['email_formatting_note0']='Isso significa que o Hesk irá ignorar os modelos HTML aqui.';
+$hesklang['email_formatting_note1']='Isso significa que o Hesk irá ignorar os modelos de texto aqui.';
+$hesklang['email_formatting_note2']='Isso significa que o Hesk gerará uma versão em texto simples de e-mails de seus modelos HTML e ignorará os modelos de texto simples aqui.';
+$hesklang['etnu']='Este modelo de e-mail atualmente não é usado pela Hesk com base em sua seleção em %1$s &gt; %2$s &gt; %3$s'; // %1$s = Settings, %2$s = Email, %3$s = Email formatting
+$hesklang['edit_category']='Editar categoria';
+$hesklang['create_category']='Criar categoria';
+$hesklang['one_user_included']='1 usuário incluído';
+$hesklang['one_user_excluded']='1 usuário removido';
+$hesklang['x_users_included']='%s usuários incluídos'; // %s = Number of users
+$hesklang['x_users_excluded']='%s usuários removidos'; // %s = Number of users
+$hesklang['aa_cat']='Atribuir chamados automaticamente nesta categoria';
+$hesklang['modify_autoassign_settings']='Modificar configurações de atribuição automática';
+$hesklang['autoassign_on_all_users']='Sim, qualquer usuário pode ter acesso a essa categoria';
+$hesklang['autoassign_on_select_users']='Sim, para usuários especificos';
+$hesklang['autoassign_off']='Não, enviar chamados como não atribuídos';
+$hesklang['autoassign_users']='Usuários a serem incluídos/excluídos na atribuição automática';
+$hesklang['autoassign_selected_include']='Os usuários selecionados devem ser <strong>incluídos</strong> ao atribuir chamados automaticamente nesta categoria';
+$hesklang['autoassign_selected_exclude']='Os usuários selecionados devem ser <strong>excluídos</strong> ao atribuir chamados automaticamente nesta categoria';
+$hesklang['cat_edited']='Categoria %s editada com suceso';
+$hesklang['search_for_user']='Busca por usuário';
+$hesklang['email_sending']='Enviando emails';
+$hesklang['email_to_ticket']='Email para chamado';
+$hesklang['email_to_ticket_info']='A conversão de emails em tickets requer alguma configuração do lado do servidor. Para obter detalhes, consulte <a href="%s" target="_blank">este guia da base de conhecimento</a>.'; // %s = link to article
+$hesklang['from_warning2']='Hesk está usando um servidor SMTP para enviar notificações por e-mail. Seu <strong>%1$s</strong> deve ser definido como <strong>%2$s</strong>'; // %1$s = "From email" text, %2$s = email address
+$hesklang['nofex']='Está faltando extensão do arquivo';
+$hesklang['block_ignore']='E-mail para chamado - Ignore e-mails e evite loops';
+$hesklang['block_noreply']='Não responda';
+$hesklang['block_noreply2']='Ignore emails sent from &quot;do not reply&quot; email addresses';
+$hesklang['block_returned']='Retornado';
+$hesklang['block_returned2']='Ignore returned emails, such as delivery status notifications and automated replies';
+$hesklang['block_duplicate']='Duplicados';
+$hesklang['block_duplicate2']='Ignore e-mails com a mesma mensagem enviada em &quot;%s&quot; segundos'; // %s = "Timeframe"
+$hesklang['loop_info']='e-mails recebidos do mesmo endereço de e-mail em &quot;%s&quot; segundos';
+$hesklang['thist21']='<li class="smaller">%s | notificação de e-mail atrasada enviada</li>'; // %s = date
+$hesklang['thist22']='<li class="smaller">%s | e-mail de acompanhamento enviado</li>'; // %s = date
+$hesklang['elevator_header']='Entrando na Área Segura';
+$hesklang['elevator_intro']='Você está prestes a entrar em uma área segura.';
+$hesklang['elevator_enter_password']='Por favor, digite sua senha para continuar.';
+$hesklang['elevator_duration_setting_title']='Duração da área segura';
+$hesklang['desc_survey']='(Cliente) E-mail de acompanhamento (pesquisa)'; // Email description
+$hesklang['satisfaction']['tab']='Satisfação';
+$hesklang['satisfaction']['title']='Pesquisa de satisfação do cliente';
+$hesklang['satisfaction']['intro']='Envie a seus clientes uma pesquisa de satisfação de acompanhamento para coletar feedback sobre a experiência deles com seu suporte técnico.';
+$hesklang['satisfaction']['tab1']='Configurações';
+$hesklang['satisfaction']['tab2']='Excluir';
+$hesklang['satisfaction']['enable']='Ativar e-mails de acompanhamento:';
+$hesklang['satisfaction']['enabled']='As pesquisas de satisfação do cliente estão ativadas.';
+$hesklang['satisfaction']['disabled']='As pesquisas de satisfação do cliente estão desativadas no momento.';
+$hesklang['satisfaction']['url']='Endereço do URL da pesquisa:';
+$hesklang['satisfaction']['send']='Atraso de e-mail de acompanhamento:';
+$hesklang['satisfaction']['at_least']='Espere pelo menos';
+$hesklang['satisfaction']['after']='após a resolução do chamado antes de enviar o email';
+$hesklang['satisfaction']['h1']='Como usar esta ferramenta?';
+$hesklang['satisfaction']['h2']='Primeiro, crie uma pesquisa de satisfação do cliente em sua ferramenta de pesquisa favorita. Se você não tiver certeza de qual ferramenta usar ou quais perguntas fazer, temos um <a href="%s" target="_blank">guia disponível aqui</a>.'; // %s = link to article
+$hesklang['satisfaction']['h3']='Quando sua pesquisa estiver pronta, ative os e-mails de acompanhamento usando o formulário abaixo. A Hesk processará os tickets resolvidos com pelo menos uma resposta da equipe uma vez por hora e enviará o link da pesquisa para seus clientes.';
+$hesklang['satisfaction']['e_url']='Insira um endereço de URL de pesquisa válido. Este é o URL para o qual seus clientes serão enviados.';
+$hesklang['satisfaction']['as']='Insira um endereço de URL de pesquisa válido. Este é o URL para o qual seus clientes serão enviados.';
+$hesklang['satisfaction']['oo1']='Esta página lista os endereços de e-mail para os quais os e-mails de acompanhamento <b>não</b> serão enviados.';
+$hesklang['satisfaction']['oo2']='Seus clientes podem optar por não receber e-mails de pesquisa clicando em um link no e-mail. Como alternativa, você pode adicionar manualmente endereços de e-mail nesta página.';
+$hesklang['satisfaction']['ooe']='Endereço de e-mail para desativação';
+$hesklang['satisfaction']['ooe2']='Digite o endereço de e-mail que você deseja cancelar o recebimento de e-mails de pesquisa.';
+$hesklang['satisfaction']['ooe3']='Este endereço de e-mail <i>%s</i> já desativou o recebimento de e-mails de pesquisa.'; // %s will be replaced with email
+$hesklang['satisfaction']['btn_oo']='Desativar este e-mail';
+$hesklang['satisfaction']['oob']='Desativado por';
+$hesklang['satisfaction']['no_oo']='Nenhum cliente optou por não receber e-mails de pesquisa.';
+$hesklang['satisfaction']['oor']='Remover';
+$hesklang['satisfaction']['oor2']='E-mail removido da desativação';
+$hesklang['satisfaction']['oor3']='Confirmar remoção';
+$hesklang['satisfaction']['oor4']='Quando removido da desativação, este usuário receberá novamente e-mails de acompanhamento.';
+$hesklang['satisfaction']['optedout']='O endereço de e-mail <i>%s</i> foi desativado para não receber e-mails de pesquisa.'; // %s will be replaced with email
+$hesklang['satisfaction']['mit']='ID de pesquisa ausente ou inválido';
+$hesklang['satisfaction']['starting']='Iniciando o processo de notificação da pesquisa de satisfação do cliente';
+$hesklang['satisfaction']['tc']='Encontrados %s chamados fechados que não tiveram a pesquisa de satisfação enviada.'; // %s = Number of tickets
+$hesklang['satisfaction']['finished']='Pesquisa de satisfação do cliente finalizada. E-mails enviados: %1$s. Falha ao enviar e-mails: %2$s. Chamados sem e-mail: %3$s. Chamados com e-mail de desativação: %4$s.'; // %1$s = successful emails, %2$s = failed emails, %3$s = number of tickets without an email, %4$s = number of tickets with opt-out users
+$hesklang['satisfaction']['oo']='Ignorando, este cliente não deseja receber e-mails de pesquisa.';
+$hesklang['satisfaction']['ne']='Ignorando, este chamado está sem endereço de e-mail';
+$hesklang['satisfaction']['feat1']='Crie sua pesquisa usando qualquer ferramenta de terceiros, como o Google Forms';
+$hesklang['satisfaction']['feat2']='Configure seu URL de pesquisa, preferências e limitações dentro deste módulo';
+$hesklang['satisfaction']['feat3']='quando você resolver um chamado, a Hesk enviará um e-mail ao seu cliente com o link para a pesquisa';
+$hesklang['dfor']='Formato da data';
+$hesklang['dtfor']='Data e Hora';
+$hesklang['cdfor']='Formato de hora selecionado.';
+$hesklang['custom']='Personalizado';
+$hesklang['jsc_notice']='A seleção de data\'t não suporta formatação de data no estido PHP. Selecione uma das opções pré-configuradas ou clique no ícone %s abaixo para ver as opções de exibição disponíveis.'; // %s = replaced by icon
+$hesklang['lcf3']='Somente data'; // Display: "Date only"
+$hesklang['epdd']='Erro ao analisar o parâmetro due_date:';
+$hesklang['edit_pass']='Editar senha';
+$hesklang['save_pass']='Salvar senha';
+$hesklang['cur_pass']='Senha atual';
+$hesklang['cur_pass2']='Você deve fornecer sua senha atual para alterá-la.';
+$hesklang['cur_pass3']='Após uma atualização de senha bem-sucedida, você será redirecionado para a página de login, onde poderá fazer login com sua nova senha.';
+$hesklang['e_new_pass']='Por favor, digite sua nova senha';
+$hesklang['pass_len']='A senha não deve exceder 64 caracteres';
+$hesklang['pass_login']='Faça login novamente após alterar sua senha';
+$hesklang['bf_int']='Você foi desconectado devido a muitas tentativas de verificação com falha';
+$hesklang['tst_cnt']='Número de e-mails que seu servidor de e-mail enviará para Hesk: %s'; // %s = number of emails
+$hesklang['wrn_imap']='Você tem muitos emails não lidos em sua caixa de correio (%1$s). O Hesk transformará todos esses e-mails em chamados.<br><br>Você pode marcar os e-mails existentes como lidos antes de ativar %2$s ou usar uma nova conta de e-mail para o Hesk.'; // %1$s = number of emails, %2$s = IMAP or POP3 fetching
+$hesklang['wrn_pop3']='Você tem muitos e-mails em sua caixa de correio (%1$s). O Hesk transformará todos esses e-mails em chamados.<br><br>Você pode excluir os e-mails existentes antes de ativar %2$s ou usar uma nova conta de e-mail para o Hesk.'; // %1$s = number of emails, %2$s = IMAP or POP3 fetching
+$hesklang['search_due_date_specific']='Vence em'; // Due on (date)
+$hesklang['search_due_date_range']='Vencimento em'; // Due in (X days)
+$hesklang['attachment_add_files']='Adicionar arquivo.';
+$hesklang['attachment_max_exceeded']='Este arquivo não será carregado porque você já carregou o número máximo de arquivos permitidos.';
+$hesklang['attachment_viewer_message']='Arraste os arquivos para esta área ou clique no botão \'Adicionar arquivo\' abaixo para selecionar arquivos para enviar.';
+$hesklang['attachment_invalid_type_message']='Desculpe, mas o tipo de arquivo que você tentou enviar não é permitido.';
+$hesklang['attachment_upload_error']='Ocorreu um erro ao tentar fazer o upload. Por favor, tente novamente mais tarde.';
+$hesklang['attachment_too_large']='Este anexo é maior que o tamanho máximo de arquivo permitido.';
+$hesklang['attachment_cancel']='Cancelar';
+$hesklang['attachment_confirm_cancel']='Tem certeza de que deseja cancelar este envio?';
+$hesklang['attachment_remove']='Remover anexo';
+$hesklang['attachment_too_many_uploads']='Muitos anexos foram enviados de seu local em um curto período de tempo. Por favor, tente novamente mais tarde.';
+$hesklang['sub_note']='Enviar nota';
+$hesklang['can_view_users']='Ver todos os usuários (mas não gerenciá-los)';
+$hesklang['welcome1']='Ei, você parece ser novo aqui. Bem-vindo!';
+$hesklang['welcome2']='Para ajudá-lo a começar, confira o %s.'; // %s = Hesk online Quick Start Guide (below)
+$hesklang['welcome3']='Guia de início rápido da Hesk';
+$hesklang['tmce1']='Use Ctrl com o botão direito para acessar o corretor ortográfico.';
+$hesklang['tmce2']='Segure a tecla Control (Ctrl) e clique com o botão direito do mouse na palavra incorreta para acessar o corretor ortográfico.';
+$hesklang['desc_new_ticket_by_staff']='(Cliente) Novo chamado enviado pela equipe';
+$hesklang['mod_et_h']='Você pode modificar os modelos de e-mail em %1$s &gt; %2$s'; // %1$s = Tools, %2$s = Email templates link
+$hesklang['set_lang']='Definir idioma para';
+$hesklang['ouwa']='Apenas os usuários com acesso a esta categoria estão listados abaixo. Para adicionar membros da equipe a esta categoria, edite suas permissões na página %s'; // %s = Team
+$hesklang['previous_tickets']='Chamados anteriores';
+$hesklang['no_previous']='Sem chamados anteriores para %s'; // %s = email address
+$hesklang['all_previous']='Listar todos os chamados anteriores';
+$hesklang['confirm_delete_ticket']='Tem certeza de que deseja excluir permanentemente este chamado?';
+$hesklang['confirm_delete_reply']='Tem certeza de que deseja excluir esta resposta permanentemente?';
+$hesklang['select_new_category']='Número de chamados nesta categoria: %s<br><br>Selecione uma nova categoria para transferir esses chamados:'; // %s = Number of tickets
+$hesklang['deleting_user_with_tickets']='Número de chamados atribuídos a este usuário: %1$s<br>Número de chamados <b>abertos</b> atribuídos a este usuário: %2$s chamados<br><br><b>Aberto</b> será <b>não atribuído</b> após a exclusão deste usuário.'; // %1$s = total tickets, %2$s = open tickets
+$hesklang['hlic']='Licença HESK';
+$hesklang['hlic_free']='GRATIS';
+$hesklang['hlic_buyl']='Compre uma licensa';
+$hesklang['hlic_paid']='Licenciado';
+$hesklang['antdemo']='O envio de chamados do painel de administração foi desativado no modo de demonstração.<br><br>Use o <a href="%s" target="_blank">lado público</a> para enviar um chamado de teste.';
+
+// Added in version 3.4.0
+$hesklang['email_authentication_method']='Método de Autenticação';
+$hesklang['email_authentication_method_username_password']='Básico (Usuário / Senha)';
+$hesklang['email_authentication_method_oauth']='OAuth';
+$hesklang['email_authentication_method_oauth_disabled']='OAuth - Nenhum provedor OAuth verificado configurado.';
+$hesklang['email_authentication_method_oauth_link']='Gerenciar provedores OAuth'; // Links to "OAuth Providers" tools page
+$hesklang['email_oauth_auth_url']='URL do endpoint de autorização';
+$hesklang['email_oauth_token_url']='URL do Token do Endpoint';
+$hesklang['email_oauth_client_id']='ID do Cliente';
+$hesklang['email_oauth_client_secret']='Segredo do Cliente';
+$hesklang['email_oauth_scope']='Escopo';
+$hesklang['oauth_error_invalid_state']='O estado OAuth não corresponde ao estado enviado ao provedor OAuth.';
+$hesklang['oauth_error_unknown']='Ocorreu um erro desconhecido ao tentar salvar os tokens OAuth.';
+$hesklang['oauth_error_no_token']='Token de acesso ausente na resposta JSON.';
+$hesklang['oauth_error_retrieve']='Não é possível recuperar um token de acesso. Confirme as configurações do seu provedor OAuth e salve-as novamente para adquirir um novo token.';
+$hesklang['email_oauth_provider']='Provedor OAuth';
+$hesklang['email_oauth_providers']='Provedores OAuth';
+$hesklang['email_oauth_provider_guide']='Antes de usar o OAuth, você deve registrar um provedor OAuth. Para detalhes, consulte <a href="%s" target="_blank">este guia da base de conhecimento</a>.'; // %s = link to article
+$hesklang['email_oauth_provider_uri']='Seu URI de redirecionamento OAuth para Hesk é:<br><i>%s</i>'; // %s = URL of the oauth_providers.php file
+$hesklang['email_oauth_providers_intro']='Use esta ferramenta para adicionar provedores OAuth ao seu help desk';
+$hesklang['email_oauth_provider_name']='Nome'; // OAuth provider name
+$hesklang['email_oauth_new_provider']='Novo Provedor';
+$hesklang['email_oauth_edit_provider']='Editar Provedor';
+$hesklang['email_oauth_provider_being_used_for']='Sendo usado para';
+$hesklang['email_oauth_providers_none']='Nenhum provedor OAuth salvo. Você pode adicioná-los clicando em "Novo provedor" acima.';
+$hesklang['email_oauth_provider_cannot_be_deleted']='Este provedor não pode ser removido porque está sendo usado pelo help desk.';
+$hesklang['email_oauth_confirm_delete_provider']='Tem certeza de que deseja excluir este provedor OAuth?';
+$hesklang['oauth_provider_saved']='O provedor OAuth foi salvo';
+$hesklang['oauth_provider_use']='Agora você pode selecionar este provedor em %s &gt; %s'; // %s = Settings, %s = Email
+$hesklang['oauth_provider_err_name']='Insira o nome do provedor';
+$hesklang['oauth_provider_err_auth_url']='Insira uma URL de autorização válida';
+$hesklang['oauth_provider_err_token_url']='Insira uma URL de Token válida';
+$hesklang['oauth_provider_err_client_id']='Insira o ID do Cliente';
+$hesklang['oauth_provider_err_client_secret']='Insira o Segredo do Cliente';
+$hesklang['oauth_provider_err_scope']='Insira o Escopo';
+$hesklang['oauth_provider_deleted']='Provedor OAuth excluído';
+$hesklang['oauth_provider_not_found']='Este provedor OAuth não existe';
+$hesklang['oauth_provider_verified']='Verificado';
+$hesklang['oauth_provider_click_to_verify']='Clique para verificar';
+$hesklang['can_due_date']='Pode definir data de vencimento'; // Permission to set and modify due date
+$hesklang['can_due_date_e']='Você não tem permissão para definir datas de vencimento';
 
 // DO NOT CHANGE BELOW
 if (!defined('IN_SCRIPT')) die('PHP syntax OK!');

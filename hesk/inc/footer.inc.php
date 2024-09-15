@@ -32,10 +32,10 @@ https://www.hesk.com/buy.php
 $hesk_settings['hesk_license']('Qo8Zm9vdGVyIGNsYXNzPSJmb290ZXIiPg0KICAgIDxwIGNsY
 XNzPSJ0ZXh0LWNlbnRlciI+UG93ZXJlZCBieSA8YSBocmVmPSJodHRwczovL3d3dy5oZXNrLmNvbSIgY
 2xhc3M9ImxpbmsiPkhlbHAgRGVzayBTb2Z0d2FyZTwvYT4gPHNwYW4gY2xhc3M9ImZvbnQtd2VpZ2h0L
-WJvbGQiPkhFU0s8L3NwYW4+LCBpbiBwYXJ0bmVyc2hpcCB3aXRoIDxhIGhyZWY9Imh0dHBzOi8vd3d3L
-nN5c2FpZC5jb20vP3V0bV9zb3VyY2U9SGVzayZhbXA7dXRtX21lZGl1bT1jcGMmYW1wO3V0bV9jYW1wY
-Wlnbj1IZXNrUHJvZHVjdF9Ub19IUCIgY2xhc3M9ImxpbmsiPlN5c0FpZCBUZWNobm9sb2dpZXM8L2E+P
-C9wPg0KPC9mb290ZXI+DQo=',"\104", "347db01e129edd4b3877f70ea6fed019462ae827");
+WJvbGQiPkhFU0s8L3NwYW4+PGJyPk1vcmUgSVQgZmlyZXBvd2VyPyBUcnkgPGEgaHJlZj0iaHR0cHM6L
+y93d3cuc3lzYWlkLmNvbS8/dXRtX3NvdXJjZT1IZXNrJmFtcDt1dG1fbWVkaXVtPWNwYyZhbXA7dXRtX
+2NhbXBhaWduPUhlc2tQcm9kdWN0X1RvX0hQIiBjbGFzcz0ibGluayI+U3lzQWlkPC9hPjwvcD4NCjwvZ
+m9vdGVyPg0K',"\104", "a809404e0adf9823405ee0b536e5701fb7d3c969");
 /*******************************************************************************
 END LICENSE CODE
 *******************************************************************************/
@@ -64,16 +64,52 @@ if (defined('CALENDAR'))
     monthsShort: ['<?php echo $hesklang['ms01']; ?>','<?php echo $hesklang['ms02']; ?>','<?php echo $hesklang['ms03']; ?>','<?php echo $hesklang['ms04']; ?>','<?php echo $hesklang['ms05']; ?>','<?php echo $hesklang['ms06']; ?>', '<?php echo $hesklang['ms07']; ?>','<?php echo $hesklang['ms08']; ?>','<?php echo $hesklang['ms09']; ?>','<?php echo $hesklang['ms10']; ?>','<?php echo $hesklang['ms11']; ?>','<?php echo $hesklang['ms12']; ?>'],
     today: '<?php echo hesk_slashJS($hesklang['r1']); ?>',
     clear: '<?php echo hesk_slashJS($hesklang['clear']); ?>',
-    dateFormat: 'mm/dd/yyyy',
-    timeFormat: 'hh:ii aa',
+    dateFormat: '<?php echo hesk_slashJS($hesk_settings['format_datepicker_js']); ?>',
+    timeFormat: '<?php echo hesk_slashJS($hesk_settings['format_time']); ?>',
     firstDay: <?php echo $hesklang['first_day_of_week']; ?>
 }; })(jQuery);
 </script>
 <?php
 }
 ?>
-<script type="text/javascript" src="<?php echo HESK_PATH; ?>js/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js"></script>
+
+<script type="text/javascript" src="<?php echo HESK_PATH; ?>js/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+
 <?php
+// Any adjustments to datepicker?
+if (isset($hesk_settings['datepicker'])):
+    ?>
+    <script>
+
+    function convertDateToUTC(date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds()); }
+
+    $(document).ready(function () {
+        const myDP = {};
+        <?php
+        foreach ($hesk_settings['datepicker'] as $selector => $data) {
+            echo "
+                myDP['{$selector}'] = $('{$selector}').datepicker(".((isset($data['position']) && is_string($data['position'])) ? "{position: '{$data['position']}'}" : "").");
+            ";
+            if (isset($data['timestamp']) && ($ts = intval($data['timestamp']))) {
+                if ( ! empty($hesk_settings['datepicker'][$selector]['fromDB'])) {
+                    echo "myDP['{$selector}'].data('datepicker').selectDate(convertDateToUTC(new Date({$ts} * 1000)));";
+                } else {
+                    echo "myDP['{$selector}'].data('datepicker').selectDate(new Date({$ts} * 1000));";
+                }
+            }
+        }
+        ?>
+        $('.showme').click(function (e) {
+            $(this).addClass('active');
+            $(this).parent()
+                .find('.datepicker')
+                .data("datepicker")
+                .show();
+        });
+    });
+    </script>
+    <?php
+endif;
 
 // Auto-select first empty or error field on non-staff pages?
 if (defined('AUTOFOCUS'))

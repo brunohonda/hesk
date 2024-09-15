@@ -37,14 +37,7 @@ function hesk_dbSetNames()
 {
 	global $hesk_settings, $hesk_db_link;
 
-    if ($hesk_settings['db_vrsn'])
-    {
-		mysqli_set_charset($hesk_db_link, 'utf8');
-    }
-    else
-    {
-    	hesk_dbQuery("SET NAMES 'utf8'");
-    }
+    mysqli_set_charset($hesk_db_link, 'utf8');
 
 } // END hesk_dbSetNames()
 
@@ -119,6 +112,9 @@ function hesk_dbConnect()
     	die($hesklang['emp']);
     }
 
+    // We want pre-PHP 8.1 behavior for now
+    mysqli_report(MYSQLI_REPORT_OFF);
+
 	// Do we need a special port? Check and connect to the database
 	if ( strpos($hesk_settings['db_host'], ':') )
 	{
@@ -162,7 +158,6 @@ function hesk_dbClose()
 
 } // END hesk_dbClose()
 
-
 function hesk_dbQuery($query)
 {
     global $hesk_last_query;
@@ -181,18 +176,44 @@ function hesk_dbQuery($query)
     if ($res = @mysqli_query($hesk_db_link, $query))
     {
     	return $res;
+    } else {
+        hesk_dbHandleFailure($query);
     }
-    elseif ($hesk_settings['debug_mode'])
-    {
-	    hesk_error("$hesklang[cant_sql]: $query</p><p>$hesklang[mysql_said]:<br />".mysqli_error($hesk_db_link)."</p>");
-    }
-    else
-    {
-	    hesk_error("$hesklang[cant_sql]</p><p>$hesklang[contact_webmsater] <a href=\"mailto:$hesk_settings[webmaster_mail]\">$hesk_settings[webmaster_mail]</a></p>");
-    }
-
 } // END hesk_dbQuery()
 
+function hesk_dbHandleFailure($query) {
+    global $hesk_settings, $hesklang, $hesk_db_link;
+
+    $valid_response_types = array('json', 'throw');
+
+    if (!isset($hesk_settings['db_failure_response']) || !in_array($hesk_settings['db_failure_response'], $valid_response_types)) {
+        if ($hesk_settings['debug_mode']) {
+            hesk_error("$hesklang[cant_sql]: $query</p><p>$hesklang[mysql_said]:<br />".mysqli_error($hesk_db_link)."</p>");
+        } else {
+            hesk_error("$hesklang[cant_sql]</p><p>$hesklang[contact_webmsater] <a href=\"mailto:$hesk_settings[webmaster_mail]\">$hesk_settings[webmaster_mail]</a></p>");
+        }
+    } elseif ($hesk_settings['db_failure_response'] === 'json') {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        if ($hesk_settings['debug_mode']) {
+            print json_encode(array(
+                'status' => 'failure',
+                'title' => $hesklang['cant_sql'],
+                'message' => mysqli_error($hesk_db_link)
+            ));
+        } else {
+            print json_encode(array(
+                'status' => 'failure',
+                'title' => $hesklang['cant_sql'],
+                'message' => sprintf('%s: %s', $hesklang['contact_webmsater'], $hesk_settings['webmaster_mail'])
+            ));
+        }
+        exit();
+    } elseif ($hesk_settings['db_failure_response'] === 'throw') {
+        $message = $hesk_settings['debug_mode'] ? mysqli_error($hesk_db_link) : $hesklang['cant_sql'];
+        throw new Exception($message);
+    }
+}
 
 function hesk_dbFetchAssoc($res)
 {

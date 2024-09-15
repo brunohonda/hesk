@@ -229,7 +229,7 @@ $(document).ready(function() {
   $(document).click(closeAllSelect);
   $(document).on("touchend", "body", function(e) {
     if (documentClick) {
-      $(document).unbind("click");
+      //$(document).unbind("click");
       documentClick = false;
     }
     closeAllSelect(e);
@@ -493,7 +493,7 @@ $(document).ready(function() {
         .find('.datepicker')
         .data("datepicker")
         .clear();
-    $(".ticket-create .param.calendar .calendar--value").fadeOut(
+    $(this).parent().parent().find('.calendar--value').fadeOut(
       150,
       function() {
         $(this)

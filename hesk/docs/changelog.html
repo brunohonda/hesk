@@ -15,7 +15,7 @@
 <tr>
 <td width="50%" style="text-align:left;vertical-align:top">
  <ul class="nobullets">
- <li>Version: 3.2.2 from 13th March 2021</li>
+ <li>Version: 3.4.6 from 11th August 2024</li>
  <li>Developed by: Klemen Stirn, Mike Koch</li>
  <li><a href="https://www.hesk.com">Help Desk Software HESK</a></li>
  <li><a href="https://www.phpjunkyard.com">Free PHP Scripts</a></li>
@@ -24,8 +24,8 @@
 <td width="50%" style="text-align:right;vertical-align:top">
  <ul class="nobullets">
  <li><a href="index.html">HESK documentation</a></li>
- <li><a href="step-by-step-guide.html">Step by step guide</a></li>
- <li><a href="quick-guide.html">Quick guide</a></li>
+ <li><a href="step-by-step-guide.html">Step by step install guide</a></li>
+ <li><a href="quick-guide.html">Quick install guide</a></li>
  <li><b>Changelog</b></li>
  </ul>
 </td>
@@ -33,6 +33,181 @@
 </table>
 
 <h2>HESK 3 CHANGELOG</h2>
+
+<p><b>Changes in 3.4.6</b> - 11th August 2024<br />
+- security: fixed a reflected XSS, reported by TETS (<a href="https://theeminence.org/">www</a>)<br />
+- fix: invalid value in tickets sub-pages links</p>
+
+<p><b>Changes in 3.4.5</b> - 9th March 2024<br />
+- fix: required custom field errors from category-specific fields when editing a ticket<br />
+- fix: file attachments not working on PHP 8.3+ when Debug mode is ON</p>
+
+<p><b>Changes in 3.4.4</b> - 3rd March 2024<br />
+- added "status-" selectors to the list of tickets table to make customization by status easier<br />
+- fix: list of tickets should have links HTML formatted in HTML emails<br />
+- fix: when changing a ticket category, category-specific custom fields should not be cleared of data<br />
+- fix: when printing a ticket, print also the sequential ID if enabled<br />
+- fix: possible duplicate custom field ID generated<br />
+- fix: use rename instead of copy to move temporary attachments<br />
+- fix: don't load the users page without the edit or view users permission<br />
+- fix: Uncaught TypeError when submitting a note with disabled attachments<br />
+- fix: allow Dynamic Properties in secimg class to avoid PHP 8.2/PHP 9 depreciation errors<br />
+- fix: private KB sub-category shows no articles if only private articles are inside<br />
+- fix: when parsing emails, check if attachments have attachments<br />
+- fix: when detecting first name, valid short first names are ignored<br />
+- fix: undefined $hesklang in an OAuth function<br />
+- fix: allow blob images in TinyMCE<br />
+- fix: reply drafts not deleted on slower requests<br />
+- fix: in grouped ticket lists, apply select all check marks on the selected grouping only<br />
+- fix: wrong status displayed of a resolved ticket to staff who cannot resolve tickets<br />
+- fix: time worked not updated when submitting notes in some cases<br />
+- fix: IMAP not respecting custom port setting<br />
+- updated third-party libraries</p>
+
+<p><b>Changes in 3.4.3</b> - 8th April 2023<br />
+- updates for PHP 8.2 depreciated functionality<br />
+- ticket reply messages will now auto-save as draft a few seconds after you stop typing<br />
+- new email tag %%ATTACHMENTS%% that lists links to attachments to a ticket/reply<br />
+- list of attachments will now show directly below %%MESSAGE%% (unless %%ATTACHMENTS%% is used)<br />
+- the &quot;Find a ticket&quot; form now allows searching for empty (null) values in fields that allow it<br />
+- fix: IMAP fetching using the wrong noval_cert setting<br />
+- fix: POP3 fetching will now calculate a reasonable execution time limit<br />
+- fix: generated links to attachments in HTML emails are not clickable<br />
+- fix: re-sent email notifications include ticket attachments instead of reply attachments<br>
+- fix: SQL error in escalate module with overdue tickets and non-standard date format<br />
+- fix: if $hesklang['EMAIL_HR'] is defined in custom-text.php, use that one<br />
+- fix: some email templates display unsupported tags<br />
+- fix: the close button on custom date field hides all the date values<br />
+- fix: some custom field input types not marked in red on error<br />
+- updated PHPMailer to 6.8.0<br />
+</p>
+
+<p><b>Changes in 3.4.2</b> - 3rd December 2022<br />
+- fix: tickets raised by email piping don't have a due date<br />
+- fix: in canned responses replace URL-encoded special tags<br />
+- fix: email utf-8 conversion may cause missing characters<br />
+- fix: remove unwanted chars from email-generated ticket subjects<br />
+- updated TinyMCE to 5.10.6<br />
+- updated PHPMailer to 6.6.5<br />
+</p>
+
+<p><b>Changes in 3.4.1</b> - 29th September 2022<br />
+- added OAuth support for POP3 fetching<br />
+- fix: missing function error when viewing a resolved ticket<br />
+- fix: do not mark an OAuth Provider as verified on errors<br />
+- fix: unassigned email sending not working correctly on multi-language staff<br />
+- fix: detect and ignore non-3.4.x language files<br />
+- updated HTMLPurifier to 4.15.0<br />
+</p>
+
+<p><b>Changes in 3.4.0</b> - 17th September 2022<br />
+- added OAuth support for email sending and IMAP fetching<br />
+- new permission: Can set due date<br />
+- updates for PHP 8.2 depreciated functionality<br />
+- fix: custom date fields can display the wrong date when editing a ticket<br />
+- fix: wrong current month date range in reporting<br />
+- fix: sending emails does not work with unauthenticated SMTP<br />
+- fix: silent fail if unable to move attachments to the /attachments/temp folder<br />
+- fix: in the &quot;Previous tickets&quot; list only show tickets the user has access to<br /> 
+- fix: attachments with no file extension will be renamed to *.unknown-file-type instead of fatal error<br />
+- fix: increase some too small display margins<br />
+- fix: SMTP error log should not be echoed directly<br />
+- fix: email to ticket attachment removal notices not visible<br />
+</p>
+
+<p><b>Changes in 3.3.2</b> - 2nd August 2022<br />
+- added option to not validate SSL certificates for SMTP connections<br />
+- fix: minimum requirement set to PHP 5.6 due to Composer compatibility<br/>
+- fix: SMTP host name stored with ssl:// prefix when SSL encryption is selected<br />
+- fix: ticket reminder form not working with Invisible ReCaptcha enabled<br />
+- fix: wrong %%MESSAGE%% value in HTML emails when re-sending email notification for replies<br />
+</p>
+
+<p><b>Changes in 3.3.1</b> - 15th July 2022<br />
+- fix: password reset link issues in HTML emails<br />
+- fix: error when elevator duration is set to hours<br />
+- fix: automatically submitting MFA forms could cause double submissions in Chrome<br />
+- fix: survey email template is not needed in the self-hosted version, removed it<br />
+- fix: &quot;Add a note&quot; form misbehaving when &quot;Newest reply at top&quot; is active<br />
+- fix: in admin panel the due date calendar may require horizontal scroll<br />
+- fix: a few date fields not working properly<br />
+</p>
+
+<p><b>Changes in 3.3.0</b> - 5th July 2022<br />
+- [<a href="https://www.hesk.com/get/hesk3-satisfaction">CLOUD ONLY</a>] Satisfaction module: send a third party survey after resolving tickets<br />
+- Ocean Blue is now the default Hesk style. For other styles, visit <a href="https://www.hesk.com/styles/">Hesk Styles</a><br />
+- dropped support for PHP 5.3 and 5.4, Hesk now requires PHP 5.5+<br/>
+- categories can auto-assign tickets to specific users<br />
+- categories can have a default due date set<br />
+- added support for multi-factor authentication<br />
+- improved display options for date and time<br />
+- improved attachments process (async upload, drag and drop, preserve on errors)<br />
+- Hesk now uses PHPMailer to construct and send emails<br />
+- added support for HTML emails (both HTML and plain text templates are available)<br />
+- email fetching shows the reason why an email was ignored if Debug mode is on<br />
+- more control over what emails are ignored in the email to ticket functionality<br />
+- tracking ID is no longer required in email subject for email to ticket functionality<br />
+- if captcha is enabled, it will also show in the &quot;Forgot ticket ID&quot; form<br />
+- update &quot;Time worked&quot; when staff submits a note to a ticket<br />
+- use the &quot;Show Tickets&quot; form to find tickets by due date<br />
+- new staff permission: can view all users, but not manage them<br />
+- updates for PHP 8.1 depreciated functionality<br />
+- security: improved password storage algorithm and length requirements<br />
+- staff can now select ticket status when submitting a ticket in the customer's name<br />
+- a new email template is now used when staff submits a ticket in the customer's name<br />
+- you can now set the ticket language when editing a ticket in multi-language installations<br />
+- when viewing a ticket in the admin panel a list of previous tickets is shown<br />
+- changed several Javascript confirm boxes to HTML modals<br />
+- when deleting a category, you can now select what category to move the tickets to<br />
+- when deleting a user, only open tickets will be set to unassigned<br />
+- fix: no need to regenerate session ID on every page load<br />
+- fix: changing language when viewing a ticket shows the &quot;View ticket&quot; form<br />
+- fix: non-YMD date format caused an error when sending overdue notifications<br />
+- fix: custom date fields could display wrong date on the edit ticket page<br />
+- fix: custom field name hidden when editing it, if it was created in a deleted language<br />
+- fix: wrong default submit action in staff New ticket page<br />
+- fix: unable to set negative relative dates in custom fields<br />
+- updated TinyMCE to 5.10.5<br />
+</p>
+
+<p><b>Changes in 3.2.5</b> - 6th January 2022<br />
+- updates for PHP 8.1 depreciated functionality<br />
+- fix: long URL addresses stretch the ticket window<br />
+- fix: status selection in ticket export form not working under certain conditions<br />
+- fix: missing array key 'time_worked' in email to ticket function reply notification<br />
+- fix: user setting for overdue ticket notifications not always respected<br />
+- fix: using &quot;Submit as Resolved&quot; doesn't update &quot;closed at&quot; date<br />
+- fix: forgot ticket ID modal close button not working on small screens<br />
+- updated HTMLPurifier to 4.14.0<br />
+- updated TinyMCE to 5.10.2<br />
+</p>
+
+<p><b>Changes in 3.2.4</b> - 2nd October 2021<br />
+- added &quot;Due date&quot; tag for canned responses<br />
+- security: error message not appropriately sanitized, reported by msry1<br />
+- fix: insert canned responses tags at pointer focus<br />
+- fix: inconsistent storage of plain text message version in RTF mode<br />
+- fix: due date not formatted for staff with view-only access<br />
+- fix: avatar uppercase letter shows ? in multi-byte names<br />
+- fix: cannot uncheck &quot;Assigned to others&quot; on ticket export page<br />
+- updated TinyMCE to 5.9.2<br />
+- minor styling and usability changes<br />
+</p>
+
+<p><b>Changes in 3.2.3</b> - 11th August 2021<br />
+- automatically link URLs in TinyMCE by default<br />
+- removed the <i>db_vrsn</i> setting, it is not needed anymore<br />
+- all ticket list pages now show the &quot;Auto reload page&quot; widget<br />
+- fix: forgot ticket ID email list does not include tickets with a custom status<br />
+- fix: the &quot;reply below this line&quot; tag not added in IMAP fetching<br />
+- fix: add an extra empty space after ticket tracking URL to make them clickable in Outlook<br />
+- fix: overdue cron notifications not working if date format is not YYYY-MM-DD<br />
+- fix: installation script doesn't accept UTF-8 chars for admin username<br />
+- fix: priority pre-select via URL parameter doesn't work in the public side<br />
+- fix: unable to sort ticket columns after setting a default view<br />
+- fix: Hesk doesn't accept database username with &amp;<br />
+- updated TinyMCE to 5.8.2<br />
+</p>
 
 <p><b>Changes in 3.2.2</b> - 13th March 2021<br />
 - fix: replies via email not showing content when Rich Text (HTML) formatting is turned on<br />
@@ -166,6 +341,31 @@
 </p>
 
 <h2>HESK 2 CHANGELOG</h2>
+
+<p><b>Changes in 2.8.10</b> - 2nd October 2021<br />
+- security: error message not appropriately sanitized, reported by msry1<br />
+</p>
+
+<p><b>Changes in 2.8.9</b> - 11th August 2021<br />
+- fix: forgot ticket ID email list does not include tickets with a custom status<br />
+- fix: the &quot;reply below this line&quot; tag not added in IMAP fetching<br />
+- fix: add an extra empty space after ticket tracking URL to make them clickable in Outlook<br />
+- fix: installation script doesn't accept UTF-8 chars for admin username<br />
+- fix: Hesk doesn't accept database username with &amp;<br />
+</p>
+
+<p><b>Changes in 2.8.8</b> - 28th February 2021<br />
+- security: fixed persistent XSS, reported by Charley Celice of Quorum Cyber (<a href="https://www.quorumcyber.com/">www</a>)<br />
+- fix: &quot;Can unban ips&quot; permission should also enable &quot;Can ban ips&quot;<br />
+- fix: email notification setting when someone adds a note not respected<br />
+- fix: properly encode CDATA closing tag<br />
+</p>
+
+<p><b>Changes in 2.8.7</b> - 18th August 2020<br />
+- don't change the &quot;last updated&quot; value of tickets when deleting a custom field<br />
+- fix: use quoting mechanism for special interpretation characters in mail from header<br />
+- updated third party libraries to the latest version<br />
+</p>
 
 <p><b>Changes in 2.8.6</b> - 7th April 2020<br />
 - security: fixed a reflected XSS, reported by Mostafa Gamal &amp; Ahmed Sherif<br />
@@ -775,7 +975,7 @@
 
 <p>&nbsp;</p>
 
-<p style="text-align:center">&copy; Copyright <a href="https://www.hesk.com">HESK.COM</a> 2005-2021. All rights reserved.<br />
+<p style="text-align:center">&copy; Copyright <a href="https://www.hesk.com">HESK.COM</a> 2005-2024. All rights reserved.<br />
 &reg; HESK is a registered trademark of Klemen Stirn.</p>
 
 </div>

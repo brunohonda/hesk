@@ -121,7 +121,7 @@ function hesk_get_status_select($ignore_status = '', $can_resolve = true, $selec
         }
         elseif ($k == 3)
         {
-            if ($can_resolve)
+            if ($can_resolve || $k == $select_status)
             {
                 $last = '<option value="'.$k.'" '.($k == $select_status ? 'selected' : '').'>'.$v['name'].'</option>';
             }
@@ -222,6 +222,23 @@ function hesk_get_ticket_status($status, $append = '', $check_change = 1)
 } // END hesk_get_ticket_status()
 
 
+function hesk_get_ticket_status_from_DB($trackingID)
+{
+    global $hesk_settings, $hesklang;
+
+    if (empty($trackingID)) {
+        hesk_error($hesklang['no_trackID']);
+    }
+
+    $result = hesk_dbQuery("SELECT `status` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `trackid`='".hesk_dbEscape($trackingID)."' LIMIT 1");
+    if (hesk_dbNumRows($result) != 1) {
+        hesk_error($hesklang['ticket_not_found']);
+    }
+
+    return hesk_dbResult($result);
+} // END hesk_get_ticket_status_from_DB()
+
+
 function hesk_can_customer_change_status($status)
 {
     global $hesk_settings;
@@ -236,11 +253,13 @@ function hesk_print_status_select_box_jquery()
     <script>
     $(document).ready(function() {
         <?php
+        $data_options = array();
         foreach ($hesk_settings['statuses'] as $id => $data)
         {
             // Is this a default status? Use style class to add color
             if (isset($data['class']))
             {
+                $data_options[$id] = array('class' => $data['class']);
                 echo '$("#ticket-status-div > div.dropdown-select > ul.dropdown-list > li[data-option=\''.$id.'\']").addClass("'.$data['class'].'");'."\n";
                 echo '
                     $("#ticket-status-div > div.dropdown-select > div.label > span").filter(function () {
@@ -253,6 +272,7 @@ function hesk_print_status_select_box_jquery()
             // Does this status have a color code?
             if (isset($data['color']))
             {
+                $data_options[$id] = array('color' => $data['color']);
                 echo '$("#ticket-status-div > div.dropdown-select > ul.dropdown-list > li[data-option=\''.$id.'\']").css("color", "'.$data['color'].'");'."\n";
                 echo '
                     $("#ticket-status-div > div.dropdown-select > div.label > span").filter(function () {
@@ -263,6 +283,23 @@ function hesk_print_status_select_box_jquery()
         }
         ?>
     });
+
+    function hesk_update_status_color(this_id)
+    {
+        $("#ticket-status-div > div.dropdown-select > div.label > span").removeClass();
+        $("#ticket-status-div > div.dropdown-select > div.label > span").removeAttr('style');
+        <?php
+        foreach($data_options as $id => $data) {
+            echo 'if (this_id == '.$id.') {';
+            if (isset($data['class'])) {
+                echo '$("#ticket-status-div > div.dropdown-select > div.label > span").addClass("'.$data['class'].'");';
+            } else {
+                echo '$("#ticket-status-div > div.dropdown-select > div.label > span").css("color", "'.$data['color'].'");';
+            }
+            echo 'return;}';
+        }
+        ?>
+    }
     </script>
     <?php
 } // END hesk_print_status_select_box_jquery()

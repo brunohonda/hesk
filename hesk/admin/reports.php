@@ -43,35 +43,49 @@ $selected = array(
 );
 $is_all_time = 0;
 
-/* Default this month to date */
-$date_from = date('Y-m-d',mktime(0, 0, 0, date("m"), 1, date("Y")));
-$date_to = date('Y-m-d');
-$input_datefrom = date('m/d/Y', strtotime('last month'));
-$input_dateto = date('m/d/Y');
+// Default this month to date
+$hesk_settings['datepicker'] = array();
+
+$df = new DateTime("first day of this month");
+$date_from = $df->format('Y-m-d');
+$hesk_settings['datepicker']['#datefrom']['timestamp'] = $df->getTimestamp();
+
+$dt = new DateTime();
+$date_to = $dt->format('Y-m-d');
+$hesk_settings['datepicker']['#dateto']['timestamp'] = $dt->getTimestamp();
+
+$input_datefrom = hesk_translate_date_string(date($hesk_settings['format_datepicker_php'], strtotime('last month')));
+$input_dateto = hesk_translate_date_string(date($hesk_settings['format_datepicker_php']));
 
 /* Date */
 if (!empty($_GET['w']))
 {
-	$df = preg_replace('/[^0-9]/','', hesk_GET('datefrom') );
-    if (strlen($df) == 8)
-    {
-    	$date_from = substr($df,4,4) . '-' . substr($df,0,2) . '-' . substr($df,2,2);
-        $input_datefrom = substr($df,0,2) . '/' . substr($df,2,2) . '/' . substr($df,4,4);
-    }
-    else
-    {
-    	$date_from = date('Y-m-d', strtotime('last month') );
+    $df = hesk_datepicker_get_date( hesk_GET('datefrom') );
+    if ($df === false) {
+        try {
+            $df = new DateTime( hesk_GET('datefrom') );
+            $date_from = $df->format('Y-m-d');
+            $input_datefrom = hesk_translate_date_string($df->format($hesk_settings['format_datepicker_php']));
+        } catch(Exception $e) {
+            $date_from = date('Y-m-d', strtotime('last month') );
+        }
+    } else {
+        $date_from = $df->format('Y-m-d');
+        $input_datefrom = hesk_translate_date_string($df->format($hesk_settings['format_datepicker_php']));
     }
 
-	$dt = preg_replace('/[^0-9]/','', hesk_GET('dateto') );
-    if (strlen($dt) == 8)
-    {
-    	$date_to = substr($dt,4,4) . '-' . substr($dt,0,2) . '-' . substr($dt,2,2);
-        $input_dateto = substr($dt,0,2) . '/' . substr($dt,2,2) . '/' . substr($dt,4,4);
-    }
-    else
-    {
-    	$date_to = date('Y-m-d');
+    $dt = hesk_datepicker_get_date( hesk_GET('dateto') );
+    if ($dt === false) {
+        try {
+            $dt = new DateTime( hesk_GET('dateto') );
+            $date_to = $dt->format('Y-m-d');
+            $input_dateto = hesk_translate_date_string($dt->format($hesk_settings['format_datepicker_php']));
+        } catch(Exception $e) {
+            $date_to = date('Y-m-d');
+        }
+    } else {
+        $date_to = $dt->format('Y-m-d');
+        $input_dateto = hesk_translate_date_string($dt->format($hesk_settings['format_datepicker_php']));
     }
 
     if ($date_from > $date_to)
@@ -86,12 +100,30 @@ if (!empty($_GET['w']))
         $input_dateto = $tmp2;
 
         $note_buffer = $hesklang['datetofrom'];
+
+        $df2 = $df;
+        $df = $dt;
+        $dt = $df2;
+        unset($df2);
     }
 
     if ($date_to > date('Y-m-d'))
     {
-    	$date_to = date('Y-m-d');
-        $input_dateto = date('m/d/Y');
+        $dt = new DateTime();
+        $date_to = $dt->format('Y-m-d');
+        $input_dateto = hesk_translate_date_string(date($hesk_settings['format_datepicker_php']));
+    }
+
+    if ($df instanceof DateTime) {
+        $hesk_settings['datepicker']['#datefrom']['timestamp'] = $df->getTimestamp();
+    } elseif (isset($hesk_settings['datepicker']['#datefrom']['timestamp'])) {
+        unset($hesk_settings['datepicker']['#datefrom']['timestamp']);
+    }
+
+    if ($dt instanceof DateTime) {
+        $hesk_settings['datepicker']['#dateto']['timestamp'] = $dt->getTimestamp();
+    } elseif (isset($hesk_settings['datepicker']['#dateto']['timestamp'])) {
+        unset($hesk_settings['datepicker']['#dateto']['timestamp']);
     }
 
     $query_string = 'reports.php?w=1&amp;datefrom='.urlencode($input_datefrom).'&amp;dateto='.urlencode($input_dateto);
@@ -325,13 +357,13 @@ hesk_handle_messages();
 if ($date_from == $date_to)
 {
 	?>
-	<h2 style="margin-top: 20px; margin-bottom: 20px"><?php echo hesk_dateToString($date_from,0); ?></h2>
+	<h2 style="margin-top: 20px; margin-bottom: 20px"><?php echo hesk_date($date_from, true, true, true, $hesk_settings['format_date']); ?></h2>
 	<?php
 }
 else
 {
 	?>
-	<h2 style="margin-top: 20px; margin-bottom: 20px"><?php echo hesk_dateToString($date_from,0); ?> - <?php echo hesk_dateToString($date_to,0); ?></h2>
+	<h2 style="margin-top: 20px; margin-bottom: 20px"><?php echo hesk_date($date_from, true, true, true, $hesk_settings['format_date']); ?> - <?php echo hesk_date($date_to, true, true, true, $hesk_settings['format_date']); ?></h2>
 	<?php
 }
 
@@ -483,7 +515,7 @@ function hesk_ticketsByCategory()
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr>
+          <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['num_tickets']; ?></b></td>
 	        <td><b><?php echo $totals['num_tickets'] - $totals['resolved']; ?></b></td>
@@ -685,7 +717,7 @@ function hesk_ticketsByUser()
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr>
+          <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
             <td><b><?php echo $totals['openedby']; ?></b></td>
 	        <td><b><?php echo $totals['asstickets']; ?></b></td>
@@ -818,7 +850,7 @@ function hesk_ticketsByMonth()
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr>
+          <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['all']; ?></b></td>
 	        <td><b><?php echo $totals['all']-$totals['resolved']; ?></b></td>
@@ -940,7 +972,7 @@ function hesk_ticketsByDay()
 	if ($num_tickets > 10)
 	{
 	?>
-	      <tr>
+          <tr class="total">
 	        <td><b><?php echo $hesklang['totals']; ?></b></td>
 	        <td><b><?php echo $totals['all']; ?></b></td>
 	        <td><b><?php echo $totals['all']-$totals['resolved']; ?></b></td>

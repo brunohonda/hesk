@@ -40,8 +40,14 @@ if ( ! empty($_POST['action']))
 		hesk_process_messages($hesklang['sdemo'], 'profile.php', 'NOTICE');
 	}
 
-	// Update profile
-	update_profile();
+    if ($_POST['action'] == 'password')
+    {
+        update_password();
+    }
+    else
+    {
+        update_profile();
+    }
 }
 else
 {
@@ -78,7 +84,7 @@ require_once(HESK_PATH . 'inc/header.inc.php');
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 
 /* This will handle error, success and notice messages */
-if (!hesk_SESSION(array('new', 'errors'))) {
+if (!hesk_SESSION(array('new', 'errors')) && !hesk_SESSION(array('newpass', 'errors'))) {
     hesk_handle_messages();
 }
 
@@ -101,12 +107,46 @@ if (defined('WARN_PASSWORD'))
             <div class="profile__edit">
                 <button class="btn btn--blue-border" data-action="profile-edit"><?php echo $hesklang['edit_profile']; ?></button>
             </div>
+            <div class="profile__edit">
+                <button class="btn btn--blue-border" data-action="profile-password"><?php echo $hesklang['edit_pass']; ?></button>
+            </div>
             <a href="index.php?a=logout&token=<?php hesk_token_echo(); ?>" class="profile-log-out">
                 <svg class="icon icon-log-out">
                     <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-log-out"></use>
                 </svg>
                 <span><?php echo $hesklang['logout']; ?></span>
             </a>
+        </div>
+    </article>
+    <article class="profile__wrapper">
+        <div class="profile__info">
+            <div class="profile__info_list">
+                <h3><?php echo $hesklang['mfa']; ?></h3>
+                <div class="info--mail">
+                    <?php if ($_SESSION['new']['mfa_enrollment'] === '0') { ?>
+                        <div class="text-danger">
+                            <?php echo $hesklang['mfa_disabled']; ?>
+                        </div>
+                    <?php } elseif ($_SESSION['new']['mfa_enrollment'] === '1') { ?>
+                        <div class="text-success">
+                            <?php echo sprintf($hesklang['mfa_enabled'], $hesklang['mfa_method_email']); ?>
+                        </div>
+                    <?php } elseif ($_SESSION['new']['mfa_enrollment'] === '2') { ?>
+                        <div class="text-success">
+                            <?php echo sprintf($hesklang['mfa_enabled'], $hesklang['mfa_method_auth_app']); ?>
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
+        </div>
+        <div class="profile__control">
+            <div class="profile__edit">
+                <a href="manage_mfa.php">
+                    <button class="btn btn-full wider">
+                        <?php echo $hesklang['mfa_manage_profile']; ?>
+                    </button>
+                </a>
+            </div>
         </div>
     </article>
 </div>
@@ -187,8 +227,73 @@ if (defined('WARN_PASSWORD'))
         </form>
     </div>
 </div>
+<div class="right-bar profile-password" <?php echo (hesk_SESSION(array('newpass','errors')) || hesk_SESSION('password_reset')) ? 'style="display: block"' : ''; ?>>
+    <div class="right-bar__body form" data-step="1">
+        <h3>
+            <a href="javascript:">
+                <svg class="icon icon-back">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
+                </svg>
+                <span><?php echo $hesklang['edit_pass']; ?></span>
+            </a>
+        </h3>
+        <?php
+        /* This will handle error, success and notice messages */
+        if (hesk_SESSION(array('newpass', 'errors'))) {
+            hesk_handle_messages();
+        } elseif (hesk_SESSION('password_reset')) {
+            hesk_show_notice($hesklang['resim'], ' ', false);
+            hesk_show_info($hesklang['cur_pass3'], ' ', false, 'no-padding-top');
+        } else {
+            hesk_show_info($hesklang['cur_pass2'] . '<br><br>' . $hesklang['cur_pass3'], ' ', false);
+        }
 
+        $session_array='newpass';
+        $errors = hesk_SESSION(array($session_array, 'errors'));
+        $errors = is_array($errors) ? $errors : array();
+        ?>
+        <form name="form1" method="post" action="profile.php" class="form <?php echo hesk_SESSION(array('newpass','errors')) ? 'invalid' : ''; ?>">
+            <section class="item--section">
+                <?php if ( ! hesk_SESSION('password_reset')): ?>
+                <div class="form-group">
+                    <label for="pass_cur"><?php echo $hesklang['cur_pass']; ?></label>
+                    <input type="password" id="pass_cur" name="pass_cur" autocomplete="off" class="form-control <?php echo in_array('current', $errors) ? 'isError' : ''; ?>"
+                           value="<?php echo isset($_SESSION[$session_array]['pass_cur']) ? $_SESSION[$session_array]['pass_cur'] : ''; ?>">
+                </div>
+                <p>&nbsp;</p>
+                <?php endif; ?>
+                <div class="form-group">
+                    <label for="pass_new"><?php echo $hesklang['new_pass']; ?></label>
+                    <input type="password" id="pass_new" name="pass_new" autocomplete="off" class="form-control <?php echo in_array('new', $errors) ? 'isError' : ''; ?>"
+                           value="<?php echo isset($_SESSION[$session_array]['pass_new']) ? $_SESSION[$session_array]['pass_new'] : ''; ?>"
+                           onkeyup="hesk_checkPassword(this.value, 'progressBar2')">
+                </div>
+                <div class="form-group">
+                    <label for="pass_new2"><?php echo $hesklang['confirm_pass']; ?></label>
+                    <input type="password" id="pass_new2" name="pass_new2" autocomplete="off" class="form-control <?php echo in_array('new2', $errors) ? 'isError' : ''; ?>"
+                           value="<?php echo isset($_SESSION[$session_array]['pass_new2']) ? $_SESSION[$session_array]['pass_new2'] : ''; ?>">
+                </div>
+                <div class="form-group">
+                    <label><?php echo $hesklang['pwdst']; ?></label>
+                    <div style="border: 1px solid #d4d6e3; width: 100%; height: 14px">
+                        <div id="progressBar2" style="font-size: 1px; height: 12px; width: 0px; border: none;">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Submit -->
+            <div class="right-bar__footer">
+                <input type="hidden" name="action" value="password" />
+                <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>" />
+                <button type="submit" class="btn btn-full save" data-action="save" ripple="ripple"><?php echo $hesklang['save_pass']; ?></button>
+            </div>
+        </form>
+    </div>
+</div>
 <?php
+
+hesk_cleanSessionVars('newpass');
 unset($_SESSION['new']['errors']);
 
 require_once(HESK_PATH . 'inc/footer.inc.php');
@@ -197,13 +302,89 @@ exit();
 
 /*** START FUNCTIONS ***/
 
+
+function update_password() {
+	global $hesk_settings, $hesklang;
+
+	/* A security check */
+	hesk_token_check('POST');
+
+    $hesk_error_buffer = '';
+    $errors = array();
+
+    // Current password
+	$_SESSION['newpass']['pass_cur'] = hesk_input( hesk_POST('pass_cur') );
+    if (hesk_SESSION('password_reset')) {
+        // Allow password reset without the old password
+    } elseif (!$_SESSION['newpass']['pass_cur']) {
+        $hesk_error_buffer .= '<li>' . $hesklang['enter_pass'] . '</li>';
+        $errors[] = 'current';
+    } elseif (strlen($_SESSION['newpass']['pass_cur']) > 64) {
+        $hesk_error_buffer .= '<li>' . $hesklang['pass_len'] . '</li>';
+        $errors[] = 'current';
+    } else {
+        hesk_limitInternalBfAttempts();
+
+        // Get current password hash from DB
+        $result = hesk_dbQuery("SELECT `pass` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users` WHERE `id` = ".intval($_SESSION['id'])." LIMIT 1");
+        if (hesk_dbNumRows($result) != 1)
+        {
+            hesk_forceLogout($hesklang['wrong_user']);
+        }
+        $user_row = hesk_dbFetchAssoc($result);
+
+        // Validate current password
+        if (hesk_password_verify($_SESSION['newpass']['pass_cur'], $user_row['pass'])) {
+            hesk_cleanBfAttempts();
+        } else {
+            $hesk_error_buffer .= '<li>' . $hesklang['wrong_pass'] . '</li>';
+            $errors[] = 'current';
+        }
+    }
+
+    // New password
+	$_SESSION['newpass']['pass_new'] = hesk_input( hesk_POST('pass_new') );
+	if (!$_SESSION['newpass']['pass_new']) {
+        $hesk_error_buffer .= '<li>' . $hesklang['e_new_pass'] . '</li>';
+        $errors[] = 'new';
+    } elseif (strlen($_SESSION['newpass']['pass_new']) < 5) {
+        $hesk_error_buffer .= '<li>' . $hesklang['password_not_valid'] . '</li>';
+        $errors[] = 'new';
+    } elseif (strlen($_SESSION['newpass']['pass_new']) > 64) {
+        $hesk_error_buffer .= '<li>' . $hesklang['pass_len'] . '</li>';
+        $errors[] = 'new';
+    }
+
+    // Confirm password
+	$_SESSION['newpass']['pass_new2'] = hesk_input( hesk_POST('pass_new2') );
+	if ($_SESSION['newpass']['pass_new2'] != $_SESSION['newpass']['pass_new']) {
+        $hesk_error_buffer .= '<li>' . $hesklang['passwords_not_same'] . '</li>';
+        $errors[] = 'new2';
+    }
+
+    if (strlen($hesk_error_buffer))
+    {
+        $hesk_error_buffer = '<div class="browser-default"><ul>'.$hesk_error_buffer.'</ul></div>';
+        $_SESSION['newpass']['errors'] = $errors;
+        hesk_process_messages($hesk_error_buffer,'NOREDIRECT');
+    }
+    else
+    {
+        $newpass_hash = hesk_password_hash($_SESSION['newpass']['pass_new']);
+		hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."users` SET `pass` = '".hesk_dbEscape($newpass_hash)."' WHERE `id` = ".intval($_SESSION['id']));
+
+        // Force login after password change
+        hesk_forceLogout($hesklang['pass_login'], null, null, 'NOTICE');
+    }
+} // End update_password()
+
+
 function update_profile() {
 	global $hesk_settings, $hesklang, $can_view_unassigned;
 
 	/* A security check */
 	hesk_token_check('POST');
 
-    $sql_pass = '';
     $sql_username = '';
 
     $hesk_error_buffer = '';
@@ -242,42 +423,9 @@ function update_profile() {
 		}
         else
         {
-        	$sql_username =  ",`user`='" . hesk_dbEscape($_SESSION['new']['user']) . "'";
+        	$sql_username =  "`user`='" . hesk_dbEscape($_SESSION['new']['user']) . "', ";
         }
     }
-
-	/* Change password? */
-    $newpass = hesk_input( hesk_POST('newpass') );
-    $passlen = strlen($newpass);
-	if ($passlen > 0)
-	{
-        /* At least 5 chars? */
-        if ($passlen < 5)
-        {
-        	$hesk_error_buffer .= '<li>' . $hesklang['password_not_valid'] . '</li>';
-        	$errors[] = 'passwords';
-        }
-        /* Check password confirmation */
-        else
-        {
-        	$newpass2 = hesk_input( hesk_POST('newpass2') );
-
-			if ($newpass != $newpass2)
-			{
-				$hesk_error_buffer .= '<li>' . $hesklang['passwords_not_same'] . '</li>';
-                $errors[] = 'passwords';
-			}
-            else
-            {
-				$newpass_hash = hesk_Pass2Hash($newpass);
-				if ($newpass_hash == '499d74967b28a841c98bb4baaabaad699ff3c079')
-				{
-					define('WARN_PASSWORD',true);
-				}
-				$sql_pass = ',`pass`=\''.$newpass_hash.'\'';
-            }
-        }
-	}
 
     /* After reply */
     $_SESSION['new']['afterreply'] = intval( hesk_POST('afterreply') );
@@ -340,9 +488,8 @@ function update_profile() {
 		"UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."users` SET
 		`name`='".hesk_dbEscape($_SESSION['new']['name'])."',
 		`email`='".hesk_dbEscape($_SESSION['new']['email'])."',
-		`signature`='".hesk_dbEscape($_SESSION['new']['signature'])."'
+		`signature`='".hesk_dbEscape($_SESSION['new']['signature'])."',
 		$sql_username
-		$sql_pass ,
 		`afterreply`='".($_SESSION['new']['afterreply'])."' ,
 		".($hesk_settings['time_worked'] ? "`autostart`='".($_SESSION['new']['autostart'])."'," : '')."
 		`autoreload`='".($_SESSION['new']['autoreload'])."' ,
@@ -365,15 +512,7 @@ function update_profile() {
 		$_SESSION['new'] = hesk_stripArray($_SESSION['new']);
 
 		// Do we need a new session_veify tag?
-		if ( strlen($sql_username) && strlen($sql_pass) )
-		{
-			$_SESSION['session_verify'] = hesk_activeSessionCreateTag($_SESSION['new']['user'], $newpass_hash);
-		}
-		elseif ( strlen($sql_pass) )
-		{
-			$_SESSION['session_verify'] = hesk_activeSessionCreateTag($_SESSION['user'], $newpass_hash);
-		}
-		elseif ( strlen($sql_username) )
+		if ( strlen($sql_username) )
 		{
 			$res = hesk_dbQuery('SELECT `pass` FROM `'.hesk_dbEscape($hesk_settings['db_pfix'])."users` WHERE `id` = '".intval($_SESSION['id'])."' LIMIT 1");
 			$_SESSION['session_verify'] = hesk_activeSessionCreateTag($_SESSION['new']['user'], hesk_dbResult($res) );

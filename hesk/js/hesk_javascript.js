@@ -11,37 +11,42 @@
  */
 
 function hesk_insertTag(tag) {
-var text_to_insert = '%%'+tag+'%%';
-hesk_insertAtCursor(document.form1.msg, text_to_insert);
-document.form1.message.focus();
+    var text_to_insert = '%%'+tag+'%%';
+    hesk_insertAtCursor(document.form1.msg, text_to_insert);
+    document.form1.msg.focus();
 }
 
 function hesk_insertAtCursor(myField, myValue) {
-if (document.selection) {
-myField.focus();
-sel = document.selection.createRange();
-sel.text = myValue;
-}
-else if (myField.selectionStart || myField.selectionStart == '0') {
-var startPos = myField.selectionStart;
-var endPos = myField.selectionEnd;
-myField.value = myField.value.substring(0, startPos)
-+ myValue
-+ myField.value.substring(endPos, myField.value.length);
-} else {
-myField.value += myValue;
-}
+    if (document.selection) {
+        myField.focus();
+        sel = document.selection.createRange();
+        sel.text = myValue;
+    } else if (myField.selectionStart || myField.selectionStart == '0') {
+        var startPos = myField.selectionStart;
+        var endPos = myField.selectionEnd;
+        myField.value = myField.value.substring(0, startPos) + myValue + myField.value.substring(endPos, myField.value.length);
+        myField.selectionStart = startPos + myValue.length; myField.selectionEnd = startPos + myValue.length;
+    } else {
+        myField.value += myValue;
+    }
 }
 
-function hesk_changeAll(myID) {
-  var d = document.form1;
-  var setTo = myID.checked ? true : false;
+function hesk_changeAll(myID, group = 0) {
+    var d = document.form1;
+    var setTo = myID.checked ? true : false;
 
-  for (var i = 0; i < d.elements.length; i++)
-  {
-    if(d.elements[i].type == 'checkbox' && d.elements[i].name != 'checkall')
+    for (var i = 0; i < d.elements.length; i++)
     {
-     d.elements[i].checked = setTo;
+        if(d.elements[i].type == 'checkbox' && d.elements[i].name != 'checkall')
+        {
+            if (group == 0)
+            {
+                d.elements[i].checked = setTo;
+            }
+            else if (d.elements[i].classList.contains(group))
+            {
+                d.elements[i].checked = setTo;
+            }
     }
   }
 }
@@ -337,7 +342,7 @@ function hesk_btn(Elem, myClass)
         Elem.className = myClass;
 }
 
-function hesk_checkPassword(password)
+function hesk_checkPassword(password, fieldID = "progressBar")
 {
 
     var numbers = "0123456789";
@@ -346,21 +351,26 @@ function hesk_checkPassword(password)
     var punctuation = "!.@$#*()%~<>{}[]";
 
     var combinations = 0;
+    var maxScoreCap = 0;
 
     if (hesk_contains(password, numbers) > 0) {
         combinations += 10;
+        maxScoreCap += 25;
     }
 
     if (hesk_contains(password, lowercase) > 0) {
         combinations += 26;
+        maxScoreCap += 25;
     }
 
     if (hesk_contains(password, uppercase) > 0) {
         combinations += 26;
+        maxScoreCap += 25;
     }
 
     if (hesk_contains(password, punctuation) > 0) {
         combinations += punctuation.length;
+        maxScoreCap += 25;
     }
 
     var totalCombinations = Math.pow(combinations, password.length);
@@ -369,36 +379,36 @@ function hesk_checkPassword(password)
     var lifetime = 365000;
     var percentage = timeInDays / lifetime;
 
-    var friendlyPercentage = hesk_cap(Math.round(percentage * 100), 98);
+    var friendlyPercentage = hesk_cap(Math.round(percentage * 100), maxScoreCap);
 
     if (friendlyPercentage < (password.length * 5)) {
         friendlyPercentage += password.length * 5;
     }
 
-    var friendlyPercentage = hesk_cap(friendlyPercentage, 98);
+    var friendlyPercentage = hesk_cap(friendlyPercentage, maxScoreCap);
 
-    var progressBar = document.getElementById("progressBar");
+    var progressBar = document.getElementById(fieldID);
     progressBar.style.width = friendlyPercentage + "%";
 
-    if (percentage > 1) {
+    if (percentage > 1 && friendlyPercentage > 75) {
         // strong password
         progressBar.style.backgroundColor = "#3bce08";
         return;
     }
 
-    if (percentage > 0.5) {
+    if (percentage > 0.5 && friendlyPercentage > 50) {
         // reasonable password
         progressBar.style.backgroundColor = "#ffd801";
         return;
     }
 
-    if (percentage > 0.10) {
+    if (percentage > 0.10 && friendlyPercentage > 10) {
         // weak password
         progressBar.style.backgroundColor = "orange";
         return;
     }
 
-    if (percentage <= 0.10) {
+    if (percentage <= 0.10 || friendlyPercentage <= 10) {
         // very weak password
         progressBar.style.backgroundColor = "red";
         return;
@@ -464,3 +474,46 @@ function deleteCookie(name, path, domain)
                         "; expires=Thu, 01-Jan-70 00:00:01 GMT";
         }
 }
+
+// Dropzone
+function outputAttachmentIdHolder(value, id) {
+    $('#attachment-holder-' + id).append('<input type="hidden" name="attachments[]" value="' + value + '">');
+}
+
+function removeAttachment(id, fileKey, isAdmin) {
+    if (fileKey === undefined) {
+        return;
+    }
+
+    var prefix = isAdmin ? '../' : '';
+    $('input[name="attachments[]"][value="' + fileKey + '"]').remove();
+    $.ajax({
+        url: prefix + 'upload_attachment.php?action=delete&fileKey=' + encodeURIComponent(fileKey),
+        method: 'GET'
+    });
+}
+
+function hesk_updateDeleteCategoryUrl(modalIndex) {
+    var selectedCategory = $('#targetCat' + modalIndex).val();
+    var confirmButton = $('a[data-confirm-button]');
+    var existingLink = confirmButton[modalIndex];
+    var regex = /&targetCategory=\d+/i;
+    existingLink.href = existingLink.href.replace(regex, '&targetCategory=' + selectedCategory);
+}
+
+jQuery.fn.preventDoubleSubmission = function() {
+  $(this).on('submit',function(e){
+    var $form = $(this);
+
+    if ($form.data('submitted') === true) {
+      // Previously submitted - don't submit again
+      e.preventDefault();
+    } else {
+      // Mark it so that the next submit can be ignored
+      $form.data('submitted', true);
+    }
+  });
+
+  // Keep chainability
+  return this;
+};

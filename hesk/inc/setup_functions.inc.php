@@ -14,7 +14,37 @@
 /* Check if this is a valid include */
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');} 
 
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 /*** FUNCTIONS ***/
+
+
+function hesk_map_datepicker_date_format_to_php($format)
+{
+    $js_to_php_date_format_map = array(
+        'dd'  => 'zzzz',
+        'd'   => 'j',
+        'DD'  => 'l',
+        'D'   => 'D',
+        'mm'  => 'wwww',
+        'm'   => 'n',
+        'MM'  => 'F',
+        'M'   => 'M',
+        'yyyy' => 'Y',
+        'yy'   => 'y',
+
+        // Trick to not overwrite d and m after matching dd and mm
+        'zzzz' => 'd',
+        'wwww' => 'm',
+    );
+
+    foreach ($js_to_php_date_format_map as $js_format => $php_format) {
+        $format = str_replace($js_format, $php_format, $format);
+    }
+
+    return $format;
+} // END hesk_map_datepicker_date_format_to_php()
 
 
 function hesk_translate_timezone_list($timezone_list)
@@ -83,7 +113,7 @@ function hesk_generate_timezone_list()
         $pretty_offset = "UTC{$offset_prefix}{$offset_formatted}";
 
         $t = new DateTimeZone($timezone);
-        $c = new DateTime(null, $t);
+        $c = new DateTime("now", $t);
         $current_time = $c->format('d M Y, H:i');
 
         $timezone_list[$timezone] = "{$timezone} - {$current_time}";
@@ -109,31 +139,38 @@ function hesk_testMySQL()
 	$set['db_pass'] = hesk_input( hesk_POST('s_db_pass') );
 	$set['db_pfix'] = preg_replace('/[^0-9a-zA-Z_]/', '', hesk_POST('s_db_pfix', 'hesk_') );
 
-	// Allow & in password
+	// Allow & in password and username
+    $set['db_user'] = str_replace('&amp;', '&', $set['db_user']);
     $set['db_pass'] = str_replace('&amp;', '&', $set['db_pass']);
 
 	// MySQL tables used by HESK
 	$tables = array(
-		$set['db_pfix'].'attachments',
-		$set['db_pfix'].'banned_emails',
-		$set['db_pfix'].'banned_ips',
-		$set['db_pfix'].'categories',
-		$set['db_pfix'].'kb_articles',
-		$set['db_pfix'].'kb_attachments',
-		$set['db_pfix'].'kb_categories',
-		$set['db_pfix'].'logins',
-		$set['db_pfix'].'mail',
-		$set['db_pfix'].'notes',
-		$set['db_pfix'].'online',
-		$set['db_pfix'].'pipe_loops',
-		$set['db_pfix'].'replies',
-		$set['db_pfix'].'reply_drafts',
-		$set['db_pfix'].'reset_password',
-		$set['db_pfix'].'service_messages',
-		$set['db_pfix'].'std_replies',
-		$set['db_pfix'].'tickets',
-		$set['db_pfix'].'ticket_templates',
-		$set['db_pfix'].'users',
+        $set['db_pfix'].'attachments',
+        $set['db_pfix'].'auth_tokens',
+        $set['db_pfix'].'banned_emails',
+        $set['db_pfix'].'banned_ips',
+        $set['db_pfix'].'categories',
+        $set['db_pfix'].'custom_fields',
+        $set['db_pfix'].'custom_statuses',
+        $set['db_pfix'].'kb_articles',
+        $set['db_pfix'].'kb_attachments',
+        $set['db_pfix'].'kb_categories',
+        $set['db_pfix'].'logins',
+        $set['db_pfix'].'log_overdue',
+        $set['db_pfix'].'mail',
+        $set['db_pfix'].'mfa_backup_codes',
+        $set['db_pfix'].'mfa_verification_tokens',
+        $set['db_pfix'].'notes',
+        $set['db_pfix'].'online',
+        $set['db_pfix'].'pipe_loops',
+        $set['db_pfix'].'replies',
+        $set['db_pfix'].'reply_drafts',
+        $set['db_pfix'].'reset_password',
+        $set['db_pfix'].'service_messages',
+        $set['db_pfix'].'std_replies',
+        $set['db_pfix'].'tickets',
+        $set['db_pfix'].'ticket_templates',
+        $set['db_pfix'].'users',
 	);
 
 	$connection_OK = false;
@@ -144,18 +181,28 @@ function hesk_testMySQL()
 	// Connect to MySQL
 	if ($use_mysqli)
 	{
+        mysqli_report(MYSQLI_REPORT_OFF);
+
 		// Do we need a special port? Check and connect to the database
 		if ( strpos($set['db_host'], ':') )
 		{
 			list($set['db_host_no_port'], $set['db_port']) = explode(':', $set['db_host']);
-			$set_link = mysqli_connect($set['db_host_no_port'], $set['db_user'], $set['db_pass'], $set['db_name'], intval($set['db_port']) );
+            try {
+                $set_link = mysqli_connect($set['db_host_no_port'], $set['db_user'], $set['db_pass'], $set['db_name'], intval($set['db_port']) );
+            } catch (Exception $e) {
+                $set_link = false;
+            }
 		}
 		else
 		{
-			$set_link = mysqli_connect($set['db_host'], $set['db_user'], $set['db_pass'], $set['db_name']);
+            try {
+                $set_link = mysqli_connect($set['db_host'], $set['db_user'], $set['db_pass'], $set['db_name']);
+            } catch (Exception $e) {
+                $set_link = false;
+            }
 		}
 
-		if ( ! $set_link)
+		if (empty($set_link))
 		{
 			ob_end_clean();
 			$mysql_error = $hesklang['err_dbconn'];
@@ -232,9 +279,6 @@ function hesk_testMySQL()
 		return false;
 	}
 
-	// Check PHP version for the mysql(i)_set_charset function
-	$set['db_vrsn'] = ( version_compare(PHP_VERSION, '5.2.3') >= 0 ) ? 1 : 0;
-
 	// Some tables weren't found, show an error
 	if (count($tables) > 0)
 	{
@@ -264,6 +308,8 @@ function hesk_testPOP3($check_old_settings=false)
     $set['pop3_keep']		= empty($_POST['s_pop3_keep']) ? 0 : 1;
 	$set['pop3_user']		= hesk_input( hesk_POST('s_pop3_user') );
 	$set['pop3_password']	= hesk_input( hesk_POST('s_pop3_password') );
+    $set['pop3_conn_type']  = hesk_input(hesk_POST('s_pop3_conn_type'));
+    $set['pop3_oauth_provider'] = $set['pop3_conn_type'] === 'basic' ? 0 : intval(hesk_POST('s_pop3_oauth_provider'));
 
     // For compatibility with PHP 5.3 magic quotes...
     if (HESK_SLASH === false)
@@ -280,6 +326,8 @@ function hesk_testPOP3($check_old_settings=false)
 		$set['tmp_pop3_keep']		= empty($_POST['tmp_pop3_keep']) ? 0 : 1;
 		$set['tmp_pop3_user']		= hesk_input( hesk_POST('tmp_pop3_user') );
 		$set['tmp_pop3_password']	= hesk_input( hesk_POST('tmp_pop3_password') );
+        $set['tmp_pop3_conn_type']  = hesk_input(hesk_POST('tmp_pop3_conn_type'));
+        $set['tmp_pop3_oauth_provider']  = $set['tmp_pop3_conn_type'] === 'basic' ? 0 : intval(hesk_POST('tmp_pop3_oauth_provider'));
 
         // For compatibility with PHP 5.3 magic quotes...
         if (HESK_SLASH === false)
@@ -294,7 +342,9 @@ function hesk_testPOP3($check_old_settings=false)
 			$set['tmp_pop3_tls']       == $set['pop3_tls']       &&
 			$set['tmp_pop3_keep']      == $set['pop3_keep']      &&
 			$set['tmp_pop3_user']      == $set['pop3_user']      &&
-			$set['tmp_pop3_password']  == $set['pop3_password']
+			$set['tmp_pop3_password']  == $set['pop3_password']  &&
+            $set['tmp_pop3_conn_type'] == $set['pop3_conn_type'] &&
+            $set['tmp_pop3_oauth_provider'] == $set['pop3_oauth_provider']
 		)
 		{
 			return true;
@@ -309,6 +359,19 @@ function hesk_testPOP3($check_old_settings=false)
 	$pop3->tls		= $set['pop3_tls'];
 	$pop3->debug	= 1;
 
+    if ($set['pop3_conn_type']=='oauth') {
+        require_once(HESK_PATH . 'inc/oauth_functions.inc.php');
+        $pop3->authentication_mechanism = 'XOAUTH2';
+        hesk_dbConnect();
+        $access_token = hesk_fetch_access_token($set['pop3_oauth_provider']);
+        if (!$access_token) {
+            global $pop3_error, $pop3_log;
+            $pop3_error = $hesklang['oauth_error_retrieve'];
+            $pop3_log = $hesklang['oauth_error_retrieve'];
+            return false;
+        }
+    }
+
 	$connection_OK = false;
 
 	ob_start();
@@ -317,13 +380,20 @@ function hesk_testPOP3($check_old_settings=false)
 	if(($error=$pop3->Open())=="")
 	{
 		// Authenticate
-		if(($error=$pop3->Login($set['pop3_user'], hesk_htmlspecialchars_decode(stripslashes($set['pop3_password']))))=="")
+		if(($error=$pop3->Login($set['pop3_user'], ($set['pop3_conn_type']=='oauth' ? $access_token : hesk_htmlspecialchars_decode(stripslashes($set['pop3_password'])))))=="")
 		{
-			if(($error=$pop3->Close()) == "")
-			{
-				// Connection OK
-				$connection_OK = true;
-			}
+            // Get number of messages and total size
+            if(($error=$pop3->Statistics($messages,$size))=="")
+            {
+                global $emails_found;
+                $emails_found = $messages;
+
+                if(($error=$pop3->Close()) == "")
+                {
+                    // Connection OK
+                    $connection_OK = true;
+                }
+            }
 		}
 	}
 
@@ -348,10 +418,13 @@ function hesk_testSMTP($check_old_settings=false)
 	$set['smtp_host_name']	= hesk_input( hesk_POST('s_smtp_host_name', 'localhost') );
 	$set['smtp_host_port']	= intval( hesk_POST('s_smtp_host_port', 25) );
 	$set['smtp_timeout']	= intval( hesk_POST('s_smtp_timeout', 10) );
-	$set['smtp_ssl']		= empty($_POST['s_smtp_ssl']) ? 0 : 1;
-	$set['smtp_tls']		= empty($_POST['s_smtp_tls']) ? 0 : 1;
+    $set['smtp_enc']        = hesk_POST('s_smtp_enc');
+    $set['smtp_enc']        = ($set['smtp_enc'] == 'ssl' || $set['smtp_enc'] == 'tls') ? $set['smtp_enc'] : '';
+    $set['smtp_noval_cert'] = empty($_POST['s_smtp_noval_cert']) ? 0 : 1;
 	$set['smtp_user']		= hesk_input( hesk_POST('s_smtp_user') );
 	$set['smtp_password']	= hesk_input( hesk_POST('s_smtp_password') );
+    $set['smtp_conn_type']  = hesk_input(hesk_POST('s_smtp_conn_type'));
+    $set['smtp_oauth_provider']  = $set['smtp_conn_type'] === 'basic' ? 0 : intval(hesk_POST('s_smtp_oauth_provider'));
 
     // For compatibility with PHP 5.3 magic quotes...
     if (HESK_SLASH === false)
@@ -365,10 +438,13 @@ function hesk_testSMTP($check_old_settings=false)
 		$set['tmp_smtp_host_name']	= hesk_input( hesk_POST('tmp_smtp_host_name', 'localhost') );
 		$set['tmp_smtp_host_port']	= intval( hesk_POST('tmp_smtp_host_port', 25) );
 		$set['tmp_smtp_timeout']	= intval( hesk_POST('tmp_smtp_timeout', 10) );
-		$set['tmp_smtp_ssl']		= empty($_POST['tmp_smtp_ssl']) ? 0 : 1;
-		$set['tmp_smtp_tls']		= empty($_POST['tmp_smtp_tls']) ? 0 : 1;
+        $set['tmp_smtp_enc']        = hesk_POST('tmp_smtp_enc');
+        $set['tmp_smtp_enc']        = ($set['tmp_smtp_enc'] == 'ssl' || $set['tmp_smtp_enc'] == 'tls') ? $set['tmp_smtp_enc'] : '';
+        $set['tmp_smtp_noval_cert'] = empty($_POST['tmp_smtp_noval_cert']) ? 0 : 1;
 		$set['tmp_smtp_user']		= hesk_input( hesk_POST('tmp_smtp_user') );
 		$set['tmp_smtp_password']	= hesk_input( hesk_POST('tmp_smtp_password') );
+        $set['tmp_smtp_conn_type']  = hesk_input(hesk_POST('tmp_smtp_conn_type'));
+        $set['tmp_smtp_oauth_provider']  = $set['tmp_smtp_conn_type'] === 'basic' ? 0 : intval(hesk_POST('tmp_smtp_oauth_provider'));
 
         // For compatibility with PHP 5.3 magic quotes...
         if (HESK_SLASH === false)
@@ -381,55 +457,113 @@ function hesk_testSMTP($check_old_settings=false)
 			$set['tmp_smtp_host_name'] == $set['smtp_host_name'] &&
 			$set['tmp_smtp_host_port'] == $set['smtp_host_port'] &&
 			$set['tmp_smtp_timeout']   == $set['smtp_timeout']   &&
-			$set['tmp_smtp_ssl']       == $set['smtp_ssl']       &&
-			$set['tmp_smtp_tls']       == $set['smtp_tls']       &&
+			$set['tmp_smtp_enc']       == $set['smtp_enc']       &&
+			$set['tmp_smtp_noval_cert'] == $set['smtp_noval_cert'] &&
 			$set['tmp_smtp_user']      == $set['smtp_user']      &&
-			$set['tmp_smtp_password']  == $set['smtp_password']
+			$set['tmp_smtp_password']  == $set['smtp_password'] &&
+            $set['tmp_smtp_conn_type'] == $set['smtp_conn_type'] &&
+            $set['tmp_smtp_oauth_provider'] == $set['smtp_oauth_provider']
 		)
 		{
 			return true;
 		}
-	}    
-
-	// Initiate SMTP class and set parameters
-	require_once(HESK_PATH . 'inc/mail/smtp.php');
-	$smtp = new smtp_class;
-	$smtp->host_name	= $set['smtp_host_name'];
-	$smtp->host_port	= $set['smtp_host_port'];
-	$smtp->timeout		= $set['smtp_timeout'];
-	$smtp->ssl			= $set['smtp_ssl'];
-	$smtp->start_tls	= $set['smtp_tls'];
-	$smtp->user			= $set['smtp_user'];
-	$smtp->password		= hesk_htmlspecialchars_decode(stripslashes($set['smtp_password']));
-	$smtp->debug		= 1;
-
-	if (strlen($set['smtp_user']) || strlen($set['smtp_password']))
-	{
-		require_once(HESK_PATH . 'inc/mail/sasl/sasl.php');
 	}
 
-	$connection_OK = false;
+    ob_start();
 
-	ob_start();
+    //Create a new SMTP instance
+    $smtp = new SMTP();
 
-	// Test connection
-	if ($smtp->Connect())
-	{
-		// SMTP connect successful
-	    $connection_OK = true;
-		$smtp->Disconnect();
-	}
-    else
-    {
-    	global $smtp_error, $smtp_log;
-        $smtp_error = ucfirst($smtp->error);
-		$smtp_log   = ob_get_contents();
+    //Enable connection-level debug output
+    if ($hesk_settings['debug_mode']) {
+        $smtp->do_debug = SMTP::DEBUG_CONNECTION;
+        // $smtp->do_debug = SMTP::DEBUG_LOWLEVEL;
+    } else {
+        $smtp->do_debug = SMTP::DEBUG_SERVER;
+    }
+    $smtp->Timeout = $set['smtp_timeout'];
+    $smtp->Timelimit = $set['smtp_timeout'];
+
+    if ($set['smtp_noval_cert']) {
+        $options = array(
+          'ssl' => array(
+              'verify_peer' => false,
+              'verify_peer_name' => false,
+              'allow_self_signed' => true
+          )
+        );
+    } else {
+        $options = array();
     }
 
-    $smtp_log   = ob_get_contents();
-	ob_end_clean();
+    if (stripos($set['smtp_host_name'], 'ssl://') === 0) {
+        $set['smtp_host_name'] = substr($set['smtp_host_name'], 6);
+    }
 
-    return $connection_OK;
+    $set['smtp_host_name_full'] = ($set['smtp_enc'] == 'ssl') ? 'ssl://' . $set['smtp_host_name'] : $set['smtp_host_name'];
+
+    try {
+        //Connect to an SMTP server
+        if (!$smtp->connect($set['smtp_host_name_full'], $set['smtp_host_port'], $set['smtp_timeout'], $options)) {
+            throw new Exception('Connect failed');
+        }
+        //Say hello
+        if (!$smtp->hello(gethostname())) {
+            throw new Exception('EHLO failed: ' . $smtp->getError()['error']);
+        }
+        //Get the list of ESMTP services the server offers
+        $e = $smtp->getServerExtList();
+
+        if ($set['smtp_enc'] == 'tls' && is_array($e)) {
+            if ( ! array_key_exists('STARTTLS', $e)) {
+                throw new Exception('Server does not support STARTTLS');
+            }
+            $tlsok = $smtp->startTLS();
+            if (!$tlsok) {
+                throw new Exception('Failed to start encryption: ' . $smtp->getError()['error']);
+            }
+            //Repeat EHLO after STARTTLS
+            if (!$smtp->hello(gethostname())) {
+                throw new Exception('EHLO (2) failed: ' . $smtp->getError()['error']);
+            }
+            //Get new capabilities list, which will usually now include AUTH if it didn't before
+            $e = $smtp->getServerExtList();
+        }
+
+        //If server supports authentication, do it (even if no encryption)
+        if (is_array($e) && array_key_exists('AUTH', $e)) {
+            if ($set['smtp_conn_type']=='oauth') {
+                require_once(HESK_PATH . 'inc/oauth_functions.inc.php');
+                require_once(HESK_PATH . 'inc/mail/HeskOAuthTokenProvider.php');
+
+                $oauthTokenProvider = new \PHPMailer\PHPMailer\HeskOAuthTokenProvider();
+                $oauthTokenProvider->username = $set['smtp_user'];
+                $oauthTokenProvider->provider = $set['smtp_oauth_provider'];
+
+                if ($smtp->authenticate($set['smtp_user'], null, 'XOAUTH2', $oauthTokenProvider)) {
+                    echo 'Connected ok (OAuth)!';
+                } else {
+                    throw new Exception('Authentication failed: ' . $smtp->getError()['error']);
+                }
+
+            } elseif ($smtp->authenticate($set['smtp_user'], hesk_htmlspecialchars_decode(stripslashes($set['smtp_password'])))) {
+                echo 'Connected ok!';
+            } else {
+                throw new Exception('Authentication failed: ' . $smtp->getError()['error']);
+            }
+        }
+    } catch (Exception $e) {
+        global $smtp_error, $smtp_log;
+        $smtp_error = $e->getMessage();
+        $smtp_log = ob_get_contents();
+        $smtp->quit();
+        ob_end_clean();
+        return false;
+    }
+
+    $smtp->quit();
+    ob_end_clean();
+    return true;
 } // END hesk_testSMTP()
 
 
@@ -445,6 +579,8 @@ function hesk_testIMAP($check_old_settings=false)
 	$set['imap_keep']		= empty($_POST['s_imap_keep']) ? 0 : 1;
 	$set['imap_user']		= hesk_input( hesk_POST('s_imap_user') );
 	$set['imap_password']	= hesk_input( hesk_POST('s_imap_password') );
+    $set['imap_conn_type']  = hesk_input(hesk_POST('s_imap_conn_type'));
+    $set['imap_oauth_provider']  = $set['imap_conn_type'] === 'basic' ? 0 : intval(hesk_POST('s_imap_oauth_provider'));
 
     // For compatibility with PHP 5.3 magic quotes...
     if (HESK_SLASH === false)
@@ -463,6 +599,8 @@ function hesk_testIMAP($check_old_settings=false)
 		$set['tmp_imap_keep']		= empty($_POST['tmp_imap_keep']) ? 0 : 1;
 		$set['tmp_imap_user']		= hesk_input( hesk_POST('tmp_imap_user') );
 		$set['tmp_imap_password']	= hesk_input( hesk_POST('tmp_imap_password') );
+        $set['tmp_imap_conn_type']  = hesk_input(hesk_POST('tmp_imap_conn_type'));
+        $set['tmp_imap_oauth_provider']  = $set['tmp_imap_conn_type'] === 'basic' ? 0 : intval(hesk_POST('tmp_imap_oauth_provider'));
 
         // For compatibility with PHP 5.3 magic quotes...
         if (HESK_SLASH === false)
@@ -478,7 +616,9 @@ function hesk_testIMAP($check_old_settings=false)
 			$set['tmp_imap_noval_cert'] == $set['imap_noval_cert'] &&
 			$set['tmp_imap_keep']      == $set['imap_keep']      &&
 			$set['tmp_imap_user']      == $set['imap_user']      &&
-			$set['tmp_imap_password']  == $set['imap_password']
+			$set['tmp_imap_password']  == $set['imap_password']  &&
+            $set['tmp_imap_conn_type'] == $set['imap_conn_type'] &&
+            $set['tmp_imap_oauth_provider'] == $set['imap_oauth_provider']
 		)
 		{
 			return true;
@@ -490,33 +630,68 @@ function hesk_testIMAP($check_old_settings=false)
     ob_start();
 
     // IMAP mailbox based on required encryption
-    switch ($set['imap_enc'])
-    {
-        case 'ssl':
-            $set['imap_mailbox'] = '{'.$set['imap_host_name'].':'.$set['imap_host_port'].'/imap/ssl'.($set['imap_noval_cert'] ? '/novalidate-cert' : '').'}';
-            break;
-        case 'tls':
-            $set['imap_mailbox'] = '{'.$set['imap_host_name'].':'.$set['imap_host_port'].'/imap/tls'.($set['imap_noval_cert'] ? '/novalidate-cert' : '').'}';
-            break;
-        default:
-            $set['imap_mailbox'] = '{'.$set['imap_host_name'].':'.$set['imap_host_port'].'}';
+    require_once(HESK_PATH . 'inc/mail/imap/HeskIMAP.php');
+    $imap = new HeskIMAP();
+
+    $imap->host = $set['imap_host_name'];
+    $imap->port = $set['imap_host_port'];
+    $imap->username = $set['imap_user'];
+    if ($set['imap_conn_type'] === 'basic') {
+        $imap->password = hesk_htmlspecialchars_decode(stripslashes($set['imap_password']));
+        $imap->useOAuth = false;
+    } elseif ($set['imap_conn_type'] === 'oauth') {
+        require_once(HESK_PATH . 'inc/oauth_functions.inc.php');
+        $access_token = hesk_fetch_access_token($set['imap_oauth_provider']);
+        if (!$access_token) {
+            global $imap_error, $imap_log;
+            $imap_error = $hesklang['oauth_error_retrieve'];
+            $imap_log = $hesklang['oauth_error_retrieve'];
+            return false;
+        }
+
+        $imap->accessToken = $access_token;
+        $imap->useOAuth = true;
+        $imap->password = null;
     }
 
-    // Connect to IMAP
-    $imap = @imap_open($set['imap_mailbox'], $set['imap_user'], hesk_htmlspecialchars_decode(stripslashes($set['imap_password'])));
+    $imap->readOnly = false;
+    $imap->ignoreCertificateErrors = $set['imap_noval_cert'];
+    $imap->connectTimeout = 15;
+    $imap->responseTimeout = 15;
 
-    // Connection successful?
-    if ($imap !== false)
+    if ($set['imap_enc'] === 'ssl')
     {
-        // Try reading the mailbox
-        imap_search($imap, 'UNSEEN');
+        $imap->ssl = true;
+        $imap->tls = false;
+    }
+    elseif ($set['imap_enc'] === 'tls')
+    {
+        $imap->ssl = false;
+        $imap->tls = true;
+    }
+    else
+    {
+        $imap->ssl = false;
+        $imap->tls = false;
+    }
 
-        // Close IMAP connection
-        imap_close($imap);
+    if ($imap->login())
+    {
+        global $emails_found;
+        $emails_found = 0;
+        echo $hesk_settings['debug_mode'] ? "<pre>Connected to the IMAP server &quot;" . $imap->host . ":" . $imap->port . "&quot;.</pre>\n" : '';
+
+        if ($imap->hasUnseenMessages())
+        {
+            $emails = $imap->getUnseenMessageIDs();
+            $emails_found = count($emails);
+        }
+
+        $imap->logout();
     }
 
     // Any error messages?
-    if($errors = imap_errors())
+    if($errors = $imap->getErrors())
     {
         global $imap_error, $imap_log;
 
@@ -532,7 +707,6 @@ function hesk_testIMAP($check_old_settings=false)
     }
     else
     {
-        // Connection OK
         $connection_OK = true;
     }
 

@@ -249,6 +249,24 @@ elseif ($is_quick_link == 'ovr')
     $sql .= " AND `status` != 3 AND `due_date` < NOW() ";
 }
 
+// Did the user specify a due date (either specific or a range)?
+$duedate_search_type = hesk_restricted_GET('duedate_option', ['specific', 'range'], 'specific');
+$duedate_input = hesk_GET('duedate_specific_date');
+$duedate_amount_value = intval(hesk_GET('duedate_amount_value'));
+$duedate_amount_unit = hesk_restricted_GET('duedate_amount_unit', ['day', 'week'], 'day');
+if ($duedate_search_type === 'specific' && $duedate_input && hesk_datepicker_get_date($duedate_input) !== false) {
+    $formatted_due_date = hesk_datepicker_get_date($duedate_input);
+    $hesk_settings['datepicker'] = array();
+    $hesk_settings['datepicker']['#duedate_specific_date']['timestamp'] = $formatted_due_date->getTimestamp();;
+    $formatted_due_date = $formatted_due_date->format('Y-m-d');
+    $sql .= " AND DATE(`due_date`) = '".hesk_dbEscape($formatted_due_date)."' ";
+    $sql_count .= " AND DATE(`due_date`) = '".hesk_dbEscape($formatted_due_date)."' ";
+} elseif ($duedate_search_type === 'range' && $duedate_amount_value && $duedate_amount_unit) {
+    $unit = $duedate_amount_unit === 'day' ? 'DAY' : 'WEEK';
+    $sql .= " AND `due_date` BETWEEN NOW() AND (NOW() + INTERVAL {$duedate_amount_value} {$unit}) ";
+    $sql_count .= " AND `due_date` BETWEEN NOW() AND (NOW() + INTERVAL {$duedate_amount_value} {$unit}) ";
+}
+
 // That's all the SQL we need for count
 $sql = $sql_final . $sql;
 

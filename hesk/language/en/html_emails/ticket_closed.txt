@@ -1,0 +1,6 @@
+<p>Dear %%NAME%%,</p>
+<p>Your support ticket "%%SUBJECT%%" has been updated to a closed/resolved status.</p>
+<p>You can view the status of your ticket here:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p>If the above link is not clickable, try copying and pasting it into the address bar of your web browser.</p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

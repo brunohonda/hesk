@@ -207,6 +207,14 @@ if ($hesk_settings['confirm_email'])
 
 $tmpvar['category'] = intval( hesk_POST('category') ) or $hesk_error_buffer['category']=$hesklang['sel_app_cat'];
 
+// Do we have a default due date?
+$default_due_date_info = hesk_getCategoryDueDateInfo($tmpvar['category']);
+if ($default_due_date_info !== null) {
+    $current_date = new DateTime('today midnight');
+    $current_date->add(DateInterval::createFromDateString("+{$default_due_date_info['amount']} {$default_due_date_info['unit']}s"));
+    $tmpvar['due_date'] = hesk_datepicker_format_date($current_date->getTimestamp());
+}
+
 // Do we allow customer to select priority?
 if ($hesk_settings['cust_urgency'])
 {
@@ -325,25 +333,26 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
         	$tmpvar[$k] = hesk_POST($k);
             $_SESSION["c_$k"] = '';
 
-			if (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $tmpvar[$k]))
-			{
-            	$date = strtotime($tmpvar[$k] . ' t00:00:00 UTC');
-                $dmin = strlen($v['value']['dmin']) ? strtotime($v['value']['dmin'] . ' t00:00:00 UTC') : false;
-                $dmax = strlen($v['value']['dmax']) ? strtotime($v['value']['dmax'] . ' t00:00:00 UTC') : false;
-
+            if ($date = hesk_datepicker_get_date($tmpvar[$k], false, 'UTC'))
+            {
                 $_SESSION["c_$k"] = $tmpvar[$k];
 
-	            if ($dmin && $dmin > $date)
+                $date->setTime(0, 0);
+                $dmin = strlen($v['value']['dmin']) ? new DateTime($v['value']['dmin'] . ' t00:00:00 UTC') : false;
+                $dmax = strlen($v['value']['dmax']) ? new DateTime($v['value']['dmax'] . ' t00:00:00 UTC') : false;
+
+
+	            if ($dmin && $dmin->format('Y-m-d') > $date->format('Y-m-d'))
 	            {
-					$hesk_error_buffer[$k] = sprintf($hesklang['d_emin'], $v['name'], hesk_custom_date_display_format($dmin, $v['value']['date_format']));
+					$hesk_error_buffer[$k] = sprintf($hesklang['d_emin'], $v['name'], hesk_translate_date_string($dmin->format($hesk_settings['format_datepicker_php'])));
 	            }
-	            elseif ($dmax && $dmax < $date)
+	            elseif ($dmax && $dmax->format('Y-m-d') < $date->format('Y-m-d'))
 	            {
-					$hesk_error_buffer[$k] = sprintf($hesklang['d_emax'], $v['name'], hesk_custom_date_display_format($dmax, $v['value']['date_format']));
+					$hesk_error_buffer[$k] = sprintf($hesklang['d_emax'], $v['name'], hesk_translate_date_string($dmax->format($hesk_settings['format_datepicker_php'])));
 	            }
                 else
                 {
-					$tmpvar[$k] = $date;
+					$tmpvar[$k] = $date->getTimestamp();
                 }
 			}
             else
@@ -417,6 +426,7 @@ if ($email_available && $hesk_settings['max_open'] && ! isset($hesk_error_buffer
 }
 
 // If we reached max tickets let's save some resources
+$use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 if ($below_limit)
 {
 	// Generate tracking ID
@@ -430,14 +440,26 @@ if ($below_limit)
 	    $attachments = array();
         $trackingID  = $tmpvar['trackid'];
 
-	    for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++)
-	    {
-	        $att = hesk_uploadFile($i);
-	        if ($att !== false && ! empty($att) )
-	        {
-	            $attachments[$i] = $att;
-	        }
-	    }
+
+        if ($use_legacy_attachments) {
+            // The user went to the fallback file upload system.
+            for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+                $att = hesk_uploadFile($i);
+                if ($att !== false && !empty($att)) {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_names = hesk_POST_array('attachments');
+            foreach ($temp_attachment_names as $temp_attachment_name) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
+            }
+        }
 	}
 	$tmpvar['attachments'] = '';
 }
@@ -459,10 +481,17 @@ if (count($hesk_error_buffer))
         $tmp .= "<li>$error</li>\n";
     }
 
-	// Remove any successfully uploaded attachments
+
 	if ($below_limit && $hesk_settings['attachments']['use'])
     {
-    	hesk_removeAttachments($attachments);
+        if ($use_legacy_attachments) {
+            // Remove any successfully uploaded attachments
+            hesk_removeAttachments($attachments);
+        } else {
+            // Send back the list of already-attached items
+            $_SESSION['c_attachments'] = $attachments;
+        }
+
     }
 
     $hesk_error_buffer = $hesklang['pcer'] . '<br /><br /><ul>' . $tmp . '</ul>';
@@ -495,6 +524,11 @@ if ($autoassign_owner)
 // Insert attachments
 if ($hesk_settings['attachments']['use'] && ! empty($attachments) )
 {
+    // Delete temp attachment records and set the new filename
+    if (!$use_legacy_attachments) {
+        $attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+    }
+
     foreach ($attachments as $myatt)
     {
         hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($tmpvar['trackid'])."','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -541,6 +575,7 @@ hesk_cleanSessionVars('c_priority');
 hesk_cleanSessionVars('c_subject');
 hesk_cleanSessionVars('c_message');
 hesk_cleanSessionVars('c_question');
+hesk_cleanSessionVars('c_attachments');
 hesk_cleanSessionVars('img_verified');
 
 $messages = hesk_get_messages();

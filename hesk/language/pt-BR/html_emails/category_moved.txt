@@ -1,0 +1,7 @@
+<p>Olá,</p>
+<p>Um novo ticket de suporte foi movido para sua categoria. Detalhes do chamado:</p>
+<p>Assunto do Chamado: %%SUBJECT%%<br / ID: %%TRACK_ID%%</p>
+<p>Você pode gerenciar este chamado aqui:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p> </p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

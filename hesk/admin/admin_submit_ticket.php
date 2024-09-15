@@ -45,6 +45,7 @@ if (hesk_POST('change_category') == 1)
     $_SESSION['as_name']     = hesk_POST('name');
     $_SESSION['as_email']    = hesk_POST('email');
     $_SESSION['as_priority'] = hesk_POST('priority');
+    $_SESSION['as_status']   = hesk_POST('status');
     $_SESSION['as_subject']  = hesk_POST('subject');
     $_SESSION['as_message']  = hesk_POST('message');
     $_SESSION['as_due_date'] = hesk_POST('due_date');
@@ -109,6 +110,11 @@ if ($tmpvar['priority'] < 0 || $tmpvar['priority'] > 3)
 	}
 }
 
+$tmpvar['status'] = intval(hesk_POST('status', 0));
+if ( ! isset($hesk_settings['statuses'][$tmpvar['status']])) {
+    $tmpvar['status'] = 0;
+}
+
 $tmpvar['subject'] = hesk_input( hesk_POST('subject') );
 if ($hesk_settings['require_subject'] == 1 && $tmpvar['subject'] == '')
 {
@@ -169,25 +175,25 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
         	$tmpvar[$k] = hesk_POST($k);
             $_SESSION["as_$k"] = '';
 
-			if (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $tmpvar[$k]))
-			{
-            	$date = strtotime($tmpvar[$k] . ' t00:00:00 UTC');
-                $dmin = strlen($v['value']['dmin']) ? strtotime($v['value']['dmin'] . ' t00:00:00 UTC') : false;
-                $dmax = strlen($v['value']['dmax']) ? strtotime($v['value']['dmax'] . ' t00:00:00 UTC') : false;
-
+            if ($date = hesk_datepicker_get_date($tmpvar[$k], false, 'UTC'))
+            {
                 $_SESSION["as_$k"] = $tmpvar[$k];
 
-	            if ($dmin && $dmin > $date)
+                $date->setTime(0, 0);
+                $dmin = strlen($v['value']['dmin']) ? new DateTime($v['value']['dmin'] . ' t00:00:00 UTC') : false;
+                $dmax = strlen($v['value']['dmax']) ? new DateTime($v['value']['dmax'] . ' t00:00:00 UTC') : false;
+
+                if ($dmin && $dmin->format('Y-m-d') > $date->format('Y-m-d'))
 	            {
-					$hesk_error_buffer[$k] = sprintf($hesklang['d_emin'], $v['name'], hesk_custom_date_display_format($dmin, $v['value']['date_format']));
+					$hesk_error_buffer[$k] = sprintf($hesklang['d_emin'], $v['name'], hesk_translate_date_string($dmin->format($hesk_settings['format_datepicker_php'])));
 	            }
-	            elseif ($dmax && $dmax < $date)
+	            elseif ($dmax && $dmax->format('Y-m-d') < $date->format('Y-m-d'))
 	            {
-					$hesk_error_buffer[$k] = sprintf($hesklang['d_emax'], $v['name'], hesk_custom_date_display_format($dmax, $v['value']['date_format']));
+					$hesk_error_buffer[$k] = sprintf($hesklang['d_emax'], $v['name'], hesk_translate_date_string($dmax->format($hesk_settings['format_datepicker_php'])));
 	            }
                 else
                 {
-                	$tmpvar[$k] = $date;
+                	$tmpvar[$k] = $date->getTimestamp();
                 }
 			}
             else
@@ -240,9 +246,28 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
     }
 }
 
-$tmpvar['due_date'] = hesk_input(hesk_POST('due_date'));
-if ($tmpvar['due_date'] != '' && !preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $tmpvar['due_date'])) {
-    $hesk_error_buffer['due_date'] = $hesklang['invalid_due_date'];
+
+// If use doesn't have permission to set due dates, try using the category default due date
+if (hesk_checkPermission('can_due_date',0)) {
+    $tmpvar['due_date'] = hesk_input(hesk_POST('due_date'));
+    if ($tmpvar['due_date'] != '') {
+        $date = hesk_datepicker_get_date($tmpvar['due_date']);
+        if ($date === false) {
+            $hesk_error_buffer['due_date'] = $hesklang['invalid_due_date'];
+        }
+    }
+} else {
+    $tmpvar['due_date'] = '';
+    if (($default_due_date_info = hesk_getCategoryDueDateInfo($tmpvar['category'])) !== null) {
+        $due_date = new DateTime('today midnight');
+        $due_date->add(DateInterval::createFromDateString("+{$default_due_date_info['amount']} {$default_due_date_info['unit']}s"));
+        $tmpvar['due_date'] = hesk_datepicker_format_date($due_date->getTimestamp());
+
+        // Don't set a due date if any unexpected errors
+        if ($tmpvar['due_date'] === false) {
+            $tmpvar['due_date'] = '';
+        }
+    }
 }
 
 // Generate tracking ID
@@ -251,6 +276,28 @@ $tmpvar['trackid'] = hesk_createID();
 // Log who submitted ticket
 $tmpvar['history'] = sprintf($hesklang['thist7'], hesk_date(), addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
 $tmpvar['openedby'] = $_SESSION['id'];
+
+// Was the ticket submitted as "Resolved"?
+if ($tmpvar['status'] == 3) {
+    // Check permission
+    if ( ! hesk_checkPermission('can_resolve', 0))  {
+        $hesk_error_buffer['status'] = $hesklang['noauth_resolve'];
+    }
+
+    $tmpvar['history'] .= sprintf($hesklang['thist3'], hesk_date(), addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
+
+    if ($hesk_settings['custopen'] != 1)  {
+        $tmpvar['locked'] = 1;
+    }
+
+    // Log who marked the ticket resolved
+    $tmpvar['closedat'] = 1;
+    $tmpvar['closedby'] = intval($_SESSION['id']);
+} elseif ($tmpvar['status'] != 0) {
+    // Status set to something different than "New" or "Resolved", let's log it
+    $status_name = hesk_get_status_name($tmpvar['status']);
+    $tmpvar['history'] .= sprintf($hesklang['thist9'], hesk_date(), addslashes($status_name), addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
+}
 
 // Owner
 $tmpvar['owner'] = 0;
@@ -329,19 +376,30 @@ if ($hesk_settings['can_sel_lang'])
 }
 
 // Attachments
+$use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 if ($hesk_settings['attachments']['use'])
 {
     require_once(HESK_PATH . 'inc/attachments.inc.php');
 
     $attachments = array();
     $trackingID  = $tmpvar['trackid'];
-    
-    for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-    {
-        $att = hesk_uploadFile($i);
-        if ($att !== false && !empty($att))
-        {
-            $attachments[$i] = $att;
+
+    if ($use_legacy_attachments) {
+        for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+            $att = hesk_uploadFile($i);
+            if ($att !== false && !empty($att)) {
+                $attachments[$i] = $att;
+            }
+        }
+    } else {
+        // The user used the new drag-and-drop system.
+        $temp_attachment_names = hesk_POST_array('attachments');
+        foreach ($temp_attachment_names as $temp_attachment_name) {
+            $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+            if ($temp_attachment !== null) {
+                $attachments[] = $temp_attachment;
+            }
         }
     }
 }
@@ -355,6 +413,7 @@ if (count($hesk_error_buffer)!=0)
     $_SESSION['as_name']     = hesk_POST('name');
     $_SESSION['as_email']    = hesk_POST('email');
     $_SESSION['as_priority'] = $tmpvar['priority'];
+    $_SESSION['as_status']   = $tmpvar['status'];
     $_SESSION['as_subject']  = hesk_POST('subject');
     $_SESSION['as_message']  = hesk_POST('message');
     $_SESSION['as_due_date'] = hesk_POST('due_date');
@@ -381,7 +440,11 @@ if (count($hesk_error_buffer)!=0)
 	// Remove any successfully uploaded attachments
 	if ($hesk_settings['attachments']['use'])
 	{
-		hesk_removeAttachments($attachments);
+        if ($use_legacy_attachments) {
+            hesk_removeAttachments($attachments);
+        } else {
+            $_SESSION['as_attachments'] = $attachments;
+        }
 	}
 
     $hesk_error_buffer = $hesklang['pcer'].'<br /><br /><ul>'.$hesk_error_buffer.'</ul>';
@@ -390,6 +453,11 @@ if (count($hesk_error_buffer)!=0)
 
 if ($hesk_settings['attachments']['use'] && !empty($attachments))
 {
+    // Delete temp attachment records and set the new filename
+    if (!$use_legacy_attachments) {
+        $attachments = hesk_migrateTempAttachments($attachments, $tmpvar['trackid']);
+    }
+
     foreach ($attachments as $myatt)
     {
         hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($tmpvar['trackid'])."','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -412,8 +480,9 @@ if ($hesk_settings['staff_ticket_formatting'] == 2) {
     $tmpvar['message'] = convert_html_to_text($tmpvar['message_html']);
     $tmpvar['message'] = fix_newlines($tmpvar['message']);
 
-    // Re-encode the message
+    // Prepare plain message for storage as HTML
     $tmpvar['message'] = hesk_htmlspecialchars($tmpvar['message']);
+    $tmpvar['message'] = nl2br($tmpvar['message']);
 } else {
     // `message` already contains a HTML friendly version. May as well just re-use it
     $tmpvar['message'] = hesk_makeURL($tmpvar['message']);
@@ -427,13 +496,22 @@ if ($tmpvar['owner'] > 0)
     $tmpvar['assignedby'] = ! empty($autoassign_owner) ? -1 : $_SESSION['id'];
 }
 
+// Demo mode
+if ( defined('HESK_DEMO') ) {
+    hesk_process_messages(sprintf($hesklang['antdemo'], 'https://www.hesk.com/demo/index.php?a=add'), 'new_ticket.php?category='.$tmpvar['category']);
+}
+
 // Insert ticket to database
 $ticket = hesk_newTicket($tmpvar);
 
 // Notify the customer about the ticket?
 if ($notify && $email_available)
 {
-	hesk_notifyCustomer();
+    if ($tmpvar['status'] == 3) {
+        hesk_notifyCustomer('ticket_closed');
+    } else {
+        hesk_notifyCustomer('new_ticket_by_staff');
+    }
 }
 
 // If ticket is assigned to someone notify them?
@@ -463,6 +541,7 @@ hesk_cleanSessionVars('as_name');
 hesk_cleanSessionVars('as_email');
 hesk_cleanSessionVars('as_category');
 hesk_cleanSessionVars('as_priority');
+hesk_cleanSessionVars('as_status');
 hesk_cleanSessionVars('as_subject');
 hesk_cleanSessionVars('as_message');
 hesk_cleanSessionVars('as_owner');
@@ -470,6 +549,7 @@ hesk_cleanSessionVars('as_notify');
 hesk_cleanSessionVars('as_show');
 hesk_cleanSessionVars('as_due_date');
 hesk_cleanSessionVars('as_language');
+hesk_cleanSessionVars('as_attachments');
 foreach ($hesk_settings['custom_fields'] as $k=>$v)
 {
     hesk_cleanSessionVars("as_$k");

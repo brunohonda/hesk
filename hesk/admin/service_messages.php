@@ -106,7 +106,7 @@ $num = hesk_dbNumRows($res);
                 <tbody>
                 <?php if ($num < 1): ?>
                 <tr>
-                    <td colspan="<?php echo $hesk_settings['show_language'] ? 2 : 1; ?>">
+                    <td colspan="<?php echo $hesk_settings['show_language'] ? 6 : 5; ?>">
                         <?php echo $hesklang['no_sm']; ?>
                     </td>
                 </tr>
@@ -161,7 +161,7 @@ $num = hesk_dbNumRows($res);
                             if ($hesk_settings['show_language'])
                             {
                                 ?>
-                                <td><?php echo strlen($sm['language']) ? $sm['language'] : $hesklang['all']; ?></td>
+                                <td><?php echo (is_string($sm['language']) && strlen($sm['language'])) ? $sm['language'] : $hesklang['all']; ?></td>
                                 <?php
                             }
                             ?>

@@ -27,6 +27,7 @@ class HeskHTMLPurifier extends HTMLPurifier
     public function heskPurify($content)
     {
         $config = HTMLPurifier_Config::createDefault();
+        $config->set('Attr.EnableID', true);
         $config->set('Attr.AllowedRel', array('follow', 'referrer', 'nofollow', 'noreferrer') );
         $config->set('Attr.AllowedFrameTargets', array('_blank', '_self', '_parent', '_top') );
         $config->set('Cache.SerializerPath', $this->cacheDir);

@@ -227,7 +227,7 @@ $messages = hesk_get_messages();
 $custom_fields_before_message = array();
 $custom_fields_after_message = array();
 foreach ($hesk_settings['custom_fields'] as $k=>$v) {
-    if ($v['use']==1 && hesk_is_custom_field_in_category($k, $ticket['category']))
+    if ($v['use']==1 && (strlen($ticket[$k]) || hesk_is_custom_field_in_category($k, $ticket['category'])))
     {
         $custom_field = array(
             'name' => $v['name'],

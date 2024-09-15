@@ -369,7 +369,7 @@ function edit_saved()
     }
 
     $result = hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_templates` SET `title`='".hesk_dbEscape($savename)."',`message`='".hesk_dbEscape($msg)."', `message_html`='".hesk_dbEscape($msg_html)."' WHERE `id`='".intval($id)."'");
-
+    $_SESSION['canned']['selcat2'] = $id;
 
     unset($_SESSION['canned']['what']);
     unset($_SESSION['canned']['id']);
@@ -445,6 +445,7 @@ function new_saved()
     $my_order = isset($row[0]) ? intval($row[0]) + 10 : 10;
 
     hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_templates` (`title`,`message`,`message_html`,`tpl_order`) VALUES ('".hesk_dbEscape($savename)."','".hesk_dbEscape($msg)."','".hesk_dbEscape($msg_html)."','".intval($my_order)."')");
+    $_SESSION['canned']['selcat2'] = hesk_dbInsertID();
 
     unset($_SESSION['canned']['what']);
     unset($_SESSION['canned']['name']);

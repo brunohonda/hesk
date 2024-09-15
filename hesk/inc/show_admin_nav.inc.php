@@ -176,7 +176,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                 </li>
                 <?php } ?>
                 <li class="separator"></li>
-                <?php if (hesk_checkPermission('can_man_users',0)) { ?>
+                <?php if (hesk_checkPermission('can_man_users',0) || hesk_checkPermission('can_view_users',0)) { ?>
                 <li class="listitem <?php if ($calling_script === 'manage_users') { ?>current<?php } ?>">
                     <div class="listitem__icon">
                         <a href="manage_users.php">
@@ -253,7 +253,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                 // Modules
                 if (hesk_checkPermission('can_run_reports',0) ||
                     hesk_checkPermission('can_man_settings',0)) {
-                    $pages = array('module_statistics', 'module_escalate');
+                    $pages = array('module_statistics', 'module_escalate', 'module_satisfaction', 'module_satisfaction_optout');
                     $open_menu = in_array($calling_script, $pages) ? 'current submenu-is-opened' : '';
                 ?>
                 <li class="listitem submenu <?php echo $open_menu; ?>">
@@ -286,6 +286,11 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                                         <?php echo $hesklang['escalate']['tab']; ?>
                                     </a>
                                 </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'module_satisfaction' || $calling_script === 'module_satisfaction_optout') { ?>current<?php } ?>">
+                                    <a href="module_satisfaction.php">
+                                        <?php echo $hesklang['satisfaction']['tab']; ?>
+                                    </a>
+                                </li>
                                 <?php
                             }
                             ?>
@@ -301,7 +306,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                     hesk_checkPermission('can_service_msg',0) ||
                     hesk_checkPermission('can_email_tpl',0) ||
                     hesk_checkPermission('can_man_settings',0)) {
-                    $pages = array('banned_emails', 'banned_ips', 'service_messages', 'email_templates', 'custom_fields', 'custom_statuses');
+                    $pages = array('banned_emails', 'banned_ips', 'service_messages', 'email_templates', 'custom_fields', 'custom_statuses', 'oauth_providers');
                     $open_menu = in_array($calling_script, $pages) ? 'current submenu-is-opened' : '';
                 ?>
                 <li class="separator"></li>
@@ -368,6 +373,11 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                                 <li class="submenu__listitem <?php if ($calling_script === 'custom_statuses') { ?>current<?php } ?>">
                                     <a href="custom_statuses.php">
                                         <?php echo $hesklang['statuses']; ?>
+                                    </a>
+                                </li>
+                                <li class="submenu__listitem <?php if ($calling_script === 'oauth_providers') { ?>current<?php } ?>">
+                                    <a href="oauth_providers.php">
+                                        <?php echo $hesklang['email_oauth_providers']; ?>
                                     </a>
                                 </li>
                                 <?php
@@ -448,7 +458,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                         </a>
                         <?php if ($num_mail > 0): ?>
                         <span class="badge listitem__notification">
-                            <?php echo $num_mail; ?>
+                            <?php echo ($num_mail > 99) ? '99+' : $num_mail; ?>
                         </span>
                         <?php endif; ?>
                     </div>
@@ -457,8 +467,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                     <div class="listitem__icon">
                         <a href="profile.php" class="mobile_ava">
                             <?php
-                            $letter = substr($_SESSION['name'], 0, 1);
-
+                            $letter = hesk_mb_substr($_SESSION['name'], 0, 1);
                             echo hesk_mb_strtoupper($letter);
                             ?>
                         </a>
@@ -490,7 +499,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                                 <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-mail"></use>
                             </svg>
                             <?php if ($num_mail > 0): ?>
-                            <div class="badge"><?php echo $num_mail; ?></div>
+                            <div class="badge"><?php echo ($num_mail > 99) ? '99+' : $num_mail; ?></div>
                             <?php
                             endif;
                             unset($num_mail);
@@ -501,8 +510,7 @@ $calling_script = basename($_SERVER['PHP_SELF'], '.php');
                 <div class="profile__item profile__user out-close">
                     <div class="user__ava" data-action="show-profile">
                         <?php
-                        $letter = substr($_SESSION['name'], 0, 1);
-
+                        $letter = hesk_mb_substr($_SESSION['name'], 0, 1);
                         echo hesk_mb_strtoupper($letter);
                         ?>
                     </div>

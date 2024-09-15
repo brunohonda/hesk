@@ -1209,6 +1209,68 @@ if ($hesk_settings['attachments']['use'] && ! defined('HESK_DEMO') ) {
                         </button>
                     </div>
                 </div>
+                <div class="checkbox-group">
+                    <h5>
+                        <span><?php echo $hesklang['mfa_required']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>helpdesk.html#85','400','500')">
+                            <div class="tooltype right">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </h5>
+                    <label class="switch-checkbox">
+                        <input type="checkbox" name="s_require_mfa" value="1" <?php if($hesk_settings['require_mfa'] === 1) {echo 'checked';} ?>>
+                        <div class="switch-checkbox__bullet">
+                            <i>
+                                <svg class="icon icon-close">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                                </svg>
+                                <svg class="icon icon-tick">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-tick"></use>
+                                </svg>
+                            </i>
+                        </div>
+                    </label>
+                </div>
+                <div class="form-group short">
+                    <?php
+                    //-- Default value if duration in settings is invalid
+                    $elevator_amount = 60;
+                    $elevator_unit = 'M';
+
+                    preg_match('/(\\d+)([MHD])/', $hesk_settings['elevator_duration'], $elevator_matches);
+                    if (count($elevator_matches) === 3) {
+                        $elevator_amount = $elevator_matches[1];
+                        $elevator_unit = $elevator_matches[2];
+                    }
+                    ?>
+                    <label>
+                        <span><?php echo $hesklang['elevator_duration_setting_title']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>helpdesk.html#86','400','500')">
+                            <div class="tooltype right">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </label>
+                    <input type="text" class="form-control" name="s_elevator_amount" maxlength="6" value="<?php echo $elevator_amount; ?>">
+                    <div class="dropdown-select center out-close">
+                        <select name="s_elevator_unit">
+                            <option value="M" <?php echo $elevator_unit === 'M' ? 'selected' : '' ?>>
+                                <?php echo $hesklang['escalate']['minutes']; ?>
+                            </option>
+                            <option value="H" <?php echo $elevator_unit === 'H' ? 'selected' : '' ?>>
+                                <?php echo $hesklang['escalate']['hours']; ?>
+                            </option>
+                            <option value="D" <?php echo $elevator_unit === 'D' ? 'selected' : '' ?>>
+                                <?php echo $hesklang['escalate']['days']; ?>
+                            </option>
+                        </select>
+                    </div>
+                </div>
             </section>
             <section class="settings__form_block">
                 <h3><?php echo $hesklang['attachments']; ?></h3>

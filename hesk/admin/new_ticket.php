@@ -30,12 +30,18 @@ hesk_isLoggedIn();
 // Load custom fields
 require_once(HESK_PATH . 'inc/custom_fields.inc.php');
 
+// Load statuses
+require_once(HESK_PATH . 'inc/statuses.inc.php');
+
 // Load calendar JS and CSS
 define('CALENDAR',1);
+define('ATTACHMENTS',1);
 
 if ($hesk_settings['staff_ticket_formatting'] == 2) {
     define('WYSIWYG',1);
 }
+
+$hesk_settings['datepicker'] = array();
 
 // Pre-populate fields
 
@@ -43,6 +49,7 @@ if ($hesk_settings['staff_ticket_formatting'] == 2) {
 if (isset($_REQUEST['name']) ||
     isset($_REQUEST['email']) ||
     isset($_REQUEST['priority']) ||
+    isset($_REQUEST['status']) ||
     isset($_REQUEST['subject']) ||
     isset($_REQUEST['message']) ||
     isset($_REQUEST['due_date']) ||
@@ -81,6 +88,11 @@ if (isset($_REQUEST['priority'])) {
 	$_SESSION['as_priority'] = intval($_REQUEST['priority']);
 }
 
+// Status
+if (isset($_REQUEST['status'])) {
+    $_SESSION['as_status'] = intval($_REQUEST['status']);
+}
+
 // Subject
 if (isset($_REQUEST['subject'])) {
 	$_SESSION['as_subject'] = $_REQUEST['subject'];
@@ -99,8 +111,26 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v) {
 }
 
 // Due date
-if (isset($_REQUEST['due_date']) && preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $_REQUEST['due_date'])) {
-    $_SESSION['as_due_date'] = $_REQUEST['due_date'];
+$can_due_date = hesk_checkPermission('can_due_date',0);
+if ($can_due_date && isset($_REQUEST['due_date'])) {
+    // Should be in one of valid formats
+    // - in the datepicker format
+    if (($dd = hesk_datepicker_get_date($_REQUEST['due_date']))) {
+        $_SESSION['as_due_date'] = $_REQUEST['due_date'];
+        $hesk_settings['datepicker']['#due_date']['timestamp'] = $dd->getTimestamp();
+    }
+    // - in a valid datetime format: https://www.php.net/manual/en/datetime.formats.date.php
+    else {
+        try {
+            $current_date = new DateTime($_REQUEST['due_date']);
+            $hesk_settings['datepicker']['#due_date']['timestamp'] = $current_date->getTimestamp();
+            $_REQUEST['due_date'] = hesk_datepicker_format_date($current_date->getTimestamp());
+            $_SESSION['as_due_date'] = $_REQUEST['due_date'];
+        } catch(Exception $e) {
+            $_SESSION['HESK_2ND_NOTICE']  = true;
+            $_SESSION['HESK_2ND_MESSAGE'] = $hesklang['epdd'] . ' ' . $e->getMessage();
+        }
+    }
 }
 
 // Ticket language
@@ -192,6 +222,12 @@ if ( ! isset($_SESSION['as_priority']))
 {
     $_SESSION['as_priority'] = intval($hesk_settings['categories'][$category]['priority']);
 }
+
+// Set the default ticket status
+if ( ! isset($_SESSION['as_status']))
+{
+    $_SESSION['as_status'] = 0;
+}
 ?>
 <div class="main__content categories ticket-create">
     <div class="table-wrap">
@@ -209,7 +245,7 @@ if ( ! isset($_SESSION['as_priority']))
         <h3 style="font-size: 1.3rem; margin-top: 10px"><?php echo $hesklang['nti2']; ?></h3>
         <h4><?php echo $hesklang['req_marked_with']; ?> <span class="important">*</span></h4>
 
-        <form method="post" class="form <?php echo isset($_SESSION['iserror']) && count($_SESSION['iserror']) ? 'invalid' : ''; ?>" action="admin_submit_ticket.php" name="form1" enctype="multipart/form-data">
+        <form method="post" class="form <?php echo isset($_SESSION['iserror']) && count($_SESSION['iserror']) ? 'invalid' : ''; ?>" action="admin_submit_ticket.php" name="form1" id="submit-ticket" enctype="multipart/form-data">
 
             <?php if ($number_of_categories > 1): ?>
             <div class="form-group" style="margin-bottom: 0px;">
@@ -217,12 +253,19 @@ if ( ! isset($_SESSION['as_priority']))
                     <?php echo $hesklang['category']; ?>:
                 </label>
                 &nbsp;
-                <button type="submit" class="btn btn--blue-border change_category" name="change_category" value="1" title="<?php echo $hesklang['chg_cat']; ?>"><?php echo hesk_getCategoryName($category); ?>
+                <button type="button" class="btn btn--blue-border change_category" name="cc-btn" id="cc-btn" title="<?php echo $hesklang['chg_cat']; ?>"><?php echo hesk_getCategoryName($category); ?>
                     &nbsp;
                     <svg class="icon icon-edit">
                         <use xlink:href="../img/sprite.svg#icon-edit"></use>
                     </svg>
                 </button>
+                <input type="hidden" name="change_category" id="change_category" value="0">
+                <script>
+                $("#cc-btn").click(function() {
+                    $("#change_category").val(1);
+                    $("#submit-ticket").submit();
+                });
+                </script>
             </div>
             <?php endif; ?>
 
@@ -244,9 +287,9 @@ if ( ! isset($_SESSION['as_priority']))
             </div>
             <div id="email_suggestions"></div>
             <div class="form-group">
-                <label><?php echo $hesklang['priority']; ?>: <span class="important">*</span></label>
+                <label class="priority <?php if (in_array('priority',$_SESSION['iserror'])) {echo 'isErrorStr';} ?>"><?php echo $hesklang['priority']; ?>: <?php if ($hesk_settings['select_pri']) {echo '<span class="important">*</span>';} ?></label>
                 <div class="dropdown-select center out-close priority">
-                    <select name="priority" <?php if (in_array('priority',$_SESSION['iserror'])) {echo ' class="isError" ';} ?> >
+                    <select name="priority">
                         <?php
                         // Show the "Click to select"?
                         if ($hesk_settings['select_pri'])
@@ -258,6 +301,14 @@ if ( ! isset($_SESSION['as_priority']))
                         <option value="2" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==2) {echo 'selected';} ?>><?php echo $hesklang['medium']; ?></option>
                         <option value="1" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==1) {echo 'selected';} ?>><?php echo $hesklang['high']; ?></option>
                         <option value="0" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==0) {echo 'selected';} ?>><?php echo $hesklang['critical']; ?></option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group ts" id="ticket-status-div">
+                <label><?php echo $hesklang['status']; ?>:</label>
+                <div class="dropdown-select center out-close">
+                    <select id="status-select" name="status" onchange="hesk_update_status_color(this.value)">
+                        <?php echo hesk_get_status_select('', hesk_checkPermission('can_resolve', 0), $_SESSION['as_status']); ?>
                     </select>
                 </div>
             </div>
@@ -295,12 +346,12 @@ if ( ! isset($_SESSION['as_priority']))
                     {
                         /* Radio box */
                         case 'radio':
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isError' : '';
+
                             echo '
-                                <div class="form-group">
+                                <div class="form-group '.$cls.'">
                                     <label>'.$v['name:'].' '.$v['req'].'</label>
                                     <div class="radio-list">';
-
-                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError" ' : '';
 
                             $index = 0;
                             foreach ($v['value']['radio_options'] as $option)
@@ -322,7 +373,7 @@ if ( ! isset($_SESSION['as_priority']))
 
                                 echo '
                                             <div class="radio-custom" style="margin-bottom: 5px">
-                                                <input type="radio" id="edit_'.$k.$index.'" name="'.$k.'" value="'.$option.'" '.$checked.' '.$cls.'>
+                                                <input type="radio" id="edit_'.$k.$index.'" name="'.$k.'" value="'.$option.'" '.$checked.'>
                                                 <label for="edit_'.$k.$index.'">'.$option.'</label>
                                             </div>';
                                 $index++;
@@ -370,11 +421,11 @@ if ( ! isset($_SESSION['as_priority']))
 
                         /* Checkbox */
                         case 'checkbox':
-                            echo '
-                                <div class="form-group">
-                                    <label>'.$v['name:'].' '.$v['req'].'</label>';
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isError' : '';
 
-                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError" ' : '';
+                            echo '
+                                <div class="form-group '.$cls.'">
+                                    <label>'.$v['name:'].' '.$v['req'].'</label>';
 
                             $index = 0;
                             foreach ($v['value']['checkbox_options'] as $option)
@@ -390,7 +441,7 @@ if ( ! isset($_SESSION['as_priority']))
 
                                 echo '
                                     <div class="checkbox-custom">
-                                        <input type="checkbox" id="edit_'.$k.$index.'" name="'.$k.'[]" value="'.$option.'" '.$checked.' '.$cls.'>
+                                        <input type="checkbox" id="edit_'.$k.$index.'" name="'.$k.'[]" value="'.$option.'" '.$checked.'>
                                         <label for="edit_'.$k.$index.'"> '.$option.'</label>
                                     </div>';
                                 $index++;
@@ -413,21 +464,25 @@ if ( ! isset($_SESSION['as_priority']))
 
                         // Date
                         case 'date':
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isErrorStr' : '';
+                            if (is_string($k_value) && ($dd = hesk_datepicker_get_date($k_value))) {
+                                $hesk_settings['datepicker']['#'.$k]['timestamp'] = $dd->getTimestamp();
+                            }
                             echo '
                                 <section class="param calendar">
-                                    <label>'.$v['name:'].' '.$v['req'].'</label>
+                                    <label class="'.$cls.'">'.$v['name:'].' '.$v['req'].'</label>
                                     <div class="calendar--button">
                                         <button type="button">
                                             <svg class="icon icon-calendar">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-calendar"></use>
                                             </svg>
                                         </button>
-                                        <input name="'. $k .'"
+                                        <input name="'. $k .'" id="'. $k .'"
                                                value="'. $k_value .'"
                                                type="text" class="datepicker">
                                     </div>
                                     <div class="calendar--value" '. ($k_value ? 'style="display: block"' : '') . '>
-                                        <span>'. $k_value .'</span>
+                                        <span class="'. ($cls && ! empty($k_value) ? $cls : '') .'"><i>'. $k_value .'</i></span>
                                         <i class="close">
                                             <svg class="icon icon-close">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-close"></use>
@@ -777,6 +832,10 @@ if ( ! isset($_SESSION['as_priority']))
 
                         // Date
                         case 'date':
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isErrorStr' : '';
+                            if (is_string($k_value) && ($dd = hesk_datepicker_get_date($k_value))) {
+                                $hesk_settings['datepicker']['#'.$k]['timestamp'] = $dd->getTimestamp();
+                            }
                             echo '
                                 <section class="param calendar">
                                     <label>'.$v['name:'].' '.$v['req'].'</label>
@@ -786,12 +845,12 @@ if ( ! isset($_SESSION['as_priority']))
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-calendar"></use>
                                             </svg>
                                         </button>
-                                        <input name="'. $k .'"
+                                        <input name="'. $k .'" id="'. $k .'"
                                                value="'. $k_value .'"
                                                type="text" class="datepicker">
                                     </div>
                                     <div class="calendar--value" '. ($k_value ? 'style="display: block"' : '') . '>
-                                        <span>'. $k_value .'</span>
+                                        <span class="'. $cls .'"><i>'. $k_value .'</i></span>
                                         <i class="close">
                                             <svg class="icon icon-close">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-close"></use>
@@ -841,24 +900,23 @@ if ( ! isset($_SESSION['as_priority']))
             <?php
             /* attachments */
             if ($hesk_settings['attachments']['use']) {
-
+                require(HESK_PATH . 'inc/attachments.inc.php');
                 ?>
-                <div class="block--attach">
-                    <svg class="icon icon-attach">
-                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
-                    </svg>
-                    <div>
-                        <?php echo $hesklang['attachments']; ?>:
+                <div class="attachments">
+                    <div class="block--attach">
+                        <svg class="icon icon-attach">
+                            <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
+                        </svg>
+                        <div>
+                            <?php echo $hesklang['attachments']; ?>:
+                        </div>
                     </div>
+                    <?php
+                    build_dropzone_markup(true);
+                    display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                    dropzone_display_existing_files(hesk_SESSION_array('as_attachments'));
+                    ?>
                 </div>
-                <?php
-                for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                {
-                    $cls = ($i == 1 && in_array('attachments',$_SESSION['iserror'])) ? ' class="isError" ' : '';
-                    echo '<input type="file" name="attachment['.$i.']" size="50" '.$cls.' /><br />';
-                }
-                ?>
-                <a class="link" href="javascript:" onclick="hesk_window('../file_limits.php',250,500);return false;"><?php echo $hesklang['ful']; ?></a>
                 <?php
             }
 
@@ -883,7 +941,22 @@ if ( ! isset($_SESSION['as_priority']))
                     <?php endif; ?>
                 </div>
             </div>
+            <?php if ($can_due_date): ?>
             <section class="param calendar">
+                <?php
+                // Default due date
+                $default_due_date_info = hesk_getCategoryDueDateInfo($category);
+
+                $due_date = isset($_SESSION['as_due_date']) ? $_SESSION['as_due_date'] : null;
+                if ($due_date && ($dd = hesk_datepicker_get_date($due_date))) {
+                    $hesk_settings['datepicker']['#due_date']['timestamp'] = $dd->getTimestamp();
+                } elseif ($default_due_date_info !== null && $due_date === null) {
+                    $current_date = new DateTime('today midnight');
+                    $current_date->add(DateInterval::createFromDateString("+{$default_due_date_info['amount']} {$default_due_date_info['unit']}s"));
+                    $hesk_settings['datepicker']['#due_date']['timestamp'] = $current_date->getTimestamp();
+                    $due_date = hesk_datepicker_format_date($current_date->getTimestamp());
+                }
+                ?>
                 <label><?php echo $hesklang['due_date']; ?>:</label>
                 <div class="calendar--button">
                     <button type="button">
@@ -891,12 +964,12 @@ if ( ! isset($_SESSION['as_priority']))
                             <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
                         </svg>
                     </button>
-                    <input name="due_date"
-                           value="<?php if (isset($_SESSION['as_due_date'])) {echo stripslashes(hesk_input($_SESSION['as_due_date']));} ?>"
+                    <input name="due_date" id="due_date"
+                           value="<?php if (isset($due_date)) {echo stripslashes(hesk_input($due_date));} ?>"
                            type="text" class="datepicker">
                 </div>
-                <div class="calendar--value" style="<?php echo empty($_SESSION['as_due_date']) ? '' : 'display: block'; ?>">
-                <span><?php echo isset($_SESSION['as_due_date']) ? stripslashes($_SESSION['as_due_date']) : ''; ?></span>
+                <div class="calendar--value" style="<?php echo empty($due_date) ? '' : 'display: block'; ?>">
+                <span><?php echo isset($due_date) ? stripslashes($due_date) : ''; ?></span>
                 <i class="close">
                     <svg class="icon icon-close">
                         <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
@@ -905,6 +978,7 @@ if ( ! isset($_SESSION['as_priority']))
                 </div>
             </section>
             <br>
+            <?php endif; ?>
             <?php if ($hesk_settings['can_sel_lang']): ?>
             <div class="form-group">
                 <label for="as_language"><?php echo $hesklang['tlan']; ?>:</label>
@@ -976,9 +1050,15 @@ if ( ! isset($_SESSION['as_priority']))
                 <?php
             }
             ?>
+
+            <?php if ( defined('HESK_DEMO') ): ?>
+                 <?php hesk_show_notice(sprintf($hesklang['antdemo'], 'https://www.hesk.com/demo/index.php?a=add')); ?>
+                <button class="btn btn-full"><?php echo $hesklang['sub_ticket']; ?></button>
+            <?php else: ?>
+                <button type="submit" class="btn btn-full"><?php echo $hesklang['sub_ticket']; ?></button>
+            <?php endif; ?>
             <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
             <input type="hidden" name="category" value="<?php echo $category; ?>">
-            <button type="submit" class="btn btn-full"><?php echo $hesklang['sub_ticket']; ?></button>
         </form>
         <p>&nbsp;</p>
         <p>&nbsp;</p>
@@ -991,6 +1071,11 @@ if ( ! isset($_SESSION['as_priority']))
 
 hesk_cleanSessionVars('iserror');
 hesk_cleanSessionVars('isnotice');
+
+// Clearing it out, otherwise users could delete an attachment, refresh, and it'll "supposedly" be back
+hesk_cleanSessionVars('as_attachments');
+
+$hesk_settings['print_status_select_box_jquery'] = true;
 
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
@@ -1009,17 +1094,16 @@ function print_select_category($number_of_categories)
 		hesk_process_messages($hesklang['sel_app_cat'],'NOREDIRECT','NOTICE');
 	}
 
-/* This will handle error, success and notice messages */
-hesk_handle_messages();
-?>
-<div class="main__content categories">
-    <div class="table-wrap">
-        <h3><?php echo $hesklang['select_category_staff']; ?></h3>
-        <div class="select_category">
-            <?php
-            // Print a select box if number of categories is large
-            if ($number_of_categories > $hesk_settings['cat_show_select']) {
-                ?>
+    /* This will handle error, success and notice messages */
+    hesk_handle_messages();
+    ?>
+    <div class="main__content categories">
+        <?php
+        // Print a select box if number of categories is large
+        if ($number_of_categories > $hesk_settings['cat_show_select']) {
+            ?>
+            <div class="table-wrap">
+                <h2 class="select__title-alt"><?php echo $hesklang['select_category_staff']; ?></h2>
                 <form action="new_ticket.php" method="get" class="form">
                     <select class="form-control" name="category" id="select_category">
                         <?php
@@ -1040,59 +1124,33 @@ hesk_handle_messages();
                         $('#select_category').selectize();
                     });
                 </script>
-                <?php
-            }
-            // Otherwise print quick links
-            else
-            {
-                ?>
-                <ul id="ul_category">
-                    <?php
-                    foreach ($hesk_settings['categories'] as $k=>$v)
-                    {
-                        echo '<li><a ripple="ripple" href="new_ticket.php?a=add&amp;category='.$k.'">'.$v['name'].'</a></li>';
-                    }
-                    ?>
-                </ul>
-                <?php
-            }
+            </div>
+            <?php
+        }
+        // Otherwise print quick links
+        else
+        {
             ?>
-        </div>
+            <h2 class="select__title"><?php echo $hesklang['select_category_staff']; ?></h2>
+            <div class="nav">
+                <?php foreach ($hesk_settings['categories'] as $k => $v): ?>
+                <a href="new_ticket.php?a=add&amp;category=<?php echo $k; ?>" class="navlink <?php if ($number_of_categories > 8) echo "navlink-condensed"; ?>">
+                    <div class="icon-in-circle">
+                        <svg class="icon icon-chevron-right">
+                            <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-right"></use>
+                        </svg>
+                    </div>
+                    <div>
+                        <h5 class="navlink__title"><!--[if IE]> &raquo; <![endif]--><?php echo $v['name']; ?></h5>
+                    </div>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php
+        }
+        ?>
     </div>
-</div>
-<style>
-    #ul_category {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-        margin-top: 10px;
-    }
-
-    #ul_category li:first-child {
-        border-top: 1px solid #d1d5d7;
-    }
-
-    #ul_category li {
-        border: 1px solid #d1d5d7;
-        border-top: none;
-        border-radius: 2px;
-    }
-
-    #ul_category li:hover {
-        background: rgba(0,0,0,.05);
-    }
-
-    #ul_category li a {
-        display: block;
-        font-size: 14px;
-        padding: 0.75em 0.75em;
-        text-decoration: none;
-        transition: all 0.12s ease;
-        word-wrap: break-word;
-    }
-</style>
-
-<?php
+    <?php
 
 	hesk_cleanSessionVars('iserror');
 	hesk_cleanSessionVars('isnotice');
@@ -1116,6 +1174,7 @@ function hesk_new_ticket_reset_data()
     hesk_cleanSessionVars('as_email');
     hesk_cleanSessionVars('as_category');
     hesk_cleanSessionVars('as_priority');
+    hesk_cleanSessionVars('as_status');
     hesk_cleanSessionVars('as_subject');
     hesk_cleanSessionVars('as_message');
     hesk_cleanSessionVars('as_owner');

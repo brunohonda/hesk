@@ -51,6 +51,11 @@ if ($status != 3)
 
 $locked = 0;
 
+// Is the new status same as old status?
+if (hesk_get_ticket_status_from_DB($trackingID) == $status) {
+    hesk_process_messages($hesklang['noch'],'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'NOTICE');
+}
+
 if ($status == 3) // Closed
 {
     if ( ! hesk_checkPermission('can_resolve', 0))

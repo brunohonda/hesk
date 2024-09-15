@@ -4,8 +4,13 @@
  *
  * @(#) $Header: /opt2/ena/metal/pop3/pop3.php,v 1.24 2014/01/27 10:46:48 mlemos Exp $
  *
+ * 27th Sep 2022
+ * Modified for Hesk by Klemen Stirn: added XOAUTH2 support
+ * https://www.hesk.com
+ *
  */
 
+#[AllowDynamicProperties]
 class pop3_class
 {
 	var $hostname="";
@@ -329,6 +334,42 @@ class pop3_class
 			}
 			if(!$authenticated)
 			{
+                // Perform XOAUTH2 authentication for Hesk
+                if($this->authentication_mechanism == 'XOAUTH2') {
+
+                    if($this->PutLine("AUTH XOAUTH2")==0)
+                        return($this->SetError("Could not send the AUTH XOAUTH2 command"));
+
+                    $response=$this->GetLine();
+                    if(GetType($response)!="string")
+                        return("Could not get AUTH command response");
+
+                    if ($this->Tokenize($response," ") != "+")
+                        return("Unexpected AUTH command response");
+
+                    if($this->PutLine(base64_encode("user=" . $user . "\1auth=Bearer " . $password . "\1\1"))==0)
+                        return($this->SetError("Could not send the AUTH XOAUTH2 command"));
+
+                    $response=$this->GetLine();
+                    if(GetType($response)!="string")
+                        return("Could not get AUTH command response");
+
+                    switch($this->Tokenize($response," "))
+                    {
+                        case "+OK":
+                            $response="";
+                            break;
+                        case "+":
+                            $response=base64_decode($this->Tokenize("\r\n"));
+                            break;
+                        default:
+                            return($this->SetError("Authentication error: ".$this->Tokenize("\r\n")));
+                    }
+
+                    $this->state="TRANSACTION";
+                    return("");
+                }
+
 				if($this->PutLine("USER $user")==0)
 					return($this->SetError("Could not send the USER command"));
 				$response=$this->GetLine();
@@ -661,6 +702,7 @@ class pop3_class
 	}
 };
 
+#[AllowDynamicProperties]
 class pop3_stream
 {
 	var $opened = 0;

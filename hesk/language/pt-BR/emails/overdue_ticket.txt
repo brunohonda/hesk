@@ -1,0 +1,15 @@
+Olá,
+
+Um ticket está atrasado! Detalhes do ticket:
+
+Assunto do Ticket: %%SUBJECT%%
+ID de Rastreamento: %%TRACK_ID%%
+
+Você pode ver este ticket aqui:
+%%TRACK_URL%%
+
+
+Cumprimentos,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

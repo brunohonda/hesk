@@ -904,6 +904,7 @@ $(document).ready(function () {
         $('input:text:visible:first').focus();
         e.preventDefault();
     });
+    $('select[name="modal-dropdown"]').selectize();
 
 
     /* ===========================================================
@@ -983,7 +984,7 @@ $(document).ready(function () {
             .find('.datepicker')
             .data("datepicker")
             .clear();
-        $('.param.calendar .calendar--value').fadeOut(150, function () {
+        $(this).parent().parent().find('.calendar--value').fadeOut(150, function () {
             $(this).find('span').text('');
         })
     });
@@ -1046,6 +1047,15 @@ $(document).ready(function () {
         e.preventDefault();
     });
     $('.right-bar.profile-edit [data-action="save"]').click(function (e) {
+        $(this).closest('.right-bar').fadeOut(150);
+        $('body').removeClass('noscroll');
+        $('.notification-bar[data-type="profile-saved"]').fadeIn(150);
+    });
+    $('.main__content.profile [data-action="profile-password"]').click(function (e) {
+        $('.right-bar.profile-password').fadeIn(150);
+        $('body').addClass('noscroll');
+    });
+    $('.right-bar.profile-password [data-action="save"]').click(function (e) {
         $(this).closest('.right-bar').fadeOut(150);
         $('body').removeClass('noscroll');
         $('.notification-bar[data-type="profile-saved"]').fadeIn(150);

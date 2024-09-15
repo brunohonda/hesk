@@ -33,7 +33,7 @@ require_once(TEMPLATE_PATH . 'customer/util/alerts.php');
     <meta name="msapplication-config" content="<?php echo HESK_PATH; ?>img/favicon/browserconfig.xml" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="format-detection" content="telephone=no" />
-    <link rel="stylesheet" media="all" href="<?php echo TEMPLATE_PATH; ?>customer/css/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.css" />
+    <link rel="stylesheet" media="all" href="<?php echo TEMPLATE_PATH; ?>customer/css/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.css?<?php echo $hesk_settings['hesk_version']; ?>" />
     <!--[if IE]>
     <link rel="stylesheet" media="all" href="<?php echo TEMPLATE_PATH; ?>customer/css/ie9.css" />
     <![endif]-->
@@ -155,7 +155,7 @@ require_once(TEMPLATE_PATH . 'customer/util/alerts.php');
                             ?>
                             <b><?php echo $hesklang['forgot_tid']; ?></b><br><br>
                             <?php echo $hesklang['tid_mail']; ?>
-                            <form action="index.php" method="post" name="form1" class="form">
+                            <form action="index.php" method="post" name="form1" id="form1" class="form">
                                 <div class="form-group">
                                     <label class="label" style="display: none"><?php echo $hesklang['email']; ?></label>
                                     <input id="forgot-email" type="email" class="form-control" name="email" value="<?php echo $email; ?>">
@@ -174,6 +174,42 @@ require_once(TEMPLATE_PATH . 'customer/util/alerts.php');
                                         </label>
                                     </div>
                                 </div>
+
+                                <?php
+                                // Use Invisible reCAPTCHA?
+                                if ($hesk_settings['secimg_use'] && $hesk_settings['recaptcha_use'] == 1) {
+                                    define('RECAPTCHA',1);
+                                    ?>
+                                    <div class="g-recaptcha" data-sitekey="<?php echo $hesk_settings['recaptcha_public_key']; ?>" data-bind="forgot-tid-submit" data-callback="recaptcha_submitForm"></div>
+                                <?php
+                                } elseif ($hesk_settings['secimg_use']) {
+                                ?>
+                                <div class="captcha-remind">
+                                    <div class="form-group">
+                                        <?php
+                                        // Use reCAPTCHA V2?
+                                        if ($hesk_settings['recaptcha_use'] == 2) {
+                                            define('RECAPTCHA',1);
+                                            ?>
+                                            <div class="g-recaptcha" data-sitekey="<?php echo $hesk_settings['recaptcha_public_key']; ?>"></div>
+                                        <?php } else { ?>
+                                            <img name="secimg" src="print_sec_img.php?<?php echo rand(10000,99999); ?>" width="150" height="40" alt="<?php echo $hesklang['sec_img']; ?>" title="<?php echo $hesklang['sec_img']; ?>" style="vertical-align:text-bottom">
+                                            <a class="btn btn-refresh" href="javascript:void(0)" onclick="javascript:document.form1.secimg.src='print_sec_img.php?'+ ( Math.floor((90000)*Math.random()) + 10000);">
+                                                <svg class="icon icon-refresh">
+                                                    <use xlink:href="<?php echo TEMPLATE_PATH; ?>customer/img/sprite.svg#icon-refresh"></use>
+                                                </svg>
+                                            </a>
+                                            <label class="required"><?php echo $hesklang['sec_enter']; ?></label>
+                                            <input type="text" name="mysecnum" size="20" maxlength="5" autocomplete="off" class="form-control">
+                                            <?php
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+                                <?php
+                                }
+                                ?>
+
                                 <input type="hidden" name="a" value="forgot_tid">
                                 <input type="hidden" id="js" name="forgot" value="<?php echo (hesk_GET('forgot') ? '1' : '0'); ?>">
                                 <button id="forgot-tid-submit" type="submit" class="btn btn-full"><?php echo $hesklang['tid_send']; ?></button>
@@ -196,10 +232,10 @@ https://www.hesk.com/buy.php
 $hesk_settings['hesk_license']('Qo8Zm9vdGVyIGNsYXNzPSJmb290ZXIiPg0KICAgIDxwIGNsY
 XNzPSJ0ZXh0LWNlbnRlciI+UG93ZXJlZCBieSA8YSBocmVmPSJodHRwczovL3d3dy5oZXNrLmNvbSIgY
 2xhc3M9ImxpbmsiPkhlbHAgRGVzayBTb2Z0d2FyZTwvYT4gPHNwYW4gY2xhc3M9ImZvbnQtd2VpZ2h0L
-WJvbGQiPkhFU0s8L3NwYW4+LCBpbiBwYXJ0bmVyc2hpcCB3aXRoIDxhIGhyZWY9Imh0dHBzOi8vd3d3L
-nN5c2FpZC5jb20vP3V0bV9zb3VyY2U9SGVzayZhbXA7dXRtX21lZGl1bT1jcGMmYW1wO3V0bV9jYW1wY
-Wlnbj1IZXNrUHJvZHVjdF9Ub19IUCIgY2xhc3M9ImxpbmsiPlN5c0FpZCBUZWNobm9sb2dpZXM8L2E+P
-C9wPg0KPC9mb290ZXI+DQo=',"\104", "347db01e129edd4b3877f70ea6fed019462ae827");
+WJvbGQiPkhFU0s8L3NwYW4+PGJyPk1vcmUgSVQgZmlyZXBvd2VyPyBUcnkgPGEgaHJlZj0iaHR0cHM6L
+y93d3cuc3lzYWlkLmNvbS8/dXRtX3NvdXJjZT1IZXNrJmFtcDt1dG1fbWVkaXVtPWNwYyZhbXA7dXRtX
+2NhbXBhaWduPUhlc2tQcm9kdWN0X1RvX0hQIiBjbGFzcz0ibGluayI+U3lzQWlkPC9hPjwvcD4NCjwvZ
+m9vdGVyPg0K',"\104", "a809404e0adf9823405ee0b536e5701fb7d3c969");
 /*******************************************************************************
 END LICENSE CODE
 *******************************************************************************/
@@ -208,7 +244,7 @@ END LICENSE CODE
 </div>
 <?php include(TEMPLATE_PATH . '../../footer.txt'); ?>
 <script src="<?php echo TEMPLATE_PATH; ?>customer/js/jquery-3.5.1.min.js"></script>
-<script src="<?php echo TEMPLATE_PATH; ?>customer/js/hesk_functions.js"></script>
+<script src="<?php echo TEMPLATE_PATH; ?>customer/js/hesk_functions.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
 <script src="<?php echo TEMPLATE_PATH; ?>customer/js/svg4everybody.min.js"></script>
 <script src="<?php echo TEMPLATE_PATH; ?>customer/js/selectize.min.js"></script>
 <script src="<?php echo TEMPLATE_PATH; ?>customer/js/jquery.modal.min.js"></script>
@@ -225,6 +261,14 @@ END LICENSE CODE
         <?php } ?>
     });
 </script>
-<script src="<?php echo TEMPLATE_PATH; ?>customer/js/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js"></script>
+<script src="<?php echo TEMPLATE_PATH; ?>customer/js/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+<?php if (defined('RECAPTCHA')) : ?>
+<script src="https://www.google.com/recaptcha/api.js?hl=<?php echo $hesklang['RECAPTCHA']; ?>" async defer></script>
+<script>
+    function recaptcha_submitForm() {
+        document.getElementById("form1").submit();
+    }
+</script>
+<?php endif; ?>
 </body>
 </html>

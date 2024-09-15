@@ -1,0 +1,5 @@
+<p>Olá,</p>
+<p>Um cliente acabou de responder ao chamado "%%SUBJECT%%".</p>
+<p>Você pode ler a mensagem de resposta e gerenciar este chamado aqui:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

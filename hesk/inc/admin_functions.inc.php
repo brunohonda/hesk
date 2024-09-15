@@ -403,7 +403,7 @@ function hesk_activeSessionValidate($username, $password_hash, $tag)
 	}
 
 	return false;
-} // hesk_activeSessionValidate
+} // END hesk_activeSessionValidate()
 
 
 function hesk_activeSessionCreateTag($username, $password_hash)
@@ -417,80 +417,82 @@ function hesk_autoLogin($noredirect=0)
 {
 	global $hesk_settings, $hesklang, $hesk_db_link;
 
-	if (!$hesk_settings['autologin'])
-    {
-    	return false;
+    if (!$hesk_settings['autologin']) {
+        return false;
     }
 
-    $user = hesk_htmlspecialchars( hesk_COOKIE('hesk_username') );
-    $hash = hesk_htmlspecialchars( hesk_COOKIE('hesk_p') );
-    define('HESK_USER', $user);
-
-	if (empty($user) || empty($hash))
-    {
-    	return false;
+    if (empty($remember = hesk_COOKIE('hesk_remember')) || substr_count($remember, ':') !== 1) {
+        return false;
     }
 
-	/* Login cookies exist, now lets limit brute force attempts */
-	hesk_limitBfAttempts();
+    // Login cookies exist, now lets limit brute force attempts
+    hesk_limitBfAttempts();
 
-	// Admin login URL
-	$url = $hesk_settings['hesk_url'] . '/' . $hesk_settings['admin_dir'] . '/index.php?a=login&notice=1';
+    // Admin login URL
+    $url = $hesk_settings['hesk_url'] . '/' . $hesk_settings['admin_dir'] . '/index.php?a=login&notice=1';
 
-	/* Check username */
-	$result = hesk_dbQuery('SELECT * FROM `'.$hesk_settings['db_pfix']."users` WHERE `user` = '".hesk_dbEscape($user)."' LIMIT 1");
-	if (hesk_dbNumRows($result) != 1)
-	{
-        hesk_setcookie('hesk_username', '');
-        hesk_setcookie('hesk_p', '');
+    // Get and verify authentication tokens
+    list($selector, $authenticator) = explode(':', $remember);
+    $authenticator = base64_decode($authenticator);
+    if (strlen($authenticator) > 256) {
+        hesk_setcookie('hesk_remember', '');
+        header('Location: '.$url);
+        exit();
+    }
+
+    $result = hesk_dbQuery('SELECT * FROM `'.$hesk_settings['db_pfix']."auth_tokens` WHERE `selector` = '".hesk_dbEscape($selector)."' AND `expires` > NOW() LIMIT 1");
+    if (hesk_dbNumRows($result) != 1) {
+        hesk_setcookie('hesk_remember', '');
         header('Location: '.$url);
         exit();
 	}
 
-	$res=hesk_dbFetchAssoc($result);
+    $auth = hesk_dbFetchAssoc($result);
 
-	/* Check password */
-	if ($hash != hesk_Pass2Hash($res['pass'] . hesk_mb_strtolower($user) . $res['pass']) )
-	{
-		hesk_setcookie('hesk_username', '');
-		hesk_setcookie('hesk_p', '');
-		header('Location: '.$url);
-		exit();
-	}
-
-	// Set user details
-	foreach ($res as $k=>$v)
-	{
-		$_SESSION[$k]=$v;
-	}
-
-    /* Check if default password */
-    if ($_SESSION['pass'] == '499d74967b28a841c98bb4baaabaad699ff3c079')
-    {
-    	hesk_process_messages($hesklang['chdp'],'NOREDIRECT','NOTICE');
+    if ( ! hash_equals($auth['token'], hash('sha256', $authenticator))) {
+        hesk_setcookie('hesk_remember', '');
+        header('Location: '.$url);
+        exit();
     }
 
-	// Set a tag that will be used to expire sessions after username or password change
-	$_SESSION['session_verify'] = hesk_activeSessionCreateTag($user, $_SESSION['pass']);
+    // Token OK, let's regenerate session ID and get user data
+    hesk_session_regenerate_id();
 
-	// We don't need the password hash anymore
-	unset($_SESSION['pass']);
+    $result = hesk_dbQuery('SELECT * FROM `'.$hesk_settings['db_pfix']."users` WHERE `id` = ".intval($auth['user_id'])." LIMIT 1");
+    if (hesk_dbNumRows($result) != 1) {
+        hesk_setcookie('hesk_remember', '');
+        header('Location: '.$url);
+        exit();
+    }
+
+    $row = hesk_dbFetchAssoc($result);
+    foreach ($row as $k => $v) {
+        if ($k == 'pass') {
+            continue;
+        }
+        $_SESSION[$k] = $v;
+    }
+
+    $user = $row['user'];
+    define('HESK_USER', $user);
+
+    // Each token should only be used once, so update the old one with a new one
+    $selector = base64_encode(random_bytes(9));
+    $authenticator = random_bytes(33);
+    hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."auth_tokens` SET `selector`='".hesk_dbEscape($selector)."', `token` = '".hesk_dbEscape(hash('sha256', $authenticator))."', `created` = NOW() WHERE `id` = ".intval($auth['id']));
+    hesk_setcookie('hesk_remember', $selector.':'.base64_encode($authenticator), strtotime('+1 year'));
+
+	// Set a tag that will be used to expire sessions after username or password change
+	$_SESSION['session_verify'] = hesk_activeSessionCreateTag($user, $row['pass']);
 
 	/* Login successful, clean brute force attempts */
 	hesk_cleanBfAttempts();
-
-	/* Regenerate session ID (security) */
-	hesk_session_regenerate_id();
 
 	/* Get allowed categories */
 	if (empty($_SESSION['isadmin']))
 	{
 	    $_SESSION['categories']=explode(',',$_SESSION['categories']);
 	}
-
-	/* Renew cookies */
-	hesk_setcookie('hesk_username', "$user", strtotime('+1 year'));
-	hesk_setcookie('hesk_p', "$hash", strtotime('+1 year'));
 
     /* Close any old tickets here so Cron jobs aren't necessary */
 	if ($hesk_settings['autoclose'])
@@ -569,7 +571,7 @@ function hesk_isLoggedIn()
     }
     else
     {
-        hesk_session_regenerate_id();
+        // hesk_session_regenerate_id();
 
 		// Let's make sure access data is up-to-date
 		$res = hesk_dbQuery( "SELECT `user`, `pass`, `isadmin`, `categories`, `heskprivileges` FROM `".$hesk_settings['db_pfix']."users` WHERE `id` = '".intval($_SESSION['id'])."' LIMIT 1" );
@@ -680,7 +682,11 @@ function hesk_verifyGoto()
 		'manage_ticket_templates.php' => '',
 		'manage_users.php' => '',
 		'module_statistics.php' => '',
+		'module_escalate.php' => '',
+		'module_satisfaction.php' => '',
+		'module_satisfaction_optout.php' => '',
 		'new_ticket.php' => '',
+		'oauth_providers.php' => '',
 		'profile.php' => '',
 		'reports.php' => '',
 		'service_messages.php' => '',
@@ -706,6 +712,8 @@ function hesk_verifyGoto()
 
 
 function hesk_Pass2Hash($plaintext) {
+    // This is a LEGACY function, only used to check and update legacy passwords
+    // Use hesk_password_hash/hesk_password_verify functions instead!
     $majorsalt  = '';
     $len = strlen($plaintext);
     for ($i=0;$i<$len;$i++)
@@ -715,6 +723,34 @@ function hesk_Pass2Hash($plaintext) {
     $corehash = sha1($majorsalt);
     return $corehash;
 } // END hesk_Pass2Hash()
+
+
+function hesk_password_hash($password)
+{
+    if ( ! function_exists('password_hash')) {
+        global $hesklang;
+        die($hesklang['old_php_version']);
+    }
+
+    return password_hash($password, PASSWORD_DEFAULT);
+} // END hesk_password_hash()
+
+
+function hesk_password_verify($password, $hash)
+{
+    if ( ! function_exists('password_verify')) {
+        global $hesklang;
+        die($hesklang['old_php_version']);
+    }
+
+    return password_verify($password, $hash);
+} // END hesk_password_verify()
+
+
+function hesk_password_needs_rehash($hash)
+{
+    return password_needs_rehash($hash, PASSWORD_DEFAULT);
+} // END hesk_password_needs_rehash()
 
 
 function hesk_formatDate($dt, $from_database=true)
@@ -913,3 +949,15 @@ function hesk_rrmdir($dir, $keep_top_level=false)
     return $keep_top_level ? true : @rmdir($dir);
 
 } // END hesk_rrmdir()
+
+// Checks the user if they're elevated and not expired. If not, redirect to the elevator
+function hesk_check_user_elevation($post_elevation_redirect) {
+    if (!hesk_SESSION('elevated') || hesk_SESSION('elevated') < new DateTime()) {
+        $_SESSION['elevated'] = null;
+        $_SESSION['elevator_target'] = $post_elevation_redirect;
+        header('Location: elevator.php');
+        exit();
+    }
+
+    return true;
+}

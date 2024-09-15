@@ -1,0 +1,5 @@
+<p>Dear %%NAME%%,</p>
+<p>This email contains a list of support tickets submitted with your email address. Number of support tickets found: <strong>%%NUM%%</strong></p>
+<p>%%LIST_TICKETS%%</p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

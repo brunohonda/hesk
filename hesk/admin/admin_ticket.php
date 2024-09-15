@@ -44,6 +44,7 @@ $can_resolve		 = hesk_checkPermission('can_resolve', 0);
 $can_view_ass_by     = hesk_checkPermission('can_view_ass_by', 0);
 $can_privacy		 = hesk_checkPermission('can_privacy',0);
 $can_export          = hesk_checkPermission('can_export',0);
+$can_due_date        = hesk_checkPermission('can_due_date',0);
 
 // Get ticket ID
 $trackingID = hesk_cleanID() or print_form();
@@ -59,6 +60,7 @@ $_SERVER['PHP_SELF'] = 'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand
 // We will need some extra functions
 define('TIMER',1);
 define('BACK2TOP',1);
+define('ATTACHMENTS',1);
 if ($hesk_settings['time_display']) {
     define('TIMEAGO',1);
 }
@@ -344,24 +346,36 @@ if (isset($_POST['notemsg']) && hesk_token_check('POST'))
 	$msg = hesk_input( hesk_POST('notemsg') );
 
 	// Get attachments
+    $use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 	if ($hesk_settings['attachments']['use'])
 	{
 		require(HESK_PATH . 'inc/posting_functions.inc.php');
 		require(HESK_PATH . 'inc/attachments.inc.php');
 		$attachments = array();
-		for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-		{
-			$att = hesk_uploadFile($i);
-			if ($att !== false && !empty($att))
-			{
-				$attachments[$i] = $att;
-			}
-		}
+
+        if ($use_legacy_attachments) {
+            for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+                $att = hesk_uploadFile($i);
+                if ($att !== false && !empty($att)) {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_names = hesk_POST_array('attachments');
+            foreach ($temp_attachment_names as $temp_attachment_name) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
+            }
+        }
 	}
 	$myattachments='';
 
 	// We need message and/or attachments to accept note
-	if ( count($attachments) || strlen($msg) || count($hesk_error_buffer) )
+	if ( (!empty($attachments) && count($attachments)) || strlen($msg) || count($hesk_error_buffer) )
 	{
 		// Any errors?
 		if ( count($hesk_error_buffer) != 0 )
@@ -371,7 +385,11 @@ if (isset($_POST['notemsg']) && hesk_token_check('POST'))
 			// Remove any successfully uploaded attachments
 			if ($hesk_settings['attachments']['use'])
 			{
-				hesk_removeAttachments($attachments);
+                if ($use_legacy_attachments) {
+                    hesk_removeAttachments($attachments);
+                } else {
+                    $_SESSION['note_attachments'] = $attachments;
+                }
 			}
 
 			$tmp = '';
@@ -388,6 +406,10 @@ if (isset($_POST['notemsg']) && hesk_token_check('POST'))
 		// Process attachments
 		if ($hesk_settings['attachments']['use'] && ! empty($attachments) )
 		{
+            if (!$use_legacy_attachments) {
+                $attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+            }
+
 			foreach ($attachments as $myatt)
 			{
 				hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`,`type`) VALUES ('".hesk_dbEscape($trackingID)."','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."', '1')");
@@ -398,6 +420,21 @@ if (isset($_POST['notemsg']) && hesk_token_check('POST'))
 		// Add note to database
 		$msg = nl2br(hesk_makeURL($msg));
 		hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."notes` (`ticket`,`who`,`dt`,`message`,`attachments`) VALUES ('".intval($ticket['id'])."','".intval($_SESSION['id'])."',NOW(),'".hesk_dbEscape($msg)."','".hesk_dbEscape($myattachments)."')");
+
+        // Update time worked
+        if ($hesk_settings['time_worked'] && ($time_worked = hesk_getTime(hesk_POST('time_worked_notes'))) && $time_worked != '00:00:00')
+        {
+            $parts = explode(':', $ticket['time_worked']);
+            $seconds = ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
+
+            $parts = explode(':', $time_worked);
+            $seconds += ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
+
+            require(HESK_PATH . 'inc/reporting_functions.inc.php');
+            $ticket['time_worked'] = hesk_SecondsToHHMMSS($seconds);
+
+            hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `time_worked` = ADDTIME(`time_worked`,'" . hesk_dbEscape($time_worked) . "') WHERE `trackid`='" . hesk_dbEscape($trackingID) . "'");
+        }
 
         /* Notify assigned staff that a note has been added if needed */
         if ($ticket['owner'] && $ticket['owner'] != $_SESSION['id'])
@@ -434,7 +471,10 @@ if (isset($_POST['notemsg']) && hesk_token_check('POST'))
 					$info[$k] = $v['use'] ? $ticket[$k] : '';
 				}
 
-				// 3. Make sure all values are properly formatted for email
+                // 3. Add HTML message to the array
+                $info['message_html'] = $info['message'];
+
+                // 4. Make sure all values are properly formatted for email
 				$ticket = hesk_ticketToPlain($info, 1, 0);
 
 				/* Get email functions */
@@ -442,10 +482,10 @@ if (isset($_POST['notemsg']) && hesk_token_check('POST'))
 
 				/* Format email subject and message for staff */
 				$subject = hesk_getEmailSubject('new_note',$ticket);
-				$message = hesk_getEmailMessage('new_note',$ticket,1);
+				list($message, $html_message) = hesk_getEmailMessage('new_note',$ticket,1);
 
 				/* Send email to staff */
-				hesk_mail($owner['email'], $subject, $message);
+				hesk_mail($owner['email'], $subject, $message, $html_message);
 			}
         }
 	}
@@ -473,21 +513,25 @@ if ($hesk_settings['time_worked'] && ($can_reply || $can_edit) && isset($_POST['
 }
 
 /* Update due date */
-if (($can_reply || $can_edit) && isset($_POST['action']) && $_POST['action'] == 'due_date' && hesk_token_check('POST')) {
-    $new_due_date = hesk_POST('new-due-date');
+if (isset($_POST['action']) && $_POST['action'] == 'due_date' && hesk_token_check('POST')) {
 
-    // MM/DD/YYYY
-    if ($new_due_date != '' && !preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $new_due_date)) {
-        hesk_process_messages($hesklang['invalid_due_date'], 'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999));
+    // Check permission
+    if ( ! $can_due_date) {
+        hesk_process_messages($hesklang['can_due_date_e'],'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'ERROR');
     }
 
+    $new_due_date = hesk_POST('new-due-date');
     $sql_overdue_email = '';
 
     if ($new_due_date == '') {
         $formatted_date = false;
         $revision = sprintf($hesklang['thist20'], hesk_date(), addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
     } else {
-        $date = new DateTime($new_due_date . 'T00:00:00');
+        $date = hesk_datepicker_get_date($new_due_date);
+        if ($date === false) {
+            hesk_process_messages($hesklang['invalid_due_date'], 'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999));
+        }
+
         $formatted_date = $date->format('Y-m-d');
         $revision = sprintf($hesklang['thist19'], hesk_date(), $formatted_date, addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
 
@@ -637,7 +681,7 @@ hesk_handle_messages();
 // Prepare special custom fields
 foreach ($hesk_settings['custom_fields'] as $k=>$v)
 {
-	if ($v['use'] && hesk_is_custom_field_in_category($k, $ticket['category']) )
+	if ($v['use'] && (strlen($ticket[$k]) || hesk_is_custom_field_in_category($k, $ticket['category'])) )
 	{
 		switch ($v['type'])
 		{
@@ -694,9 +738,9 @@ $options = array(
                 <?php endif; ?>
                 <?php echo $ticket['subject']; ?>
             </h3>
-            <div>
-                <a href="javascript:" onclick="hesk_toggleLayerDisplay('notesformTop')" style="text-decoration: none; color: #959eb0;">
-                    <svg class="icon icon-note" style="fill: #959eb0;">
+            <div class="note__link">
+                <a href="javascript:" onclick="hesk_toggleLayerDisplay('notesDivTop')">
+                    <svg class="icon icon-note">
                         <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-note"></use>
                     </svg>&nbsp;&nbsp;
                     <?php echo $hesklang['addnote']; ?>
@@ -740,7 +784,7 @@ $options = array(
                         <div class="note__description">
                             <p><?php echo $note['message']; ?></p>
                         </div>
-                        <div class="note__attachments" style="color: #9c9c9c;">
+                        <div class="note__attachments">
                             <?php
                             // Attachments
                             if ( $hesk_settings['attachments']['use'] && strlen($note['attachments']) )
@@ -792,26 +836,39 @@ $options = array(
                     <?php
                 }
                 ?>
-                <div id="notesformTop" style="display:<?php echo isset($_SESSION['note_message']) ? 'block' : 'none'; ?>; margin-top: 20px; padding-bottom: 15px;">
-                    <form method="post" action="admin_ticket.php" class="form" enctype="multipart/form-data">
+                <div id="notesDivTop" style="display:<?php echo isset($_SESSION['note_message']) ? 'block' : 'none'; ?>; margin-top: 20px; padding-bottom: 15px;">
+                    <form id="notesformTop" method="post" action="admin_ticket.php" class="form" enctype="multipart/form-data">
                         <i><?php echo $hesklang['nhid']; ?></i><br>
                         <textarea class="form-control" name="notemsg" rows="6" cols="60" style="height: auto; resize: vertical; transition: none;"><?php echo isset($_SESSION['note_message']) ? stripslashes(hesk_input($_SESSION['note_message'])) : ''; ?></textarea>
                         <?php
                         // attachments
                         if ($hesk_settings['attachments']['use'])
                         {
-                            echo '<br>';
-                            for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                            {
-                                echo '<input type="file" name="attachment['.$i.']" size="50"><br>';
-                            }
-                            echo '<br>';
+                        ?>
+                        <div class="attachments">
+                            <div class="block--attach">
+                                <svg class="icon icon-attach">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
+                                </svg>
+                                <div>
+                                    <?php echo $hesklang['attachments'] . ':<br>'; ?>
+                                </div>
+                            </div>
+                            <?php
+                            require_once(HESK_PATH . 'inc/attachments.inc.php');
+                            build_dropzone_markup(true, 'notesFiledropTop');
+                            display_dropzone_field(HESK_PATH . 'upload_attachment.php', true, 'notesFiledropTop');
+                            dropzone_display_existing_files(hesk_SESSION_array('note_attachments'), 'notesFiledropTop');
+                            ?>
+                        </div>
+                        <?php
                         }
                         ?>
                         <button type="submit" class="btn btn-full">
-                            <?php echo $hesklang['s']; ?>
+                            <?php echo $hesklang['sub_note']; ?>
                         </button>
                         <input type="hidden" name="track" value="<?php echo $trackingID; ?>">
+                        <input type="hidden" id="time_worked_notesTop" name="time_worked_notes" value="">
                         <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
                     </form>
                 </div>
@@ -964,7 +1021,7 @@ $options = array(
             <?php
             foreach ($hesk_settings['custom_fields'] as $k=>$v)
             {
-                if ($v['use'] && $v['place']==0 && hesk_is_custom_field_in_category($k, $ticket['category']) )
+                if ($v['use'] && $v['place']==0 && (strlen($ticket[$k]) || hesk_is_custom_field_in_category($k, $ticket['category'])) )
                 {
 
                     switch ($v['type'])
@@ -976,7 +1033,7 @@ $options = array(
 
                     echo '
 					<div>
-                        <span style="color: #959eb0">'.$v['name:'].'</span>
+                        <span class="custom-field-title">'.$v['name:'].'</span>
                         <span>'.$ticket[$k].'</span>
 					</div>';
                 }
@@ -987,6 +1044,7 @@ $options = array(
                 ?>
                 <div class="block--description browser-default">
                     <p><?php echo $ticket['message_html']; ?></p>
+                    <p></p>
                 </div>
                 <?php
             }
@@ -994,7 +1052,7 @@ $options = array(
             /* custom fields after message */
             foreach ($hesk_settings['custom_fields'] as $k=>$v)
             {
-                if ($v['use'] && $v['place'] && hesk_is_custom_field_in_category($k, $ticket['category']) )
+                if ($v['use'] && $v['place'] && (strlen($ticket[$k]) || hesk_is_custom_field_in_category($k, $ticket['category'])) )
                 {
                     switch ($v['type'])
                     {
@@ -1005,7 +1063,7 @@ $options = array(
 
                     echo '
 					<div>
-                        <span style="color: #959eb0">'.$v['name:'].'</span>
+                        <span class="custom-field-title">'.$v['name:'].'</span>
                         <span>'.$ticket[$k].'</span>
 					</div>';
                 }
@@ -1015,7 +1073,7 @@ $options = array(
             hesk_listAttachments($ticket['attachments'], 0 , $i);
 
             // Show suggested KB articles
-            if ($hesk_settings['kb_enable'] && $hesk_settings['kb_recommendanswers'] && strlen($ticket['articles']) )
+            if ($hesk_settings['kb_enable'] && $hesk_settings['kb_recommendanswers'] && ! empty($ticket['articles']) )
             {
                 $suggested = array();
                 $suggested_list = '';
@@ -1091,7 +1149,7 @@ $options = array(
                         <div class="note__description">
                             <p><?php echo $note['message']; ?></p>
                         </div>
-                        <div class="note__attachments" style="color: #9c9c9c;">
+                        <div class="note__attachments">
                             <?php
                             // Attachments
                             if ( $hesk_settings['attachments']['use'] && strlen($note['attachments']) )
@@ -1143,35 +1201,61 @@ $options = array(
                     <?php
                 }
                 ?>
-                <button class="btn btn--blue-border" type="button" onclick="hesk_toggleLayerDisplay('notesform')">
+                <button class="btn btn--blue-border" type="button" onclick="hesk_toggleLayerDisplay('notesDiv')">
                     <svg class="icon icon-note">
                         <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-note"></use>
                     </svg>&nbsp;&nbsp;
                     <?php echo $hesklang['addnote']; ?>
-                </button>                
-                <div id="notesform" style="display:<?php echo isset($_SESSION['note_message']) ? 'block' : 'none'; ?>; margin-top: 20px">
-                    <form method="post" action="admin_ticket.php" class="form" enctype="multipart/form-data">
+                </button>
+                <div id="notesDiv" style="display:<?php echo isset($_SESSION['note_message']) ? 'block' : 'none'; ?>; margin-top: 20px">
+                    <form id="notesform" method="post" action="admin_ticket.php" class="form" enctype="multipart/form-data">
                         <i><?php echo $hesklang['nhid']; ?></i><br>
                         <textarea class="form-control" name="notemsg" rows="6" cols="60" style="height: auto; resize: vertical; transition: none;"><?php echo isset($_SESSION['note_message']) ? stripslashes(hesk_input($_SESSION['note_message'])) : ''; ?></textarea>
                         <?php
                         // attachments
                         if ($hesk_settings['attachments']['use'])
                         {
-                            echo '<br>';
-                            for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                            {
-                                echo '<input type="file" name="attachment['.$i.']" size="50"><br>';
-                            }
-                            echo '<br>';
+                        ?>
+                            <div class="attachments">
+                                <div class="block--attach">
+                                    <svg class="icon icon-attach">
+                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
+                                    </svg>
+                                    <div>
+                                        <?php echo $hesklang['attachments'] . ':<br>'; ?>
+                                    </div>
+                                </div>
+                                <?php
+                                require_once(HESK_PATH . 'inc/attachments.inc.php');
+                                build_dropzone_markup(true, 'notesFiledrop');
+                                display_dropzone_field(HESK_PATH . 'upload_attachment.php', true, 'notesFiledrop');
+                                dropzone_display_existing_files(hesk_SESSION_array('note_attachments'), 'notesFiledrop');
+                                ?>
+                            </div>
+                        <?php
                         }
                         ?>
                         <button type="submit" class="btn btn-full">
-                            <?php echo $hesklang['s']; ?>
+                            <?php echo $hesklang['sub_note']; ?>
                         </button>
                         <input type="hidden" name="track" value="<?php echo $trackingID; ?>">
+                        <input type="hidden" id="time_worked_notes" name="time_worked_notes" value="">
                         &nbsp;
                         <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
                     </form>
+                    <?php
+                    // Track time worked?
+                    if ($hesk_settings['time_worked']) {
+                        ?>
+                            <script>
+                                $('#notesform').submit(function() {
+                                     $('#time_worked_notes').val($('#time_worked').val());
+                                });
+                            </script>
+                        </section>
+                        <?php
+                    }
+                    ?>
                 </div>
             </div>
         </article>
@@ -1416,15 +1500,15 @@ $options = array(
                             <form class="form" method="post" action="admin_ticket.php">
                                 <div class="form-group">
                                     <label for="hours"><?php echo $hesklang['hh']; ?></label>
-                                    <input class="form-control" type="text" id="hours" name="h" value="<?php echo $t[0]; ?>">
+                                    <input class="form-control" type="text" id="hours" name="h" value="<?php echo $t[0]; ?>" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="minutes"><?php echo $hesklang['mm']; ?></label>
-                                    <input class="form-control" type="text" id="minutes" name="m" value="<?php echo $t[1]; ?>">
+                                    <input class="form-control" type="text" id="minutes" name="m" value="<?php echo $t[1]; ?>" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="seconds"><?php echo $hesklang['ss']; ?></label>
-                                    <input class="form-control" type="text" id="seconds" name="s" value="<?php echo $t[2]; ?>">
+                                    <input class="form-control" type="text" id="seconds" name="s" value="<?php echo $t[2]; ?>" autocomplete="off">
                                 </div>
 
                                 <button style="display: inline-flex; width: auto; height: 48px; padding: 0 16px" class="btn btn-full" type="submit"><?php echo $hesklang['save']; ?></button>
@@ -1448,37 +1532,41 @@ $options = array(
                 <div class="row">
                     <div class="title"><?php echo $hesklang['due_date']; ?></div>
                     <?php
-                    $dateformat = substr($hesk_settings['timeformat'], 0, strpos($hesk_settings['timeformat'], ' '));
+                    $hesk_settings['datepicker'] = array();
                     $due_date = $hesklang['none'];
                     $datepicker_due_date = '';
                     if ($ticket['due_date'] != null) {
-                        $datepicker_due_date = hesk_date($ticket['due_date'], false, true, false);
-                        $due_date = date($dateformat, $datepicker_due_date);
-                        $datepicker_due_date = date('m/d/Y', $datepicker_due_date);
+                        $datepicker_due_date = hesk_date($ticket['due_date'], true, true, false);
+                        $hesk_settings['datepicker']['#new-due-date']['timestamp'] = $datepicker_due_date;
+                        $due_date = hesk_format_due_date($datepicker_due_date, false);
+                        $datepicker_due_date = hesk_datepicker_format_date($datepicker_due_date);
                     }
 
-                    if ($can_reply || $can_edit)
+                    if ($can_due_date)
                     {
+                        $hesk_settings['datepicker']['#new-due-date']['position'] = 'left bottom';
                         ?>
                         <div class="value">
-                            <a href="javascript:" onclick="hesk_toggleLayerDisplay('modifyduedate')">
+                            <a href="javascript:" onclick="hesk_toggleLayerDisplay('modifyduedate')" class="showme" id="toggleDP">
                                 <?php echo $due_date; ?>
                             </a>
                             <div id="modifyduedate" style="display:none">
                                 <form class="form" method="post" action="admin_ticket.php">
                                     <section class="param calendar">
-                                        <div class="calendar--button">
+                                        <div class="calendar--button" id="due-date-button">
+                                            <!--
                                             <button type="button">
                                                 <svg class="icon icon-calendar">
                                                     <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
                                                 </svg>
                                             </button>
-                                            <input name="new-due-date"
-                                                   data-datepicker-position="bottom left"
+                                            -->
+                                            <input name="new-due-date" id="new-due-date"
+                                                   data-datepicker-position="left top"
                                                    value="<?php echo $datepicker_due_date; ?>"
                                                    type="text" class="datepicker">
                                         </div>
-                                        <div class="calendar--value" style="<?php echo $datepicker_due_date == '' ? '' : 'display: block'; ?>">
+                                        <div class="calendar--value pt10 pb10" style="<?php echo $datepicker_due_date == '' ? '' : 'display: block'; ?>;">
                                             <span><?php echo $datepicker_due_date; ?></span>
                                             <i class="close">
                                                 <svg class="icon icon-close">
@@ -1499,7 +1587,7 @@ $options = array(
                     } else {
                         ?>
                         <div class="value">
-                            <?php echo $ticket['due_date']; ?>
+                            <?php echo $due_date; ?>
                         </div>
                         <?php
                     }
@@ -1508,6 +1596,58 @@ $options = array(
             </div>
         </section>
         <?php
+        // Display previous tickets
+        if ( ! empty($ticket['email']))
+        {
+            // How many previous tickets should we show?
+            $show_previous_tickets = 5;
+
+            // If the ticket has multiple emails, search for the first one only
+            $first_email = strpos($ticket['email'], ',') ? strtok($ticket['email'], ',') : $ticket['email'];
+
+            // Get recent tickets, ordered by last change
+            $res = hesk_dbQuery("SELECT `trackid`, `status`, `subject` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE ".hesk_myCategories()." AND ".hesk_myOwnership()." AND `id` <> ".$ticket['id']." AND `email` <> '' AND ".hesk_dbFormatEmail($first_email)." ORDER BY `lastchange` DESC LIMIT " . ($show_previous_tickets+1));
+            $past_num = hesk_dbNumRows($res);
+            ?>
+            <section class="params--block details accordion <?php if ($past_num > 0) echo 'visible'; ?>">
+                <h4 class="accordion-title">
+                    <span><?php echo $hesklang['previous_tickets']; ?></span>
+                    <svg class="icon icon-chevron-down">
+                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-down"></use>
+                    </svg>
+                </h4>
+                <div class="accordion-body" <?php if ($past_num > 0) echo 'style="display:block"'; ?>>
+                    <?php
+                    $i = 0;
+                    while ($past_ticket = hesk_dbFetchAssoc($res)) {
+                        $i++;
+                        if ($i > $show_previous_tickets) {
+                            hesk_dbFreeResult($res);
+                            break;
+                        }
+                        ?>
+                        <div>
+                            <?php if (isset($hesk_settings['statuses'][$past_ticket['status']]['class'])): ?>
+                                <span class="dot bg-<?php echo $hesk_settings['statuses'][$past_ticket['status']]['class']; ?>" title="<?php echo $hesk_settings['statuses'][$past_ticket['status']]['name']; ?>"></span>
+                            <?php else: ?>
+                                <span class="dot" style="background-color:<?php echo $hesk_settings['statuses'][$past_ticket['status']]['color']; ?>" title="<?php echo $hesk_settings['statuses'][$past_ticket['status']]['name']; ?>"></span>
+                            <?php endif; ?>
+                            <a href="admin_ticket.php?track=<?php echo $past_ticket['trackid']; ?>&amp;Refresh=<?php echo rand(10000,99999); ?>"><?php echo $past_ticket['subject']; ?></a>
+                        </div>
+                        <?php
+                    }
+
+                    if ($past_num > 0 && $i > $show_previous_tickets) {
+                        echo '<br><a href="find_tickets.php?q='.urlencode($first_email).'&amp;what=email&amp;s_my=1&amp;s_ot=1&amp;s_un=1">'.$hesklang['all_previous'].'<a>';
+                    } elseif ($past_num == 0) {
+                        echo sprintf($hesklang['no_previous'], hesk_htmlspecialchars($first_email));
+                    }
+                    ?>
+                </div>
+            </section>
+            <?php
+        }
+
         /* Display ticket history */
         if (strlen($ticket['history']))
         {
@@ -1526,6 +1666,10 @@ $options = array(
                     foreach ($history_pieces as $history_piece) {
                         $history_piece = str_replace('<li class="smaller">', '', $history_piece);
                         $date_and_contents = explode(' | ', $history_piece);
+                        if ( ! isset($date_and_contents[1])) {
+                            $date_and_contents[1] = $date_and_contents[0];
+                            $date_and_contents[0] = '';
+                        }
                     ?>
                     <div class="row">
                         <div class="title"><?php echo $date_and_contents[0]; ?></div>
@@ -1547,6 +1691,8 @@ $options = array(
 hesk_cleanSessionVars('ticket_message');
 hesk_cleanSessionVars('time_worked');
 hesk_cleanSessionVars('note_message');
+hesk_cleanSessionVars('ar_attachments');
+hesk_cleanSessionVars('note_attachments');
 
 $hesk_settings['print_status_select_box_jquery'] = true;
 
@@ -1568,7 +1714,7 @@ function hesk_listAttachments($attachments='', $reply=0, $white=1)
 
 	/* List attachments */
 	$att=explode(',',substr($attachments, 0, -1));
-    echo '<div class="block--uploads" style="display: block; color: #9c9c9c;">';
+    echo '<div class="block--uploads" style="display: block;">';
 	foreach ($att as $myatt)
 	{
 		list($att_id, $att_name) = explode('#', $myatt);
@@ -1723,8 +1869,9 @@ function hesk_getAdminButtons($isReply=0,$white=1)
     // Anonymize ticket
     if (!$isReply && $can_privacy)
     {
+        $modal_id = hesk_generate_delete_modal($hesklang['confirm_anony'], $hesklang['privacy_anon_info'], 'anonymize_ticket.php?track='.$trackingID.'&amp;Refresh='.mt_rand(10000,99999).'&amp;token='.hesk_token_echo(0), $hesklang['confirm']);
 		$buttons['more'][] = '
-		<a id="anonymizeticket" href="anonymize_ticket.php?track='.$trackingID.'&amp;Refresh='.mt_rand(10000,99999).'&amp;token='.hesk_token_echo(0).'" onclick="return hesk_confirmExecute(\''.hesk_makeJsString($hesklang['confirm_anony']).'?\\n\\n'.hesk_makeJsString($hesklang['privacy_anon_info']).'\');" title="'.$hesklang['confirm_anony'].'">
+		<a id="anonymizeticket" href="javascript:" title="'.$hesklang['confirm_anony'].'" data-modal="[data-modal-id=\''.$modal_id.'\']">
 		    <svg class="icon icon-anonymize">
                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-anonymize"></use>
             </svg>
@@ -1740,15 +1887,18 @@ function hesk_getAdminButtons($isReply=0,$white=1)
 			$url = 'admin_ticket.php';
 			$tmp = 'delete_post='.$reply['id'];
 			$txt = $hesklang['btn_delr'];
+            $modal_text = $hesklang['confirm_delete_reply'];
 		}
 		else
 		{
 			$url = 'delete_tickets.php';
 			$tmp = 'delete_ticket=1';
 			$txt = $hesklang['btn_delt'];
+            $modal_text = $hesklang['confirm_delete_ticket'];
 		}
+        $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'], $modal_text, $url.'?track='.$trackingID.'&amp;'.$tmp.'&amp;Refresh='.mt_rand(10000,99999).'&amp;token='.hesk_token_echo(0));
 		$buttons['more'][] = '
-		<a id="deleteticket" href="'.$url.'?track='.$trackingID.'&amp;'.$tmp.'&amp;Refresh='.mt_rand(10000,99999).'&amp;token='.hesk_token_echo(0).'" onclick="return hesk_confirmExecute(\''.hesk_makeJsString($txt).'?\');" title="'.$txt.'">
+		<a id="deleteticket" href="javascript:" title="'.$txt.'" data-modal="[data-modal-id=\''.$modal_id.'\']">
 		    <svg class="icon icon-delete">
                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-delete"></use>
             </svg>
@@ -2086,7 +2236,7 @@ function hesk_printReplyForm() {
 ?>
 <!-- START REPLY FORM -->
 <article class="ticket__body_block">
-    <form method="post" class="form" action="admin_reply_ticket.php" enctype="multipart/form-data" name="form1" onsubmit="force_stop();return true;">
+    <form method="post" class="form" action="admin_reply_ticket.php" enctype="multipart/form-data" name="form1" onsubmit="force_stop();<?php if ($hesk_settings['staff_ticket_formatting'] != 2): ?>clearTimeout(typingTimer);<?php endif; ?>return true;">
         <?php
         /* Ticket assigned to someone else? */
         if ($ticket['owner'] && $ticket['owner'] != $_SESSION['id'] && isset($admins[$ticket['owner']])) {
@@ -2113,7 +2263,7 @@ function hesk_printReplyForm() {
                     </label>
                 </span>
                 <div class="form-group short" style="margin-left: 8px; margin-bottom: 0">
-                    <input type="text" class="form-control short" name="time_worked" id="time_worked" size="10" value="<?php echo ( isset($_SESSION['time_worked']) ? hesk_getTime($_SESSION['time_worked']) : '00:00:00'); ?>" />
+                    <input type="text" class="form-control short" name="time_worked" id="time_worked" size="10" value="<?php echo ( isset($_SESSION['time_worked']) ? hesk_getTime($_SESSION['time_worked']) : '00:00:00'); ?>" autocomplete="off">
                 </div>
 
                 <a href="javascript:" class="tooltip" id="pause_btn" title="<?php echo $hesklang['start']; ?>">
@@ -2133,21 +2283,27 @@ function hesk_printReplyForm() {
                     });
 
                     $('#reset_btn').click(function() {
-                        $('#pause_btn').find('svg').css('fill', '#002d73');
+                        $('#pause_btn').find('svg').addClass('playing');
                         r();
                     });
 
                     function updatePauseButton() {
                         if (!timer_running()) {
-                            $('#pause_btn').find('svg').css('fill', '#002d73');
+                            $('#pause_btn').find('svg').addClass('playing');
                         } else {
-                            $('#pause_btn').find('svg').css('fill', '#959eb0');
+                            $('#pause_btn').find('svg').removeClass('playing');
                         }
                     }
 
                     $(document).ready(function() {
                         setTimeout(updatePauseButton, 1000);
-                    })
+                    });
+
+                    <?php if ($hesk_settings['new_top'] && $ticket['replies']): ?>
+                    $('#notesformTop').submit(function() {
+                         $('#time_worked_notesTop').val($('#time_worked').val());
+                    });
+                    <?php endif; ?>
                 </script>
             </section>
             <?php
@@ -2224,28 +2380,30 @@ function hesk_printReplyForm() {
 
         <?php
         if ($hesk_settings['staff_ticket_formatting'] == 2) {
-            hesk_tinymce_init('#message');
+            hesk_tinymce_init('#message', 'hesk_save_draft_async');
         }
 
         /* attachments */
         if ($hesk_settings['attachments']['use'])
         {
+            require_once(HESK_PATH . 'inc/attachments.inc.php');
             ?>
-            <div class="block--attach">
-                <svg class="icon icon-attach">
-                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
-                </svg>
-                <div>
-                    <?php echo $hesklang['attachments'] . ' (<a class="link" href="Javascript:void(0)" onclick="hesk_window(\'../file_limits.php\',250,500);return false;">' . $hesklang['ful'] . '</a>):<br>'; ?>
+            <div class="attachments">
+                <div class="block--attach">
+                    <svg class="icon icon-attach">
+                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
+                    </svg>
+                    <div>
+                        <?php echo $hesklang['attachments'] . ':<br>'; ?>
+                    </div>
                 </div>
+                <?php
+                build_dropzone_markup(true);
+                display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                dropzone_display_existing_files(hesk_SESSION_array('ar_attachments'));
+                ?>
             </div>
-            <?php
-            for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-            {
-                echo '<input type="file" name="attachment['.$i.']" size="50" /><br />';
-            }
-            ?>
-            <?php
+        <?php
         }
         ?>
 
@@ -2333,6 +2491,57 @@ function hesk_printReplyForm() {
     </form>
 </article>
 
+<script>
+var draft_message = '';
+var previous_draft_message = '';
+
+function debug_to_console(msg) {
+    <?php if ($hesk_settings['debug_mode']): ?>
+    console.log(msg);
+    <?php endif; ?>
+}
+
+function hesk_save_draft_async() {
+    // Get the new message from the rich text editor or textbox
+    <?php if ($hesk_settings['staff_ticket_formatting'] == 2): ?>
+        draft_message = tinymce.get("message").getContent('');
+    <?php else: ?>
+        draft_message = $('#message').val();
+    <?php endif; ?>
+
+    // Only proceed if the message has changed
+    if (draft_message == previous_draft_message) {
+        debug_to_console("Message did not change");
+        return true;
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "save_ticket_draft_async.php",
+        data:{orig_id: <?php echo $ticket['id']; ?>, message: draft_message},
+        success: function(result, status){
+            previous_draft_message = draft_message;
+            debug_to_console("Request result: " + result + " " + status);
+        },
+        error: function(xhr, status, error) {
+            debug_to_console("Ajax Error " + xhr + " " + status + " " + error)
+        }
+    });
+}
+
+<?php if ($hesk_settings['staff_ticket_formatting'] != 2): ?>
+var typingTimer;
+var doneTypingInterval = 3000;
+
+$(document).ready(function() {
+    $('#message').on('input', function() {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(hesk_save_draft_async, doneTypingInterval);
+    });
+});
+<?php endif; ?>
+</script>
+
 <!-- END REPLY FORM -->
 <?php
 } // End hesk_printReplyForm()
@@ -2340,7 +2549,7 @@ function hesk_printReplyForm() {
 
 function hesk_printCanned()
 {
-	global $hesklang, $hesk_settings, $can_reply, $ticket, $admins;
+	global $hesklang, $hesk_settings, $can_reply, $ticket, $admins, $category;
 
 	/* Can user reply to tickets? */
 	if ( ! $can_reply)
@@ -2396,6 +2605,7 @@ function hesk_printCanned()
             return true;
         }
 
+        // replace plain text
 		myMsg = myMsg.replace(/%%HESK_ID%%/g, '<?php echo hesk_jsString($ticket['id']); ?>');
 		myMsg = myMsg.replace(/%%HESK_TRACKID%%/g, '<?php echo hesk_jsString($ticket['trackid']); ?>');
 		myMsg = myMsg.replace(/%%HESK_TRACK_ID%%/g, '<?php echo hesk_jsString($ticket['trackid']); ?>');
@@ -2403,11 +2613,28 @@ function hesk_printCanned()
         myMsg = myMsg.replace(/%%HESK_FIRST_NAME%%/g, '<?php echo hesk_jsString(hesk_full_name_to_first_name($ticket['name'])); ?>');
 		myMsg = myMsg.replace(/%%HESK_EMAIL%%/g, '<?php echo hesk_jsString($ticket['email']); ?>');
 		myMsg = myMsg.replace(/%%HESK_OWNER%%/g, '<?php echo hesk_jsString( isset($admins[$ticket['owner']]) ? $admins[$ticket['owner']] : ''); ?>');
+        myMsg = myMsg.replace(/%%HESK_CATEGORY%%/g, '<?php echo hesk_jsString( isset($category['name']) ? $category['name'] : ''); ?>');
+        myMsg = myMsg.replace(/%%HESK_DUE_DATE%%/g, '<?php echo hesk_jsString(hesk_format_due_date($ticket['due_date'])); ?>');
+
+        // replace URL-encoded text
+        myMsg = myMsg.replace(/%25%25HESK_ID%25%25/g, encodeURIComponent('<?php echo hesk_jsString($ticket['id']); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_TRACKID%25%25/g, encodeURIComponent('<?php echo hesk_jsString($ticket['trackid']); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_TRACK_ID%25%25/g, encodeURIComponent('<?php echo hesk_jsString($ticket['trackid']); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_NAME%25%25/g, encodeURIComponent('<?php echo hesk_jsString($ticket['name']); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_FIRST_NAME%25%25/g, encodeURIComponent('<?php echo hesk_jsString(hesk_full_name_to_first_name($ticket['name'])); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_EMAIL%25%25/g, encodeURIComponent('<?php echo hesk_jsString($ticket['email']); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_OWNER%25%25/g, encodeURIComponent('<?php echo hesk_jsString( isset($admins[$ticket['owner']]) ? $admins[$ticket['owner']] : ''); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_CATEGORY%25%25/g, encodeURIComponent('<?php echo hesk_jsString( isset($category['name']) ? $category['name'] : ''); ?>'));
+        myMsg = myMsg.replace(/%25%25HESK_DUE_DATE%25%25/g, encodeURIComponent('<?php echo hesk_jsString(hesk_format_due_date($ticket['due_date'])); ?>'));
 
 		<?php
         for ($i=1; $i<=50; $i++)
 		{
+            // replace plain text
         	echo 'myMsg = myMsg.replace(/%%HESK_custom'.$i.'%%/g, \''.hesk_jsString($ticket['custom'.$i]).'\');';
+
+            // replace URL-encoded text
+            echo 'myMsg = myMsg.replace(/%25%25HESK_custom'.$i.'%25%25/g, encodeURIComponent(\''.hesk_jsString($ticket['custom'.$i]).'\'));';
 		}
 		?>
 

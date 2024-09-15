@@ -60,7 +60,10 @@ elseif ($test_type == 'pop3')
 {
 	if ( hesk_testPOP3() )
 	{
-		hesk_show_success($hesklang['conok']);
+        hesk_show_success($hesklang['conok'] . '<br><br>' . sprintf($hesklang['tst_cnt'], $emails_found) );
+        if ($emails_found > 10) {
+            hesk_show_notice( sprintf($hesklang['wrn_pop3'], $emails_found, $hesklang['pop3']), ' ', false);
+        }
 	}
 	else
 	{
@@ -74,7 +77,7 @@ elseif ($test_type == 'smtp')
 	if ( hesk_testSMTP() )
 	{
 		// If no username/password add a notice
-		if ($set['smtp_user'] == '' && $set['smtp_user'] == '')
+		if ($set['smtp_user'] == '' && $set['smtp_user'] == '' && $set['smtp_conn_type'] != 'oauth')
 		{
 			$hesklang['conok'] .= '<br /><br />' . $hesklang['conokn'];
 		}
@@ -83,7 +86,7 @@ elseif ($test_type == 'smtp')
 	}
 	else
 	{
-		hesk_show_error( $smtp_error . '<br /><br /><textarea name="smtp_log" rows="10" cols="60">' . $smtp_log . '</textarea>' );
+		hesk_show_error( $smtp_error . '<br /><br /><textarea name="smtp_log" rows="10" cols="60" style="width: 100%">' . $smtp_log . '</textarea>' );
 	}
 }
 
@@ -92,7 +95,10 @@ elseif ($test_type == 'imap')
 {
 	if ( hesk_testIMAP() )
 	{
-		hesk_show_success($hesklang['conok']);
+        hesk_show_success($hesklang['conok'] . '<br><br>' . sprintf($hesklang['tst_cnt'], $emails_found) );
+        if ($emails_found > 10) {
+            hesk_show_notice( sprintf($hesklang['wrn_imap'], $emails_found, $hesklang['imap']), ' ', false);
+        }
 	}
 	else
 	{

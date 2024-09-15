@@ -60,4 +60,12 @@ $results = parser();
 hesk_dbConnect();
 hesk_email2ticket($results, 0, $set_category, $set_priority);
 
+// Uncomment for debugging
+/*
+if (isset($hesk_settings['DEBUG_LOG']['PIPE']))
+{
+    echo "<pre>Ticket NOT inserted: " . $hesk_settings['DEBUG_LOG']['PIPE'] . "</pre>\n";
+}
+*/
+
 return NULL;

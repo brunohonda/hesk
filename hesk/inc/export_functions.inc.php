@@ -21,7 +21,7 @@ function hesk_export_to_XML($sql, $export_selected = false)
     global $hesk_settings, $hesklang, $ticket, $my_cat;
 
 	// We'll need HH:MM:SS format for hesk_date() here
-	$hesk_settings['timeformat'] = 'H:i:s';
+	$hesk_settings['format_timestamp'] = 'H:i:s';
 
 	// Get staff names
 	$admins = array();
@@ -85,11 +85,11 @@ function hesk_export_to_XML($sql, $export_selected = false)
 
         if ($date_from == $date_to)
         {
-            $flush_me .= "(" . hesk_dateToString($date_from,0) . ")";
+            $flush_me .= "(" . hesk_date($date_from, true, true, true, $hesk_settings['format_date']) . ")";
         }
         else
         {
-            $flush_me .= "(" . hesk_dateToString($date_from,0) . " - " . hesk_dateToString($date_to,0) . ")";
+            $flush_me .= "(" . hesk_date($date_from, true, true, true, $hesk_settings['format_date']) . " - " . hesk_date($date_to, true, true, true, $hesk_settings['format_date']) . ")";
         }
     }
 
@@ -229,7 +229,7 @@ function hesk_export_to_XML($sql, $export_selected = false)
 		$ticket['category'] = isset($my_cat[$ticket['category']]) ? $my_cat[$ticket['category']] : '';
 
 		// Format for export dates
-		$hesk_settings['timeformat'] = "Y-m-d\TH:i:s\.000";
+		$hesk_settings['format_timestamp'] = "Y-m-d\TH:i:s\.000";
 
 		// Create row for the XML file
 		$tmp .= '
@@ -293,7 +293,7 @@ function hesk_export_to_XML($sql, $export_selected = false)
 	} // End of while loop
 
 	// Go back to the HH:MM:SS format for hesk_date()
-	$hesk_settings['timeformat'] = 'H:i:s';
+	$hesk_settings['format_timestamp'] = 'H:i:s';
 
 	// Append any remaining rows into the file
 	if ($this_round > 0)

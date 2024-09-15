@@ -396,7 +396,7 @@ function hesk_show_kb_category($catid, $is_search = 0) {
             <div class="knowledge__tabs_tab" style="display: flex">
     <?php
 
-	$result = hesk_dbQuery("SELECT `id`,`name`,`articles`,`type` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` WHERE `parent`='".intval($catid)."' ORDER BY `parent` ASC, `cat_order` ASC");
+	$result = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` WHERE `parent`='".intval($catid)."' ORDER BY `parent` ASC, `cat_order` ASC");
 	if (hesk_dbNumRows($result) > 0)
 	{
         $i = 1;
@@ -420,12 +420,12 @@ function hesk_show_kb_category($catid, $is_search = 0) {
                     </div>
                     <ul class="item--list">
                     <?php
-                    if (!$hesk_settings['kb_numshow'] || !$cat['articles']) {
+                    if (!$hesk_settings['kb_numshow'] || (!$cat['articles'] && !$cat['articles_private'])) {
                         echo '<li><h5>'.$hesklang['noac'].'</h5></li>';
                     }
 
                     /* Print most popular/sticky articles */
-                    if ($hesk_settings['kb_numshow'] && $cat['articles'])
+                    if ($hesk_settings['kb_numshow'] && ($cat['articles'] || $cat['articles_private']))
                     {
                         $res = hesk_dbQuery("SELECT `id`,`subject`,`type` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` WHERE `catid`='".intval($cat['id'])."' AND `type` IN ('0','1') ORDER BY `sticky` DESC, `views` DESC, `art_order` ASC LIMIT " . (intval($hesk_settings['kb_numshow']) + 1) );
                         $num = 1;

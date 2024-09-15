@@ -163,3 +163,17 @@ HESK_FUNCTIONS.rate = function(url, elementId) {
         }
     });
 }
+
+// Not namespaced for reverse compatibility with drag-and-drop attachments
+function outputAttachmentIdHolder(value, id) {
+    $('#attachment-holder-' + id).append('<input type="hidden" name="attachments[]" value="' + value + '">');
+}
+
+function removeAttachment(id, fileKey, isAdmin) {
+    var prefix = isAdmin ? '../' : '';
+    $('input[name="attachments[]"][value="' + fileKey + '"]').remove();
+    $.ajax({
+        url: prefix + 'upload_attachment.php?action=delete&fileKey=' + encodeURIComponent(fileKey),
+        method: 'GET'
+    });
+}

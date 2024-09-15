@@ -31,6 +31,15 @@ switch ($action)
     case 'do_login':
     	do_login();
         break;
+    case 'do_mfa_verification':
+        do_mfa_verification();
+        break;
+    case 'do_backup_code_verification':
+        do_backup_code_verification();
+        break;
+    case 'backup_email':
+        do_backup_email_verification();
+        break;
     case 'login':
     	print_login();
         break;
@@ -66,6 +75,10 @@ function do_login()
 	{
     	$hesk_error_buffer['pass'] = $hesklang['enter_pass'];
 	}
+    elseif (strlen($pass) > 64)
+    {
+        $hesk_error_buffer['pass'] = $hesklang['pass_len'];
+    }
 
 	if ($hesk_settings['secimg_use'] == 2 && !isset($_SESSION['img_a_verified']))
 	{
@@ -152,99 +165,228 @@ function do_login()
         exit();
 	}
 
-	$res=hesk_dbFetchAssoc($result);
-	foreach ($res as $k=>$v)
-	{
-	    $_SESSION[$k]=$v;
-	}
+    $user_row = hesk_dbFetchAssoc($result);
 
-	/* Check password */
-	if (hesk_Pass2Hash($pass) != $_SESSION['pass'])
-    {
+    // Verify password
+    if (hesk_password_verify($pass, $user_row['pass'])) {
+        if (hesk_password_needs_rehash($user_row['pass'])) {
+            $user_row['pass'] = hesk_password_hash($pass);
+            hesk_dbQuery("UPDATE `".$hesk_settings['db_pfix']."users` SET `pass`='".hesk_dbEscape($user_row['pass'])."' WHERE `id`=".intval($user_row['id']));
+        }
+    } elseif (hesk_Pass2Hash($pass) == $user_row['pass']) {
+        // Legacy password, update it
+        $user_row['pass'] = hesk_password_hash($pass);
+        hesk_dbQuery("UPDATE `".$hesk_settings['db_pfix']."users` SET `pass`='".hesk_dbEscape($user_row['pass'])."' WHERE `id`=".intval($user_row['id']));
+    } else {
         hesk_session_stop();
-    	$_SESSION['a_iserror'] = array('pass');
-		hesk_process_messages($hesklang['wrong_pass'],'NOREDIRECT');
-		print_login();
-		exit();
-	}
-
-    $pass_enc = hesk_Pass2Hash($_SESSION['pass'].hesk_mb_strtolower($user).$_SESSION['pass']);
-
-    /* Check if default password */
-    if ($_SESSION['pass'] == '499d74967b28a841c98bb4baaabaad699ff3c079')
-    {
-    	hesk_process_messages($hesklang['chdp'],'NOREDIRECT','NOTICE');
+        $_SESSION['a_iserror'] = array('pass');
+        hesk_process_messages($hesklang['wrong_pass'],'NOREDIRECT');
+        print_login();
+        exit();
     }
 
-	// Set a tag that will be used to expire sessions after username or password change
-	$_SESSION['session_verify'] = hesk_activeSessionCreateTag($user, $_SESSION['pass']);
+    // User authenticated; if MFA is disabled, complete the login
+    $mfa_enrollment = intval($user_row['mfa_enrollment']);
+    if (empty($mfa_enrollment)) {
+        process_successful_login($user_row);
+    }
 
-	// We don't need the password hash anymore
-	unset($_SESSION['pass']);
+    // Handle MFA
+    require(HESK_PATH . 'inc/mfa_functions.inc.php');
 
-	/* Login successful, clean brute force attempts */
-	hesk_cleanBfAttempts();
+    $message = $hesklang['mfa_verification_needed'] . '<br><br>';
+    $mfa_verify_option = 1;
+    if ($mfa_enrollment === 1) {
+        // Email
+        $verification_code = generate_mfa_code();
+        hash_and_store_mfa_verification_code($user_row['id'], $verification_code);
+        send_mfa_email($user_row['name'], $user_row['email'], $verification_code);
 
-	/* Regenerate session ID (security) */
-	hesk_session_regenerate_id();
+        $message .= $hesklang['mfa_verification_needed_email'];
+    } elseif ($mfa_enrollment === 2) {
+        // Authenticator App
+        $message .= $hesklang['mfa_verification_needed_auth_app'];
+        $mfa_verify_option = 2;
+    }
+    $user_id = $user_row['id'];
+    $email = $user_row['email'];
+    $name = $user_row['name'];
+    hesk_session_stop();
+    hesk_session_start();
+    $_SESSION['HESK_USER'] = $user;
+    $_SESSION['id'] = $user_id;
+    $_SESSION['mfa_enrollment'] = $mfa_enrollment;
+    $_SESSION['email'] = $email;
+    $_SESSION['remember_user_form_val'] = hesk_POST('remember_user');
+    $_SESSION['mfa_verify_option'] = $mfa_verify_option;
+    $_SESSION['name'] = $name;
+    hesk_process_messages($message, 'NOREDIRECT', 'INFO');
+
+    print_mfa_verification();
+    exit();
+} // End do_login()
+
+function do_mfa_verification() {
+    global $hesk_settings, $hesklang;
+
+    require(HESK_PATH . 'inc/mfa_functions.inc.php');
+
+    if (($_SESSION['mfa_verify_option'] === 1 && !is_mfa_email_code_valid($_SESSION['id'], hesk_POST('verification-code'))) ||
+        ($_SESSION['mfa_verify_option'] === 2 && !is_mfa_app_code_valid($_SESSION['id'], hesk_POST('verification-code')))) {
+        hesk_process_messages($hesklang['mfa_invalid_verification_code'], 'NOREDIRECT');
+        // Invalid attempts increase the lockout limit
+        hesk_limitBfAttempts();
+        $_SESSION['remember_user_form_val'] = hesk_POST('remember_user');
+        print_mfa_verification();
+        exit();
+    }
+
+    set_session_and_process_login();
+}
+
+function set_session_and_process_login() {
+    global $hesk_settings;
+
+    $result = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users` WHERE `user` = '".hesk_dbEscape($_SESSION['HESK_USER'])."' LIMIT 1");
+    $res = hesk_dbFetchAssoc($result);
+    process_successful_login($res);
+}
+
+function do_backup_code_verification() {
+    global $hesklang;
+
+    require(HESK_PATH . 'inc/mfa_functions.inc.php');
+
+    if (!verify_mfa_backup_code($_SESSION['id'], hesk_POST('backup-code'))) {
+        hesk_process_messages($hesklang['mfa_invalid_backup_code'], 'NOREDIRECT');
+        // Invalid attempts increase the lockout limit
+        hesk_limitBfAttempts();
+        $_SESSION['remember_user_form_val'] = hesk_POST('remember_user');
+        print_mfa_verification();
+        exit();
+    }
+
+    set_session_and_process_login();
+}
+
+function process_successful_login($user_row) {
+    global $hesk_settings, $hesklang;
+
+    // User authenticated, let's regenerate the session ID
+    hesk_session_regenerate_id();
+
+    // Set a tag that will be used to expire sessions after username or password change
+    $_SESSION['session_verify'] = hesk_activeSessionCreateTag($user_row['user'], $user_row['pass']);
+
+    // Set data we need for the session
+    unset($user_row['pass']);
+    unset($user_row['mfa_secret']);
+    foreach ($user_row as $k => $v) {
+        $_SESSION[$k] = $v;
+    }
+
+    // Reset repeated emails session data
+    hesk_cleanSessionVars('mfa_emails_sent');
+
+    /* Login successful, clean brute force attempts */
+    hesk_cleanBfAttempts();
+
+    // Give the user some time before requiring re-authentication for sensitive pages
+    $current_time = new DateTime();
+    $interval_amount = $hesk_settings['elevator_duration'];
+    if (in_array(substr($interval_amount, -1), array('M', 'H'))) {
+        $interval_amount = 'T'.$interval_amount;
+    }
+    $elevation_expiration = $current_time->add(new DateInterval("P{$interval_amount}"));
+    $_SESSION['elevated'] = $elevation_expiration;
 
 	/* Remember username? */
 	if ($hesk_settings['autologin'] && hesk_POST('remember_user') == 'AUTOLOGIN')
 	{
-		hesk_setcookie('hesk_username', "$user", strtotime('+1 year'));
-		hesk_setcookie('hesk_p', "$pass_enc", strtotime('+1 year'));
+        $selector = base64_encode(random_bytes(9));
+        $authenticator = random_bytes(33);
+        hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."auth_tokens` (`selector`,`token`,`user_id`,`expires`) VALUES ('".hesk_dbEscape($selector)."','".hesk_dbEscape(hash('sha256', $authenticator))."','".intval($_SESSION['id'])."', NOW() + INTERVAL 1 YEAR)");
+        hesk_setcookie('hesk_username', '');
+        hesk_setcookie('hesk_remember', $selector.':'.base64_encode($authenticator), strtotime('+1 year'));
 	}
 	elseif ( hesk_POST('remember_user') == 'JUSTUSER')
 	{
-		hesk_setcookie('hesk_username', "$user", strtotime('+1 year'));
-		hesk_setcookie('hesk_p', '');
+		hesk_setcookie('hesk_username', $user_row['user'], strtotime('+1 year'));
+		hesk_setcookie('hesk_remember', '');
 	}
 	else
 	{
 		// Expire cookie if set otherwise
 		hesk_setcookie('hesk_username', '');
-		hesk_setcookie('hesk_p', '');
+		hesk_setcookie('hesk_remember', '');
 	}
 
     /* Close any old tickets here so Cron jobs aren't necessary */
-	if ($hesk_settings['autoclose'])
+    if ($hesk_settings['autoclose'])
     {
-    	$revision = sprintf($hesklang['thist3'],hesk_date(),$hesklang['auto']);
-		$dt  = date('Y-m-d H:i:s',time() - $hesk_settings['autoclose']*86400);
+        $revision = sprintf($hesklang['thist3'],hesk_date(),$hesklang['auto']);
+        $dt  = date('Y-m-d H:i:s',time() - $hesk_settings['autoclose']*86400);
 
-		// Notify customer of closed ticket?
-		if ($hesk_settings['notify_closed'])
-		{
-			// Get list of tickets
-			$result = hesk_dbQuery("SELECT * FROM `".$hesk_settings['db_pfix']."tickets` WHERE `status` = '2' AND `lastchange` <= '".hesk_dbEscape($dt)."' ");
-			if (hesk_dbNumRows($result) > 0)
-			{
-				global $ticket;
+        // Notify customer of closed ticket?
+        if ($hesk_settings['notify_closed'])
+        {
+            // Get list of tickets
+            $result = hesk_dbQuery("SELECT * FROM `".$hesk_settings['db_pfix']."tickets` WHERE `status` = '2' AND `lastchange` <= '".hesk_dbEscape($dt)."' ");
+            if (hesk_dbNumRows($result) > 0)
+            {
+                global $ticket;
 
-				// Load required functions?
-				if ( ! function_exists('hesk_notifyCustomer') )
-				{
-					require(HESK_PATH . 'inc/email_functions.inc.php');
-				}
+                // Load required functions?
+                if ( ! function_exists('hesk_notifyCustomer') )
+                {
+                    require(HESK_PATH . 'inc/email_functions.inc.php');
+                }
 
-				while ($ticket = hesk_dbFetchAssoc($result))
-				{
-					$ticket['dt'] = hesk_date($ticket['dt'], true);
-					$ticket['lastchange'] = hesk_date($ticket['lastchange'], true);
-					$ticket = hesk_ticketToPlain($ticket, 1, 0);
-					hesk_notifyCustomer('ticket_closed');
-				}
-			}
-		}
+                while ($ticket = hesk_dbFetchAssoc($result))
+                {
+                    $ticket['dt'] = hesk_date($ticket['dt'], true);
+                    $ticket['lastchange'] = hesk_date($ticket['lastchange'], true);
+                    $ticket = hesk_ticketToPlain($ticket, 1, 0);
+                    hesk_notifyCustomer('ticket_closed');
+                }
+            }
+        }
 
-		// Update ticket statuses and history in database
-		hesk_dbQuery("UPDATE `".$hesk_settings['db_pfix']."tickets` SET `status`='3', `closedat`=NOW(), `closedby`='-1', `history`=CONCAT(`history`,'".hesk_dbEscape($revision)."') WHERE `status` = '2' AND `lastchange` <= '".hesk_dbEscape($dt)."' ");
+        // Update ticket statuses and history in database
+        hesk_dbQuery("UPDATE `".$hesk_settings['db_pfix']."tickets` SET `status`='3', `closedat`=NOW(), `closedby`='-1', `history`=CONCAT(`history`,'".hesk_dbEscape($revision)."') WHERE `status` = '2' AND `lastchange` <= '".hesk_dbEscape($dt)."' ");
     }
 
-	/* Redirect to the destination page */
-	header('Location: ' . hesk_verifyGoto() );
-	exit();
-} // End do_login()
+    /* Redirect to the destination page */
+    header('Location: ' . hesk_verifyGoto() );
+    exit();
+}
+
+function do_backup_email_verification() {
+    global $hesklang;
+
+    // Let's limit the "Send another email" to max 3
+    if (isset($_SESSION['mfa_emails_sent'])) {
+        if ($_SESSION['mfa_emails_sent'] >= 3) {
+            hesk_forceLogout($hesklang['bf_int']);
+        }
+        $_SESSION['mfa_emails_sent']++;
+    } else {
+        $_SESSION['mfa_emails_sent'] = 1;
+    }
+
+    require_once(HESK_PATH . 'inc/mfa_functions.inc.php');
+
+    $verification_code = generate_mfa_code();
+    hash_and_store_mfa_verification_code($_SESSION['id'], $verification_code);
+    send_mfa_email($_SESSION['name'], $_SESSION['email'], $verification_code);
+    $_SESSION['mfa_verify_option'] = 1;
+    $_SESSION['remember_user_form_val'] = hesk_GET('remember_user');
+
+    hesk_process_messages($hesklang['mfa_verification_needed_email'], 'NOREDIRECT', 'INFO');
+
+    print_mfa_verification();
+    exit();
+}
 
 
 function print_login()
@@ -308,7 +450,7 @@ function print_login()
 
                                 $remember_user = hesk_POST('remember_user');
 
-                                if ($hesk_settings['autologin'] && (isset($_COOKIE['hesk_p']) || $remember_user == 'AUTOLOGIN') )
+                                if ($hesk_settings['autologin'] && (isset($_COOKIE['hesk_remember']) || $remember_user == 'AUTOLOGIN') )
                                 {
                                     $is_1 = 'checked';
                                 }
@@ -332,7 +474,7 @@ function print_login()
                                     echo '</select>';
 
                                 } else {
-                                    echo '<input type="text" class="form-control '.$cls.'" id="regInputUsername" name="user" value="'.$savedUser.'" required>';
+                                    echo '<input type="text" class="form-control '.$cls.'" id="regInputUsername" name="user" value="'.$savedUser.'" autocomplete="off" required>';
                                 }
                                 ?>
                                 <div class="form-control__error"><?php echo $hesklang['this_field_is_required']; ?></div>
@@ -383,7 +525,7 @@ function print_login()
                                                 <use xlink:href="' . HESK_PATH . 'img/sprite.svg#icon-refresh"></use>
                                             </svg>
                                          </a>'.
-                                        '<br><br><input type="text" name="mysecnum" size="20" maxlength="5" '.$cls.'></div>';
+                                        '<br><br><input type="text" name="mysecnum" size="20" maxlength="5" autocomplete="off" '.$cls.'></div>';
                                 }
                                 ?>
                             </div>
@@ -457,6 +599,209 @@ function print_login()
     exit();
 } // End print_login()
 
+function print_mfa_verification()
+{
+    global $hesk_settings, $hesklang;
+
+    $hesk_settings['tmp_title'] = $hesk_settings['hesk_title'] . ' - ' .$hesklang['admin_login'];
+    require_once(HESK_PATH . 'inc/header.inc.php');
+
+    if (!isset($_SESSION['a_iserror']))
+    {
+        $_SESSION['a_iserror'] = array();
+    }
+    ?>
+            <div class="wrapper login">
+                <main class="main">
+                    <div class="reg__wrap">
+                        <div class="reg__image">
+                            <div class="bg-absolute"><img src="<?php echo HESK_PATH; ?>img/hero-bg.png" alt="Hesk" /></div>
+                        </div>
+                        <div class="reg__section">
+                            <div class="reg__box">
+                                <h2 class="reg__heading"><?php echo $hesklang['mfa']; ?></h2>
+                                <div id="mfa-verify">
+                                <div style="margin-right: -24px; margin-left: -16px">
+                                    <?php
+                                    /* This will handle error, success and notice messages */
+                                    hesk_handle_messages();
+                                    ?>
+                                </div>
+                                <form action="index.php" class="form <?php echo isset($_SESSION['a_iserror']) && count($_SESSION['a_iserror']) ? 'invalid' : ''; ?>" id="form1" method="post" name="form1" novalidate>
+                                    <div class="form-group" id="verification-code-group">
+                                        <label for="verificationCode"><?php echo $hesklang['mfa_verification_code']; ?></label>
+                                        <?php
+                                        $cls = in_array('user',$_SESSION['a_iserror']) ? 'isError' : '';
+                                        ?>
+                                        <input type="text" class="form-control <?php echo $cls; ?>" id="verificationCode" name="verification-code" autocomplete="off" maxlength="6" required>
+                                        <div class="form-control__error"><?php echo $hesklang['this_field_is_required']; ?></div>
+                                    </div>
+                                    <div class="form__submit mfa">
+                                        <button class="btn btn-full" ripple="ripple" type="submit" id="verify-submit">
+                                            <?php echo $hesklang['mfa_verify']; ?>
+                                        </button>
+                                        <input type="hidden" name="a" value="do_mfa_verification">
+                                        <input type="hidden" name="remember_user" value="<?php echo stripslashes(hesk_input($_SESSION['remember_user_form_val'])); ?>">
+                                        <?php
+
+                                        if (hesk_isREQUEST('goto') && $url=hesk_REQUEST('goto'))
+                                        {
+                                            echo '<input type="hidden" name="goto" value="'.$url.'">';
+                                        }
+                                        ?>
+                                    </div>
+                                </form>
+
+                                <?php if ($_SESSION['mfa_verify_option'] === 1): ?>
+                                    &nbsp;
+                                    <form action="index.php" class="form <?php echo isset($_SESSION['a_iserror']) && count($_SESSION['a_iserror']) ? 'invalid' : ''; ?>" id="send-another-email-form" method="post" name="send-another-email-form" novalidate>
+                                        <button class="btn btn-link" type="submit">
+                                            <?php echo $hesklang['mfa_send_another_email']; ?>
+                                        </button>
+                                        <input type="hidden" name="a" value="backup_email">
+                                        <input type="hidden" name="remember_user" value="<?php echo stripslashes(hesk_input($_SESSION['remember_user_form_val'])); ?>">
+                                    </form>
+                                <?php
+                                endif;
+                                ?>
+                                    &nbsp;<br>
+                                    <a href="javascript:hesk_toggleLayerDisplay('verify-another-way');hesk_toggleLayerDisplay('mfa-verify')">
+                                        <?php echo $hesklang['mfa_verify_another_way']; ?>
+                                    </a>
+                                </div>
+
+                                <div id="verify-another-way" style="display: none">
+                                    &nbsp;
+                                    <ul>
+                                        <?php if ($_SESSION['mfa_verify_option'] === 2): ?>
+                                        <li>
+                                            <div class="flex">
+                                                <div class="mfa-alt-icon" aria-hidden="true">
+                                                    <svg class="icon icon-mail">
+                                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-mail"></use>
+                                                    </svg>
+                                                </div>
+                                                <div class="mfa-alt-text">
+                                                    <form action="index.php" class="form <?php echo isset($_SESSION['a_iserror']) && count($_SESSION['a_iserror']) ? 'invalid' : ''; ?>" id="email-backup-form" method="post" name="email-backup-form" novalidate>
+                                                        <button class="btn btn-link" type="submit">
+                                                            <?php echo sprintf($hesklang['mfa_verify_another_way_email'], hesk_maskEmailAddress($_SESSION['email'])); ?>
+                                                        </button>
+                                                        <input type="hidden" name="a" value="backup_email">
+                                                        <input type="hidden" name="remember_user" value="<?php echo stripslashes(hesk_input($_SESSION['remember_user_form_val'])); ?>">
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <?php endif; ?>
+                                        <li>
+                                            <div class="flex">
+                                                <div class="mfa-alt-icon" aria-hidden="true">
+                                                    <svg class="icon icon-lock">
+                                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-lock"></use>
+                                                    </svg>
+                                                </div>
+                                                <div class="mfa-alt-text">
+                                                    <a href="javascript:hesk_toggleLayerDisplay('backup-code-field')"><?php echo $hesklang['mfa_verify_another_way_code']; ?></a>
+                                                    <div id="backup-code-field" style="display: none">
+                                                        <form action="index.php" class="form <?php echo isset($_SESSION['a_iserror']) && count($_SESSION['a_iserror']) ? 'invalid' : ''; ?>" id="backup-form" method="post" name="backup-form" novalidate>
+                                                            <div class="form-group">
+                                                                <label for="backupCode"><?php echo $hesklang['mfa_backup_code']; ?></label>
+                                                                <input type="text" class="form-control" id="backupCode" name="backup-code" minlength="8" maxlength="9" autocomplete="off">
+                                                            </div>
+                                                            <div class="form__submit mfa">
+                                                                <button class="btn btn-full" ripple="ripple" type="submit" id="backup-code-submit">
+                                                                    <?php echo $hesklang['s']; ?>
+                                                                </button>
+                                                            </div>
+                                                            <input type="hidden" name="a" value="do_backup_code_verification">
+                                                            <input type="hidden" name="remember_user" value="<?php echo stripslashes(hesk_input($_SESSION['remember_user_form_val'])); ?>">
+                                                            <?php
+
+                                                            if (hesk_isREQUEST('goto') && $url=hesk_REQUEST('goto'))
+                                                            {
+                                                                echo '<input type="hidden" name="goto" value="'.$url.'">';
+                                                            }
+                                                            ?>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <?php if (hesk_isThereAnotherAdmin($_SESSION['id'])): ?>
+                                        <li>
+                                            <div class="flex">
+                                                <div class="mfa-alt-icon" aria-hidden="true">
+                                                    <svg class="icon icon-assign">
+                                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-assign"></use>
+                                                    </svg>
+                                                </div>
+                                                <div class="mfa-alt-text">
+                                                    <?php echo $hesklang['mfa_verify_another_way_admin']; ?>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <?php endif; ?>
+                                        <li>
+                                            <div class="flex">
+                                                <div class="mfa-alt-icon" aria-hidden="true">
+                                                    <svg class="icon icon-move-to">
+                                                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-move-to"></use>
+                                                    </svg>
+                                                </div>
+                                                <div class="mfa-alt-text">
+                                                    <a href="https://www.hesk.com/knowledgebase/?article=108" target="_blank">
+                                                        <?php echo $hesklang['mfa_verify_another_way_reset']; ?>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+
+                                    &nbsp;
+
+                                    <p style="text-align: center">
+                                        <a href="javascript:hesk_toggleLayerDisplay('verify-another-way');hesk_toggleLayerDisplay('mfa-verify')">
+                                            <?php echo $hesklang['back']; ?>
+                                        </a>
+                                    </p>
+                                </div>
+                                <?php unset($_SESSION['remember_user_form_val']); ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        $(() => {
+                            $('form :visible[class*=isError]:first').focus();
+                        });
+                        $('#form1').preventDoubleSubmission();
+                        $('#backup-form').preventDoubleSubmission();
+                        $('#verificationCode').keyup(function() {
+                            if (this.value.length === 6) {
+                                $('#form1').submit();
+                            }
+                        });
+                        $('#backupCode').keyup(function() {
+                            if (this.value.length === 8 || this.value.length === 9) {
+                                $('#backup-form').submit();
+                            }
+                        });
+                        $('#form1').submit(function() {
+                            $('#verify-submit').attr('disabled', 'disabled')
+                                .addClass('disabled');
+                        });
+                        $('#backup-form').submit(function() {
+                            $('#backup-code-submit').attr('disabled', 'disabled')
+                                .addClass('disabled');
+                        });
+                    </script>
+<?php
+hesk_cleanSessionVars('a_iserror');
+
+require_once(HESK_PATH . 'inc/footer.inc.php');
+exit();
+} // End print_mfa_verification()
+
 
 function logout() {
 	global $hesk_settings, $hesklang;
@@ -473,6 +818,11 @@ function logout() {
     	require(HESK_PATH . 'inc/users_online.inc.php');
 		hesk_setOffline($_SESSION['id']);
 	}
+
+    // Clear users' authentication tokens
+    hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."auth_tokens` WHERE `user_id` = ".intval($_SESSION['id']));
+    hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."mfa_verification_tokens` WHERE `user_id` = ".intval($_SESSION['id']));
+
     /* Destroy session and cookies */
 	hesk_session_stop();
 
@@ -484,7 +834,8 @@ function logout() {
 
 	/* Show success message and reset the cookie */
     hesk_process_messages($hesklang['logout_success'],'NOREDIRECT','SUCCESS');
-    hesk_setcookie('hesk_p', '');
+    hesk_setcookie('hesk_username', '');
+    hesk_setcookie('hesk_remember', '');
 
     /* Print the login form */
 	print_login();

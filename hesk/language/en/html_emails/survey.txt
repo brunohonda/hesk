@@ -1,0 +1,6 @@
+<p>Dear %%NAME%%,</p>
+<p>We're reaching out regarding your recent ticket <a href="%%TRACK_URL%%">%%SUBJECT%%</a>. To help us serve you better, we'd love to hear about your experience with our support team.</p>
+<p>Please let us know how easy was it to get your issue resolved <a href="%%SURVEY_URL%%">by clicking here</a>.</p>
+<p>We appreciate your feedback. And as always, if there's anything else we can do for you in the future – please don't hesitate to reach back out again.</p>
+<p>Thanks,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>
