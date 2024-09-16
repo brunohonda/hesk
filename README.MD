@@ -2,8 +2,10 @@
 
 This project create a container to Hesk project
 
-[Hesk](https://www.hesk.com)
-[Docker Hub Repository](https://hub.docker.com/repository/docker/brunoah/hesk)
+## Important Links
+
+- [Hesk](https://www.hesk.com)
+- [Docker Hub Repository](https://hub.docker.com/repository/docker/brunoah/hesk)
 
 ## Initialize the container
 
