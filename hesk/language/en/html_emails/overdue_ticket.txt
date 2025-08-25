@@ -1,0 +1,7 @@
+<p>Hello,</p>
+<p>A ticket is overdue! Ticket details:</p>
+<p>Ticket subject: %%SUBJECT%%</p>
+<p>Tracking ID: %%TRACK_ID%%</p>
+<p>You can manage this ticket here:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p>Regards,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

@@ -7,7 +7,7 @@
 </head>
 <body>
 
-<!-- next: 69 -->
+<!-- next: 77 -->
 
 <h3>Interactive help for Hesk settings</h3>
 
@@ -24,8 +24,7 @@
 <b>SMTP Host</b> - hostname of your SMTP server, usually <i>localhost</i> or <i>mail.example.com</i><br />
 <b>SMTP Port</b> - your SMTP port, usually 25<br />
 <b>SMTP Timeout</b> - SMTP timeout in seconds<br />
-<b>SSL Protocol</b> - enable if your SMTP server requires SSL protocol<br />
-<b>TLS Protocol</b> - enable if your SMTP server requires TLS protocol<br />
+<b>Encryption</b> - enable if your SMTP server requires encrypted connections<br />
 <b>SMTP Username</b> - your SMTP username (if used)<br />
 <b>SMTP Password</b> - your SMTP password (if used)<br />
 </p>
@@ -34,6 +33,8 @@
 
 <p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
 
+<p>&nbsp;</p>
+<p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
@@ -103,6 +104,11 @@ Set to <b>0</b> to disable timeouts and always start a new fetching job.</p>
 <b>Keep a copy</b> - if enabled HESK will <b>not</b> delete mail from IMAP server<br />
 <b>IMAP Username</b> - your IMAP username<br />
 <b>IMAP Password</b> - your IMAP password<br />
+<b>IMAP Mailbox</b> - choose the IMAP mailbox to fetch emails from. Defaults to INBOX. Some valid examples: <br />
+INBOX<br />
+[Gmail]/All Mail<br />
+[Gmail]/Important<br />
+[Gmail]/Starred<br />
 </p>
 
 <p>&nbsp;</p>
@@ -133,7 +139,79 @@ Set to <b>0</b> to disable timeouts and always start a new fetching job.</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
 
+<a name="70"></a><p class="title">Do not reply</p>
+
+<p>If checked, Hesk will try to detect emails sent from &quot;Do not reply&quot; email addresses and ignore them.</p>
+
+<p>Examples:<br>
+do-not-reply@example.com<br>
+do_not_reply@example.com<br>
+no_reply@example.com
+</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="71"></a><p class="title">Returned</p>
+
+<p>If checked, Hesk will try to detect and ignore returned emails.</p>
+
+<p>For example, it will ignore emails sent from mail-deamon@example.com and emails with a subject such as &quot;Returned mail&quot;, &quot;Undeliverable&quot;, &quot;Out of Office&quot; or similar.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="72"></a><p class="title">Duplicates</p>
+
+<p>If checked, Hesk will detect and ignore an email if Hesk has already processed an email with the same message within &quot;Timeframe&quot; seconds.</p>
+
+<p>When testing email to ticket functionality, either disable this setting or send test emails with unique messages.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
 
 <a name="60"></a><p class="title">Email Loops</p>
 
@@ -144,12 +222,14 @@ will be ignored by email piping.</p>
 
 <p>Set <b>Max Hits</b> to <b>0</b> to disable loop detection.</p>
 
-<p>Note that this feature will only be used if Email piping or POP3 Fetching is enabled.</p>
-
 <p>&nbsp;</p>
 
 <p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
 
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
@@ -216,7 +296,7 @@ automatic replies to emails detected as possible SPAM by your server SPAM filter
 
 <a name="61"></a><p class="title">Strip quoted reply</p>
 
-<p>This function deletes quoted replies from all customer emails before they are converted into a ticket using Email piping or POP3 Fetching.</p>
+<p>This function deletes quoted replies from all customer emails before they are converted into a ticket.</p>
 
 <p>All emails sent to customers will start with this line:</p>
 
@@ -266,11 +346,11 @@ and 3 embedded images, HESK will save the file attachment and first embedded ima
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 
-<a name="57"></a><p class="title">Multiple emails</p>
-<p>If a customer tries to enter several emails (separated by comma) into the Email field when submitting a ticket HESK
-will only use the first email by default and ignore any other emails.</p>
+<a name="57"></a><p class="title">Ticket followers</p>
+<p>When enabled, helpdesk staff can assign multiple customers (besides the main customer) as "followers".  All followers
+will receive the same email notifications as the primary customer.</p>
 
-<p>To allow customers to enter multiple emails enable this feature by checking the box.</p>
+<p>Checking the box enables this feature.</p>
 
 <p>&nbsp;</p>
 
@@ -307,8 +387,117 @@ will only list open tickets and ignore resolved ones.</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
+
+<a name="69"></a><p class="title">Email formatting</p>
+<p>Determines which email formats are included when sending out emails. Options include:</p>
+
+<p>
+<b>HTML with plain text alternative from plain text template (default)</b> - emails will be sent as HTML. Hesk plain text email template content will be used for the alternative text in the email (multipart/alternative).<br />
+<b>HTML with plain text alternative generated from HTML template</b> - emails will be sent as HTML. The alternative text in the email (multipart/alternative) will be generated by converting the HTML template to plain text. Hesk plain text email templates will be ignored.<br />
+<b>HTML only</b> - emails will be sent as HTML only without multipart/alternative.<br />
+<b>Plain text only</b> - emails will be sent as plain text.<br />
+</p>
+
 <p>&nbsp;</p>
 <p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+
+<a name="73"></a><p class="title">Disable GSSAPI</p>
+
+<p>Sometimes, a Windows-based IMAP server will return an error message like this:</p>
+
+<p style="color:red">Notice: Unknown: Kerberos error: Credentials cache file '/tmp/krb123_0123' not found (try running kinit).</p>
+
+<p>If this happens, try enabling the &quot;Disable GSSAPI&quot; option, then test the IMAP connection again.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+
+<a name="74"></a><p class="title">Max recipients</p>
+<p>The maximum number of email recipients in a single email sent by Hesk.</p>
+
+<p>The &quot;Max recipients&quot; count is a cumulative total of all the email addresses in the To, Cc, and BCc fields of an email.</p>
+
+<p>Set to <b>0</b> to turn off the limit. However, setting a reasonable limit is highly recommended. Many email providers will block emails sent to too many recipients.</p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+
+<a name="75"></a><p class="title">Customer rejection emails</p>
+<p>Customer emails can be rejected by HESK when customer accounts are required, but the email address of the sender is not registered on the help desk.</p>
+
+<p>Selecting this option will notify the customer that their email was rejected. To reduce spam, only one rejection email is sent every "Time between rejection emails" hours.</p>
+<p><b>Note:</b> If an email is rejected due to spam or is considered a duplicate, no email will be sent to the customer regardless of this setting.</p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="76"></a><p class="title">Time between rejection emails</p>
+<p>The amount of time to wait before sending a second rejection email to a customer, regardless of the number of emails sent.</p>
+
+<p>Set to <b>0</b> to turn off the limit. However, setting a reasonable limit is highly recommended to avoid excessive emails from being sent by your mail server.</p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>

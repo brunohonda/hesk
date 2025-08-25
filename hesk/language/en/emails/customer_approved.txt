@@ -1,0 +1,11 @@
+Dear %%NAME%%,
+
+Your account registration has been approved.
+
+You may now log in below using the username and password you used when creating your account:
+%%CUSTOMER_LOGIN_URL%%
+
+Sincerely,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

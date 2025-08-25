@@ -1,0 +1,5 @@
+<p>Dear %%NAME%%,</p>
+<p>Unfortunately, your account registration has been rejected.</p>
+<p>If you believe this was done in error, please try registering again.</p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

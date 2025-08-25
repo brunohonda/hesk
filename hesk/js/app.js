@@ -1,5 +1,50 @@
-
 /*eslint-disable */
+
+/* Due to some problems on mobile/tap devices, we have to resort to using regular event listeners,
+however it means that on any such cases we have to re-register any dynamically added datepickers ourselves,
+which we can do via calling this initDatePickerEvents() */
+function initDatePickerEvents() {
+    /* // Removed this, as it's causing potential issues/Weird edge cases on tap devices.
+    // Left here for future reference, as ideally it should be handled this way, just needs some fine tuning to resolve some mobile edge cases
+    // Adjusted by Andraz to use delegated event listeners so they work on dynamically added elements 8I.e. adding datepickers with JS on selection
+    $(document).on('pointerdown', '.param.calendar button', function (e) {
+        $(this).addClass('active');
+        $(this).parent()
+            .find('.datepicker')
+            .data("datepicker")
+            .show();
+
+    });
+    $(document).on('click', '.param.calendar .close', function (e) {
+        $(this).parent().parent()
+            .find('.calendar--button')
+            .find('.datepicker')
+            .data("datepicker")
+            .clear();
+        $(this).parent().parent().find('.calendar--value').fadeOut(150, function () {
+            $(this).find('span').text('');
+        })
+    });*/
+
+    $('.param.calendar button').click(function (e) {
+        $(this).addClass('active');
+        $(this).parent()
+            .find('.datepicker')
+            .data("datepicker")
+            .show();
+    });
+    $('.param.calendar .close').click(function (e) {
+        $(this).parent().parent()
+            .find('.calendar--button')
+            .find('.datepicker')
+            .data("datepicker")
+            .clear();
+        $(this).parent().parent().find('.calendar--value').fadeOut(150, function () {
+            $(this).find('span').text('');
+        })
+    });
+}
+
 $(document).ready(function () {
 
     var toggleMenu = localStorage.getItem('main_menu') ? localStorage.getItem('main_menu') : 'open';
@@ -84,22 +129,45 @@ $(document).ready(function () {
     dropdownSelectRender = function (el) {
         var select = $(el).find('select');
         var options = [];
-        var value;
+        var value,data_class,data_style;
+        var selected_icon = '';
+
         select.find('option').each(function (i, el) {
             options.push({
                 val: $(el).val(),
                 text: $(el).text(),
-                selected: $(el).is(':selected')
+                selected: $(el).is(':selected'),
+                data_class:$(el).attr('data-class') !== undefined ? $(el).attr('data-class') : '',
+                data_style:$(el).attr('data-style') !== undefined ? $(el).attr('data-style') : ''
             });
             if ($(el).is(':selected')) {
                 value = $(el).text();
+                data_class = $(el).attr('data-class') !== undefined ? $(el).attr('data-class') : '';
+                data_style = $(el).attr('data-style') !== undefined ? $(el).attr('data-style') : '';
             }
         });
         var heskPath = $('input[type="hidden"][name="HESK_PATH"]').val();
-        var template = '<div class="label"><span>' + escapeHtml(value) + '</span><svg class="icon icon-chevron-down"><use xlink:href="' + heskPath + 'img/sprite.svg#icon-chevron-down"></use></svg></div><ul class="dropdown-list">';
+        let prependIconToSelect = '';
+        let appendIconClass = select.attr('data-append-icon-class');
+        if (appendIconClass) {
+            prependIconToSelect = '<svg class="icon ' + appendIconClass + '"><use xlink:href="' + heskPath + 'img/sprite.svg#' + appendIconClass + '"></use></svg>';
+        }
+
+        if(data_class !== undefined && data_style !== undefined && selected_icon == ''){
+            var selected_icon = '<div class="'+data_class+' remove_on_select" style = "'+data_style+'"></div>';
+        }
+        var template = '<div class="label">' + prependIconToSelect +' '+ selected_icon +'<span>' + escapeHtml(value) + '</span><svg class="icon icon-chevron-down"><use xlink:href="' + heskPath + 'img/sprite.svg#icon-chevron-down"></use></svg></div><ul class="dropdown-list">';
         for (var i in options) {
             if (options[i].selected) $(el).attr('data-value', options[i].val);
-            template += '<li data-option="' + options[i].val + '"' + (options[i].selected ? ' class="selected"' : '') + '>' + escapeHtml(options[i].text) + '</li>'
+
+            /*Check for custom icon class*/
+            var img_icon = '';
+            if(options[i].data_class !== undefined && options[i].data_style !== undefined){
+                var img_icon = '<div class="'+options[i].data_class+'" style = "'+options[i].data_style+'"></div>';
+            }
+             /*Check for custom icon class*/
+
+            template += '<li data-option="' + options[i].val + '"' + (options[i].selected ? ' class="selected"' : '') + '>' + img_icon +''+ escapeHtml(options[i].text) + '</li>'
         }
         template += '</ul></div>';
         $(el).append(template);
@@ -269,7 +337,7 @@ $(document).ready(function () {
         if ($(elmnt.target).closest('.dropdown').length) return;
 
 
-        event.stopPropagation();
+        //event.stopPropagation();
     }
 
 
@@ -472,12 +540,21 @@ $(document).ready(function () {
         if ($(e.currentTarget).closest('.dropdown-select').hasClass('submit-us')) {
             text = value.length ? 'Submit as ' + $(e.currentTarget).text() : $(e.currentTarget).text();
             text = text.toLowerCase().charAt(0).toUpperCase() + text.toLowerCase().substr(1);
-        } else {
+        } else if ($(e.currentTarget).closest('.dropdown-select').hasClass('select-priority')) {
+            //Checking for custom priority option value
+            text = $(e.currentTarget).html();
+        }else {
             text = $(e.currentTarget).text();
         }
         $(e.currentTarget).closest('.dropdown-list').find('li').removeClass('selected');
         $(e.currentTarget).addClass('selected');
-        $(e.currentTarget).closest('.dropdown-select').attr('data-value', value).find('.label span').text(text);;
+        //Checking for custom priority option value
+        if ($(e.currentTarget).closest('.dropdown-select').hasClass('select-priority')) {
+            $(e.currentTarget).closest('.dropdown-select').attr('data-value', value).find('.label .remove_on_select').remove();
+            $(e.currentTarget).closest('.dropdown-select').attr('data-value', value).find('.label span').html(text);
+        }else{
+            $(e.currentTarget).closest('.dropdown-select').attr('data-value', value).find('.label span').text(text);
+        }    
         $(e.currentTarget).closest('.dropdown-select').removeClass('active');
         $(e.currentTarget).closest('.dropdown-list').slideUp(150);
         $(e.currentTarget).closest('.dropdown-select').find('select option[value="' + value + '"]').prop('selected', true);
@@ -579,10 +656,34 @@ $(document).ready(function () {
         $('input:text:visible:first').focus();
         e.preventDefault();
     });
-    $('.right-bar').click(function (e) {
-        if ($(e.target).closest('.right-bar__body').length) return;
-        closeRightBar(e);
-    });
+    /*
+    To avoid weird situations where a user could click and drag inside the right bar body,
+    and then went out and released, Chrome would treat it as a click and close.
+    If we detect the drag, we can ignore such clicks.
+     */
+    let rightBarClickStartX, rightBarClickStartY;
+    $('.right-bar')
+        .on('mousedown', function (e) {
+            // Store the initial position of the mouse when pressing down
+            rightBarClickStartX = e.pageX;
+            rightBarClickStartY = e.pageY;
+        })
+        .click(function (e) {
+            // Check if the mouse has moved significantly between mousedown and click
+            const moveX = Math.abs(e.pageX - rightBarClickStartX);
+            const moveY = Math.abs(e.pageY - rightBarClickStartY);
+
+            // Threshold to detect a drag (adjust if necessary)
+            const dragThreshold = 10;
+
+            if (moveX > dragThreshold || moveY > dragThreshold) {
+                // If the mouse moved, treat it as a drag and ignore the click
+                return;
+            }
+
+            if ($(e.target).closest('.right-bar__body').length) return;
+            closeRightBar(e);
+        });
     $('.right-bar__body h3 a').click(function (e) {
         closeRightBar(e);
 
@@ -850,7 +951,7 @@ $(document).ready(function () {
     /* ===========================================================
                             Clipboard
       ============================================================*/
-    function coptToClipboard(text) {
+    function coptToClipboard(text) { // DEPRECATED -> preferrably use copyToClipboardAsync below
         var textArea = document.createElement("textarea");
         textArea.style.position = 'absolute';
         textArea.style.top = '-10000px';
@@ -869,7 +970,7 @@ $(document).ready(function () {
 
         document.body.removeChild(textArea);
     }
-    function copyTextToClipboard(text) {
+    function copyTextToClipboard(text) { // DEPRECATED -> preferrably use copyToClipboardAsync below
         if (!navigator.clipboard) {
             fallbackCopyTextToClipboard(text);
             return;
@@ -884,19 +985,110 @@ $(document).ready(function () {
         );
     }
 
+    // Added by Andraz Vene on 21st July 2024:
+    // More modern and robust way to copy across devices, including iOS
+    // solution from https://pandaquests.medium.com/how-to-implement-the-copy-text-to-clipboard-feature-in-javascript-cd5e60d08df0
+    // combined with : https://stackoverflow.com/questions/69438702/why-does-navigator-clipboard-writetext-not-copy-text-to-clipboard-if-it-is-pro
+    async function checkClipboardWriteSupport() {
+        // Check if Navigator API is supported
+        if (!navigator) {
+            console.log("Navigator API is not supported in this browser.");
+            return false;
+        }
+        // Check if Clipboard API is supported
+        if (!navigator.clipboard) {
+            console.log("Clipboard API is not supported in this browser.");
+            return false;
+        }
+        // Check if Permissions API is supported
+        if (!navigator.permissions) {
+            console.log("Permissions API is not supported in this browser.");
+            return false;
+        }
+
+        try {
+            // Try to query the clipboard-write permission
+            const result = await navigator.permissions.query({ name: 'clipboard-write' });
+            console.log("Clipboard-write permission is supported.");
+            return true;
+        } catch (error) {
+            if (error instanceof TypeError) {
+                console.log("'clipboard-write' is not a valid value for enumeration PermissionName.");
+            } else {
+                console.log("An unexpected error occurred:", error);
+            }
+            return false;
+        }
+    }
+
+    async function copyToClipboardAsync(text) {
+        return new Promise(async (resolve, reject) => {
+            let clipboardWriteIsSupported = await checkClipboardWriteSupport();
+            if (clipboardWriteIsSupported) {
+                const type = "text/plain";
+                const blob = new Blob([text], { type });
+                const data = [new ClipboardItem({ [type]: blob })];
+                navigator.permissions.query({name: "clipboard-write"}).then((permission) => {
+                    if (permission.state === "granted" || permission.state === "prompt") {
+                        navigator.clipboard.write(data).then(resolve, reject).catch(reject);
+                    }
+                    else {
+                        reject(new Error("Permission not granted!"));
+                    }
+                });
+            }
+            else if (document.queryCommandSupported && document.queryCommandSupported("copy")) {
+                var textarea = document.createElement("textarea");
+                textarea.textContent = text;
+                textarea.style.position = "fixed";
+                textarea.style.width = '2em';
+                textarea.style.height = '2em';
+                textarea.style.padding = 0;
+                textarea.style.border = 'none';
+                textarea.style.outline = 'none';
+                textarea.style.boxShadow = 'none';
+                textarea.style.background = 'transparent';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                try {
+                    document.execCommand("copy");
+                    document.body.removeChild(textarea);
+                    resolve();
+                }
+                catch (e) {
+                    document.body.removeChild(textarea);
+                    reject(e);
+                }
+            }
+            else {
+                reject(new Error("None of copying methods are supported by this browser!"));
+            }
+        });
+    }
 
     /* ===========================================================
                             Categories
       ============================================================*/
-    $(document).on('click', '[data-action="generate-link"]', function (e) {
-        coptToClipboard($(this).data('link'));
-        $('[data-type="link-generate-message"]').fadeIn(150, function () {
+    $(document).on('click touchstart', '[data-action="generate-link"]', async function (e) {
+        e.preventDefault();
+        //coptToClipboard($(this).data('link')); // old simplified way, less reliable, likely not to work on iOS
+        let copiedToClipboard = true;
+        let textToCopy = $(this).data('link');
+        try {
+            await copyToClipboardAsync(textToCopy);
+        }
+        catch(err) {
+            copiedToClipboard = false;
+            console.error(err);
+        }
+
+        $('[data-type="link-generate-message"]').toggleClass('display-error', !copiedToClipboard).fadeIn(150, function () {
             var notification = $(this);
             setTimeout(function () {
                 notification.fadeOut(150);
             }, 3000);
         });
-        e.preventDefault();
     });
     $('[data-action="category-create"]').click(function (e) {
         $('.right-bar.category-create').fadeIn(150);
@@ -904,6 +1096,7 @@ $(document).ready(function () {
         $('input:text:visible:first').focus();
         e.preventDefault();
     });
+    $('select[name="modal-dropdown"]').selectize();
 
 
     /* ===========================================================
@@ -970,23 +1163,9 @@ $(document).ready(function () {
         });
     } /* End if datepicker */
 
-    $('.param.calendar button').click(function (e) {
-        $(this).addClass('active');
-        $(this).parent()
-            .find('.datepicker')
-            .data("datepicker")
-            .show();
-    });
-    $('.param.calendar .close').click(function (e) {
-        $(this).parent().parent()
-            .find('.calendar--button')
-            .find('.datepicker')
-            .data("datepicker")
-            .clear();
-        $('.param.calendar .calendar--value').fadeOut(150, function () {
-            $(this).find('span').text('');
-        })
-    });
+    initDatePickerEvents();
+
+
     $('.right-bar.ticket-create .step-1 .cayrgory-list li').click(function (e) {
         $('.right-bar.ticket-create .right-bar__body').attr('data-step', 2);
     });
@@ -1046,6 +1225,15 @@ $(document).ready(function () {
         e.preventDefault();
     });
     $('.right-bar.profile-edit [data-action="save"]').click(function (e) {
+        $(this).closest('.right-bar').fadeOut(150);
+        $('body').removeClass('noscroll');
+        $('.notification-bar[data-type="profile-saved"]').fadeIn(150);
+    });
+    $('.main__content.profile [data-action="profile-password"]').click(function (e) {
+        $('.right-bar.profile-password').fadeIn(150);
+        $('body').addClass('noscroll');
+    });
+    $('.right-bar.profile-password [data-action="save"]').click(function (e) {
         $(this).closest('.right-bar').fadeOut(150);
         $('body').removeClass('noscroll');
         $('.notification-bar[data-type="profile-saved"]').fadeIn(150);
@@ -1242,16 +1430,25 @@ $(document).ready(function () {
         $('body').addClass('noscroll');
         e.preventDefault();
     });
-    $('.knowledge').on('click', '[data-action="generate-link"]', function (e) {
-        var generateLink = 'https://some-generate-link.html'
-        coptToClipboard(generateLink);
-        $('[data-type="link-generate-message"]').fadeIn(150, function () {
+    $('.knowledge').on('click', '[data-action="generate-link"]', async function (e) {
+        e.preventDefault();
+        //coptToClipboard($(this).data('link')); // old simplified way, less reliable, likely not to work on iOS
+        let copiedToClipboard = true;
+        let textToCopy = $(this).data('link');
+        try {
+            await copyToClipboardAsync($(this).data('link'));
+        }
+        catch(err) {
+            copiedToClipboard = false;
+            console.error(err);
+        }
+
+        $('[data-type="link-generate-message"]').toggleClass('display-error', !copiedToClipboard).fadeIn(150, function () {
             var notification = $(this);
             setTimeout(function () {
                 notification.fadeOut(150);
             }, 3000);
         });
-        e.preventDefault();
     });
 
     if ( $.isFunction($.fn.datepicker) ) {
@@ -1286,7 +1483,7 @@ $(document).ready(function () {
     });
 
     // Never allow typing in dropdowns
-    $('.selectize-input input').prop('readonly', true);
+    $('.selectize-control:not(.read-write) .selectize-input input').prop('readonly', true);
 });
 
 // Show mail description

@@ -27,11 +27,24 @@ $query = hesk_REQUEST('q') or die('');
 
 hesk_dbConnect();
 
+// Do we require logged-in customers to view the help desk?
+if ($hesk_settings['customer_accounts'] && $hesk_settings['customer_accounts_required'] == 2) {
+    require(HESK_PATH . 'inc/customer_accounts.inc.php');
+    hesk_session_start('CUSTOMER');
+    if (! hesk_isCustomerLoggedIn(false)) {
+        die('');
+    }
+}
+
+require(HESK_PATH . 'inc/knowledgebase_functions.inc.php');
+
 /* Get relevant articles from the database */
 $res = hesk_dbQuery("SELECT t1.`id`, t1.`subject`, LEFT(t1.`content`, ".max(200, $hesk_settings['kb_substrart'] * 2).") AS `content`, MATCH(`subject`,`content`,`keywords`) AGAINST ('".hesk_dbEscape($query)."') AS `score`
 					FROM `".hesk_dbEscape($hesk_settings['db_pfix']).'kb_articles` AS t1
 					LEFT JOIN `'.hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` AS t2 ON t1.`catid` = t2.`id`
-					WHERE t1.`type`='0' AND t2.`type`='0' AND MATCH(`subject`,`content`,`keywords`) AGAINST ('".hesk_dbEscape($query)."')
+                    WHERE t1.`type`='0' AND t2.`type`='0'
+                    AND `t2`.`id` IN (".implode(',', $hesk_settings['public_kb_categories_ids']).")
+                    AND MATCH(`subject`,`content`,`keywords`) AGAINST ('".hesk_dbEscape($query)."')
 					LIMIT ".intval($hesk_settings['kb_search_limit']));
 $num = hesk_dbNumRows($res);
 

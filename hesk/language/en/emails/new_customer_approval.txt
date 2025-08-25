@@ -1,0 +1,14 @@
+Hello,
+
+New customer accounts are pending staff approval.
+
+Number of pending approvals: %%NUM%%
+
+You can approve or reject customer account registrations here:
+%%VERIFICATION_URL%%
+
+
+Regards,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

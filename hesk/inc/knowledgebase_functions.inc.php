@@ -12,7 +12,9 @@
  */
 
 /* Check if this is a valid include */
-if (!defined('IN_SCRIPT')) {die('Invalid attempt');} 
+if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
+
+hesk_kbCategoriesArray();
 
 /*** FUNCTIONS ***/
 
@@ -20,12 +22,14 @@ function hesk_kbCategoriesArray($public_only = true)
 {
     global $hesk_settings, $hesklang;
 
-    $res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` " . ($public_only ? "WHERE `type`='0'" : "") . " ORDER BY `cat_order` ASC");
+    $res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` ORDER BY `cat_order` ASC");
 
     $categories = array();
 
     while ($category = hesk_dbFetchAssoc($res))
     {
+        $category['children'] = array();
+        $category['descendants'] = array();
         $categories[$category['id']] = $category;
     }
 
@@ -57,7 +61,65 @@ function hesk_kbCategoriesArray($public_only = true)
         $categories[$id]['parents'] = array_reverse($categories[$id]['parents']);
     }
 
-    return $categories;
+    // Get children for each category
+    foreach ($categories as $id => $category) {
+        if ($category['parent'] == 0) {
+            continue;
+        }
+
+        $categories[$category['parent']]['children'][] = $id;
+
+        foreach ($category['parents'] as $parent) {
+            $categories[$parent]['descendants'][] = $id;
+        }
+    }
+
+    // If a parent is private, make sure all sub-categories are private too
+    foreach ($categories as $id => $category) {
+        if ($category['type'] == 0) {
+            continue;
+        }
+
+        foreach ($category['descendants'] as $descendant) {
+            if (isset($categories[$descendant])) {
+                $categories[$descendant]['type'] = 1;
+            }
+        }
+    }
+
+    // Uncomment if you want to remove direct children from "descendants"
+    /*
+    foreach ($categories as $id => $category) {
+        if (count($category['children']) == 0 || count($category['descendants']) == 0) {
+            continue;
+        }
+
+        $categories[$id]['descendants'] = array_diff($categories[$id]['descendants'], $categories[$id]['children']);
+    }
+    */
+
+    $hesk_settings['all_kb_categories'] = $categories;
+
+    // Extract public categories only
+    foreach ($categories as $id => $category) {
+        if ($category['type'] == 1) {
+            unset($categories[$id]);
+
+            // Remove also from children and descendant arrays
+            foreach ($categories as $i => $c) {
+                if (($key = array_search($id, $categories[$i]['children'])) !== false) {
+                    unset($categories[$i]['children'][$key]);
+                }
+                if (($key = array_search($id, $categories[$i]['descendants'])) !== false) {
+                    unset($categories[$i]['descendants'][$key]);
+                }
+            }
+        }
+    }
+    $hesk_settings['public_kb_categories'] = $categories;
+    $hesk_settings['public_kb_categories_ids'] = array_keys($categories);
+
+    return true;
 } // END hesk_kbCategoriesArray()
 
 
@@ -105,10 +167,13 @@ function hesk_kbTopArticles($how_many, $index = 1)
 		}
     }
 
+    // Make sure "public" categories are not nested in a "private" one
+    $sql_top = ' AND `t2`.`id` IN ('.implode(',', $hesk_settings['public_kb_categories_ids']).') ';
+
     /* Get list of articles from the database */
     $res = hesk_dbQuery("SELECT `t1`.`id`,`t1`.`catid`,`t1`.`subject`,`t1`.`views`, `t1`.`content`, `t2`.`name` AS `category`, `t1`.`rating`, `t1`.`votes` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` AS `t1`
                         LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` AS `t2` ON `t1`.`catid` = `t2`.`id`
-                        WHERE `t1`.`type`='0' AND `t2`.`type`='0'
+                        WHERE `t1`.`type`='0' AND `t2`.`type`='0' {$sql_top}
                         ORDER BY `t1`.`sticky` DESC, `t1`.`views` DESC, `t1`.`art_order` ASC LIMIT ".intval($how_many));
 
     $articles = array();
@@ -170,6 +235,9 @@ function hesk_kbLatestArticles($how_many, $index = 1)
     {
         $sql_top = ' AND `t1`.`id` NOT IN ('.implode(',', $hesk_settings['kb_top_articles_printed']).')';
     }
+
+    // Make sure "public" categories are not nested in a "private" one
+    $sql_top .= ' AND `t2`.`id` IN ('.implode(',', $hesk_settings['public_kb_categories_ids']).') ';
 
     /* Get list of articles from the database */
     $res = hesk_dbQuery("SELECT `t1`.`id`,`t1`.`catid`,`t1`.`subject`,`t1`.`dt`,`t1`.`views`, `t1`.`content`, `t1`.`rating`, `t1`.`votes`, `t2`.`name` AS `category` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` AS `t1`

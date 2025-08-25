@@ -16,12 +16,12 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 /*** FUNCTIONS ***/
 
-function hesk_export_to_XML($sql, $export_selected = false)
+function hesk_export_to_XML($sql, $export_selected = false, $export_history = false)
 {
     global $hesk_settings, $hesklang, $ticket, $my_cat;
 
 	// We'll need HH:MM:SS format for hesk_date() here
-	$hesk_settings['timeformat'] = 'H:i:s';
+	$hesk_settings['format_timestamp'] = 'H:i:s';
 
 	// Get staff names
 	$admins = array();
@@ -85,11 +85,11 @@ function hesk_export_to_XML($sql, $export_selected = false)
 
         if ($date_from == $date_to)
         {
-            $flush_me .= "(" . hesk_dateToString($date_from,0) . ")";
+            $flush_me .= "(" . hesk_date($date_from, true, true, true, $hesk_settings['format_date']) . ")";
         }
         else
         {
-            $flush_me .= "(" . hesk_dateToString($date_from,0) . " - " . hesk_dateToString($date_to,0) . ")";
+            $flush_me .= "(" . hesk_date($date_from, true, true, true, $hesk_settings['format_date']) . " - " . hesk_date($date_to, true, true, true, $hesk_settings['format_date']) . ")";
         }
     }
 
@@ -147,6 +147,7 @@ function hesk_export_to_XML($sql, $export_selected = false)
 	<Column ss:AutoFitWidth="0" ss:Width="90"/>
 	<Column ss:AutoFitWidth="0" ss:Width="90"/>
 	<Column ss:AutoFitWidth="0" ss:Width="87"/>
+	<Column ss:AutoFitWidth="0" ss:Width="87"/>
 	<Column ss:AutoFitWidth="0" ss:Width="57.75"/>
 	<Column ss:AutoFitWidth="0" ss:Width="57.75"/>
 	<Column ss:AutoFitWidth="0" ss:Width="100"/>
@@ -170,8 +171,10 @@ function hesk_export_to_XML($sql, $export_selected = false)
 	<Cell><Data ss:Type="String">'.$hesklang['trackID'].'</Data></Cell>
 	<Cell><Data ss:Type="String">'.$hesklang['date'].'</Data></Cell>
     <Cell><Data ss:Type="String">'.$hesklang['last_update'].'</Data></Cell>
+    <Cell><Data ss:Type="String">'.$hesklang['resolved_at'].'</Data></Cell>
 	<Cell><Data ss:Type="String">'.$hesklang['name'].'</Data></Cell>
 	<Cell><Data ss:Type="String">'.$hesklang['email'].'</Data></Cell>
+	<Cell><Data ss:Type="String">'.$hesklang['followers'].'</Data></Cell>
 	<Cell><Data ss:Type="String">'.$hesklang['category'].'</Data></Cell>
 	<Cell><Data ss:Type="String">'.$hesklang['priority'].'</Data></Cell>
 	<Cell><Data ss:Type="String">'.$hesklang['status'].'</Data></Cell>
@@ -190,6 +193,11 @@ function hesk_export_to_XML($sql, $export_selected = false)
 		}
 	}
 
+    if ($export_history) {
+        $tmp .= '<Cell><Data ss:Type="String">'.$hesklang['thist'].'</Data></Cell>' . "\n";
+    }
+
+    $tmp .= '<Cell><Data ss:Type="String">'.$hesklang['ticket_url'].'</Data></Cell>' . "\n";
 	$tmp .= "</Row>\n";
 
 	// Write what we have by now into the XML file
@@ -206,30 +214,42 @@ function hesk_export_to_XML($sql, $export_selected = false)
 	while ($ticket=hesk_dbFetchAssoc($result))
 	{
         $ticket['status'] = hesk_get_status_name($ticket['status']);
-
-		switch ($ticket['priority'])
-		{
-			case 0:
-				$ticket['priority']=$hesklang['critical'];
-				break;
-			case 1:
-				$ticket['priority']=$hesklang['high'];
-				break;
-			case 2:
-				$ticket['priority']=$hesklang['medium'];
-				break;
-			default:
-				$ticket['priority']=$hesklang['low'];
-		}
-
+        $ticket['priority'] = hesk_get_priority_name($ticket['priority']);
 		$ticket['archive'] = !($ticket['archive']) ? $hesklang['no'] : $hesklang['yes'];
 		$ticket['message'] = hesk_msgToPlain($ticket['message'], 1, 0);
 		$ticket['subject'] = hesk_msgToPlain($ticket['subject'], 1, 0);
         $ticket['owner'] = isset($admins[$ticket['owner']]) ? $admins[$ticket['owner']] : '';
 		$ticket['category'] = isset($my_cat[$ticket['category']]) ? $my_cat[$ticket['category']] : '';
 
+        if (!function_exists('hesk_get_customers_for_ticket')) {
+            require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
+        }
+        $customers = hesk_get_customers_for_ticket($ticket['id']);
+        if (defined('HESK_DEMO')) {
+            array_walk($customers, function(&$k) {
+                $k['email'] = 'hidden@demo.com';
+            });
+        }
+        $found_requester = false;
+        $requester = [];
+        $followers = [];
+        foreach ($customers as $customer) {
+            if ($customer['customer_type'] === 'REQUESTER') {
+                $found_requester = true;
+                $requester = $customer;
+            } elseif ($customer['customer_type'] === 'FOLLOWER') {
+                $followers[] = $customer;
+            }
+        }
+        if (!$found_requester) {
+            // Ticket has been anonymized
+            $requester['name'] = $hesklang['anon_name'];
+            $requester['email'] = $hesklang['anon_email'];
+        }
+        $follower_names = array_map(function($follower) { return format_display_name($follower); }, $followers);
+
 		// Format for export dates
-		$hesk_settings['timeformat'] = "Y-m-d\TH:i:s\.000";
+		$hesk_settings['format_timestamp'] = "Y-m-d\TH:i:s\.000";
 
 		// Create row for the XML file
 		$tmp .= '
@@ -238,8 +258,17 @@ function hesk_export_to_XML($sql, $export_selected = false)
 <Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($ticket['trackid']).']]></Data></Cell>
 <Cell ss:StyleID="s62"><Data ss:Type="DateTime">'.hesk_date($ticket['dt'], true).'</Data></Cell>
 <Cell ss:StyleID="s62"><Data ss:Type="DateTime">'.hesk_date($ticket['lastchange'], true).'</Data></Cell>
-<Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA(hesk_msgToPlain($ticket['name'], 1, 0)).']]></Data></Cell>
-<Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($ticket['email']).']]></Data></Cell>
+';
+
+        if (empty($ticket['closedat'])) {
+            $tmp .= '<Cell><Data ss:Type="String"></Data></Cell>'."\n";
+        } else {
+            $tmp .= '<Cell ss:StyleID="s62"><Data ss:Type="DateTime">'.hesk_date($ticket['closedat'], true).'</Data></Cell>'."\n";
+        }
+
+        $tmp .= '<Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA(hesk_msgToPlain($requester['name'], 1, 0)).']]></Data></Cell>
+<Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($requester['email']).']]></Data></Cell>
+<Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA(implode(',', $follower_names)).']]></Data></Cell>
 <Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($ticket['category']).']]></Data></Cell>
 <Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($ticket['priority']).']]></Data></Cell>
 <Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($ticket['status']).']]></Data></Cell>
@@ -277,6 +306,16 @@ function hesk_export_to_XML($sql, $export_selected = false)
 			}
 		}
 
+        if ($export_history) {
+            $tmp .= '<Cell><Data ss:Type="String"><![CDATA['.hesk_escape_CDATA($ticket['history']).']]></Data></Cell>' . "\n";
+        }
+
+        // Include a link to ticket
+        if ($hesk_settings['email_view_ticket'] && isset($requester['email'])) {
+            $tmp .= '<Cell><Data ss:Type="String">'.$hesk_settings['hesk_url'].'/ticket.php?track='.urlencode($ticket['trackid']).'&amp;e='.urlencode($requester['email']).'</Data></Cell>';
+        } else {
+            $tmp .= '<Cell><Data ss:Type="String">'.$hesk_settings['hesk_url'].'/ticket.php?track='.urlencode($ticket['trackid']).'</Data></Cell>';
+        }
 		$tmp .= "</Row>\n";
 
 		// Write every 100 rows into the file
@@ -293,7 +332,7 @@ function hesk_export_to_XML($sql, $export_selected = false)
 	} // End of while loop
 
 	// Go back to the HH:MM:SS format for hesk_date()
-	$hesk_settings['timeformat'] = 'H:i:s';
+	$hesk_settings['format_timestamp'] = 'H:i:s';
 
 	// Append any remaining rows into the file
 	if ($this_round > 0)
@@ -435,3 +474,11 @@ function hesk_escape_CDATA($in)
 {
     return str_replace(']]>', ']]]]><![CDATA[>', $in);
 } // END hesk_escape_CDATA()
+
+function format_display_name($row) {
+    if ($row['name']) {
+        return $row['email'] ? "{$row['name']} <{$row['email']}>" : $row['name'];
+    }
+
+    return $row['email'];
+}

@@ -16,9 +16,9 @@ define('HESK_PATH','./');
 
 /* Get all the required files and functions */
 require(HESK_PATH . 'hesk_settings.inc.php');
-// TODO Pull this from settings
 define('TEMPLATE_PATH', HESK_PATH . "theme/{$hesk_settings['site_theme']}/");
 require(HESK_PATH . 'inc/common.inc.php');
+require(HESK_PATH . 'inc/customer_accounts.inc.php');
 
 // Are we in maintenance mode?
 hesk_check_maintenance();
@@ -32,6 +32,10 @@ if (!$hesk_settings['kb_enable'])
 // Connect to database
 hesk_load_database_functions();
 hesk_dbConnect();
+hesk_session_start('CUSTOMER');
+
+// Do we require logged-in customers to view the help desk?
+hesk_isCustomerLoggedIn($hesk_settings['customer_accounts'] && $hesk_settings['customer_accounts_required'] == 2);
 
 // Do we have any public articles at all?
 $res = hesk_dbQuery("SELECT `t1`.`id` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` AS `t1`
@@ -94,9 +98,6 @@ if (isset($_GET['rating']))
     exit();
 }
 
-// Get list of public categories
-$hesk_settings['public_kb_categories'] = hesk_kbCategoriesArray();
-
 /* Any category ID set? */
 $catid = intval( hesk_GET('category', 1) );
 $artid = intval( hesk_GET('article', 0) );
@@ -128,6 +129,9 @@ elseif ($artid)
                             ");
 
     $article = hesk_dbFetchAssoc($result) or hesk_error($hesklang['kb_art_id']);
+    if ( ! isset($hesk_settings['public_kb_categories'][$article['catid']])) {
+        hesk_error($hesklang['kb_art_id']);
+    }
     $article['views_formatted'] = number_format($article['views'], 0, null, $hesklang['sep_1000']);
     $article['votes_formatted'] = number_format($article['votes'], 0, null, $hesklang['sep_1000']);
     if ($article['catid'] == 1)
@@ -135,6 +139,10 @@ elseif ($artid)
         $article['cat_name'] = $hesklang['kb_text'];
     }
     hesk_show_kb_article($artid);
+}
+elseif ( ! isset($hesk_settings['public_kb_categories'][$catid]))
+{
+    hesk_error($hesklang['kb_cat_inv']);
 }
 else
 {
@@ -154,7 +162,9 @@ function hesk_kb_search($query) {
 
 	$res = hesk_dbQuery('SELECT t1.`id`, t1.`subject`, LEFT(`t1`.`content`, '.max(200, $hesk_settings['kb_substrart'] * 2).') AS `content`, t1.`rating`, t1.`votes`, t1.`views` FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'kb_articles` AS t1
     					LEFT JOIN `'.hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` AS t2 ON t1.`catid` = t2.`id`
-						WHERE t1.`type`='0' AND t2.`type`='0' AND  MATCH(`subject`,`content`,`keywords`) AGAINST ('".hesk_dbEscape($query)."') LIMIT " . intval($hesk_settings['kb_search_limit']));
+                        WHERE t1.`type`='0' AND t2.`type`='0'
+                        AND `t2`.`id` IN (".implode(',', $hesk_settings['public_kb_categories_ids']).")
+                        AND MATCH(`subject`,`content`,`keywords`) AGAINST ('".hesk_dbEscape($query)."') LIMIT " . intval($hesk_settings['kb_search_limit']));
     $num = hesk_dbNumRows($res);
 
     $articles = array();
@@ -169,7 +179,13 @@ function hesk_kb_search($query) {
     if ($num === 0) {
         hesk_show_kb_category(1, 1);
     } else {
-        $hesk_settings['render_template'](TEMPLATE_PATH . 'customer/knowledgebase/search-results.php', array('articles' => $articles));
+        $customerUserContext = hesk_isCustomerLoggedIn(false);
+        $hesk_settings['render_template'](TEMPLATE_PATH . 'customer/knowledgebase/search-results.php', array(
+                'articles' => $articles,
+                'customerLoggedIn' => $customerUserContext !== null,
+                'customerUserContext' => $customerUserContext
+            )
+        );
     }
 
     return true;
@@ -255,6 +271,11 @@ function hesk_show_kb_article($artid)
     }
     $response['relatedArticles'] = $related_articles;
 
+    $customerUserContext = hesk_isCustomerLoggedIn(false);
+    $response['customerLoggedIn'] = $customerUserContext !== null;
+    $response['customerUserContext'] = $customerUserContext;
+    $response['serviceMessages'] = hesk_get_service_messages('kb-art');
+
     $hesk_settings['render_template'](TEMPLATE_PATH . 'customer/knowledgebase/view-article.php', $response);
 } // END hesk_show_kb_article()
 
@@ -269,6 +290,10 @@ function hesk_show_kb_category($catid, $is_search = 0) {
     if ($thiscat['id'] == 1)
     {
         $thiscat['name'] = $hesklang['kb_text'];
+        $service_messages_location = 'kb-main';
+    }
+    else {
+        $service_messages_location = 'kb-sub';
     }
 
     $response = array(
@@ -280,19 +305,6 @@ function hesk_show_kb_category($catid, $is_search = 0) {
     {
         /* Print header */
         $hesk_settings['tmp_title'] = $hesk_settings['hesk_title'] . ' - ' . hesk_htmlspecialchars($thiscat['name']);
-
-        // If we are in "Knowledgebase only" mode show system messages
-        if ($catid == 1 && hesk_check_kb_only(false) )
-        {
-            // Service messages
-            $service_messages = array();
-            $res = hesk_dbQuery('SELECT `title`, `message`, `style` FROM `'.hesk_dbEscape($hesk_settings['db_pfix'])."service_messages` WHERE `type`='0' AND (`language` IS NULL OR `language` LIKE '".hesk_dbEscape($hesk_settings['language'])."') ORDER BY `order` ASC");
-            while ($sm=hesk_dbFetchAssoc($res))
-            {
-                $service_messages[] = $sm;
-            }
-            $response['service_messages'] = $service_messages;
-        }
     }
 
     if ($thiscat['parent'])
@@ -309,29 +321,19 @@ function hesk_show_kb_category($catid, $is_search = 0) {
         {
             $displayShowMoreLink = false;
             $articles_to_display = array();
+            $number_of_articles_to_display = 0;
 
-            if ($hesk_settings['kb_numshow'] && $cat['articles'])
-            {
-                $res = hesk_dbQuery("SELECT `id`,`subject` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` WHERE `catid`='{$cat['id']}' AND `type`='0' ORDER BY `sticky` DESC, `art_order` ASC LIMIT " . (intval($hesk_settings['kb_numshow']) + 1) );
-                while ($art = hesk_dbFetchAssoc($res)) {
-                    $articles_to_display[] = $art;
+            if ($hesk_settings['kb_numshow']) {
+
+                $subcat = $hesk_settings['public_kb_categories'][$cat['id']];
+
+                if ($cat['articles']) {
+                    hesk_kb_fetch_article_previews($articles_to_display, $number_of_articles_to_display, $displayShowMoreLink, array($subcat['id']), $hesk_settings['kb_numshow']);
                 }
 
-                // Do we have more articles for display than what we need?
-                if (hesk_dbNumRows($res) > $hesk_settings['kb_numshow']) {
-                    $displayShowMoreLink = true;
-                    array_pop($articles_to_display);
-                } else {
-                    // Maybe we have further sub-categories?
-                    foreach ($hesk_settings['public_kb_categories'] as $category)
-                    {
-                        // Show "More" if the sub-category has sub-categories
-                        if ($category['parent'] == $cat['id'])
-                        {
-                            $displayShowMoreLink = true;
-                            break;
-                        }
-                    }
+                // Do we need more articles to display?
+                if ( ! $displayShowMoreLink && count($subcat['descendants'])) {
+                    hesk_kb_fetch_article_previews($articles_to_display, $number_of_articles_to_display, $displayShowMoreLink, $subcat['descendants'], $hesk_settings['kb_numshow'] - $number_of_articles_to_display);
                 }
             }
 
@@ -368,6 +370,28 @@ function hesk_show_kb_category($catid, $is_search = 0) {
         $response['latestArticles'] = array();
     }
 
+    $customerUserContext = hesk_isCustomerLoggedIn(false);
+    $response['customerLoggedIn'] = $customerUserContext !== null;
+    $response['customerUserContext'] = $customerUserContext;
+    $response['serviceMessages'] = hesk_get_service_messages($service_messages_location);
+
     $hesk_settings['render_template'](TEMPLATE_PATH . 'customer/knowledgebase/view-category.php', $response);
 } // END hesk_show_kb_category()
-?>
+
+
+function hesk_kb_fetch_article_previews(&$articles_to_display, &$number_of_articles_to_display, &$displayShowMoreLink, $categories, $limit) {
+    global $hesk_settings, $hesklang;
+
+    $res = hesk_dbQuery("SELECT `id`,`subject` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` WHERE `catid` IN (" . implode(',', $categories) . ") AND `type`='0' ORDER BY `sticky` DESC, `views` DESC, `art_order` ASC LIMIT " . intval($limit + 1) );
+    while ($art = hesk_dbFetchAssoc($res)) {
+        $articles_to_display[] = $art;
+        $number_of_articles_to_display++;
+    }
+
+    // Do we have more articles for display than what we need?
+    if ($number_of_articles_to_display > $hesk_settings['kb_numshow']) {
+        $displayShowMoreLink = true;
+        array_pop($articles_to_display);
+    }
+
+} // END hesk_kb_fetch_article_previews()

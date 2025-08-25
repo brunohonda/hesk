@@ -1,0 +1,8 @@
+<p>Caro %%NAME%%,</p>
+<p>Seu chamado "%%SUBJECT%%" foi enviado.</p>
+<p>Respondemos a todos os chmados o mais rápido possível, dentro de 24 a 48 horas. Se esperarmos que seu ingresso demore mais tempo, atualizaremos você enviando um e-mail.</p>
+<p>ID: %%TRACK_ID%%</p>
+<p>Você pode ver o status do seu chamado aqui:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p>Você receberá uma notificação por e-mail quando nossa equipe responder ao seu chamado.</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

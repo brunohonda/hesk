@@ -21,6 +21,7 @@ require(HESK_PATH . 'inc/posting_functions.inc.php');
 require(HESK_PATH . 'inc/mail/rfc822_addresses.php');
 require(HESK_PATH . 'inc/mail/mime_parser.php');
 require(HESK_PATH . 'inc/mail/email_parser.php');
+require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
 
 /*** FUNCTIONS ***/
 
@@ -31,11 +32,38 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 	// Process "Reply-To:" or "From:" email
 	$tmpvar['email'] = isset($results['reply-to'][0]['address']) ? hesk_validateEmail($results['reply-to'][0]['address'],'ERR',0) : hesk_validateEmail($results['from'][0]['address'],'ERR',0);
 
-	// Email missing, invalid or banned?
-	if ( ! $tmpvar['email'] || hesk_isBannedEmail($tmpvar['email']) )
-	{
-		return hesk_cleanExit();
-	}
+    // Email missing, invalid or banned?
+    if ( ! $tmpvar['email'])
+    {
+        return hesk_cleanExit('Customer email is missing or invalid: ' . $tmpvar['email']);
+    }
+    elseif (hesk_isBannedEmail($tmpvar['email']))
+    {
+        return hesk_cleanExit('Banned customer email address: ' . $tmpvar['email']);
+    }
+
+    $sender_lowercase = strtolower($tmpvar['email']);
+
+    // Ignore emails sent from the same email address we fetch tickets from or we will create a loop
+    // -> email sender matches Hesk's "From email"
+    if ($sender_lowercase == strtolower($hesk_settings['noreply_mail'])) {
+        return hesk_cleanExit('Email from Hesk "From email", ignoring to prevent email loops');
+    }
+
+    // -> email sender matches Hesk's "SMTP user"
+    if ($hesk_settings['smtp'] && $sender_lowercase == strtolower($hesk_settings['smtp_user'])) {
+        return hesk_cleanExit('Email from Hesk "SMTP user", ignoring to prevent email loops');
+    }
+
+    // -> email sender matches Hesk's "IMAP user"
+    if ($protocol == 2 && $sender_lowercase == strtolower($hesk_settings['imap_user'])) {
+        return hesk_cleanExit('Email from Hesk "IMAP user", ignoring to prevent email loops');
+    }
+
+    // -> email sender matches Hesk's "POP3 user"
+    if ($protocol == 1 && $sender_lowercase == strtolower($hesk_settings['pop3_user'])) {
+        return hesk_cleanExit('Email from Hesk "POP3 user", ignoring to prevent email loops');
+    }
 
 	// Process "Reply-To:" or "From:" name, convert to UTF-8, set to "[Customer]" if not set
 	if ( isset($results['reply-to'][0]['name']) && strlen($results['reply-to'][0]['name']) )
@@ -61,6 +89,7 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 
 	// Process email subject, convert to UTF-8, set to "[Piped email]" if none set
 	$tmpvar['subject'] = isset($results['subject']) ? $results['subject'] : $hesklang['pem'];
+    $tmpvar['subject'] = preg_replace("/(\n|\r|\t|%0A|%0D|%08|%09)+/", " ", $tmpvar['subject']);
 	if ( ! empty($results['subject_encoding']) )
 	{
 		$tmpvar['subject'] = hesk_encodeUTF8($tmpvar['subject'], $results['subject_encoding']);
@@ -81,7 +110,7 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 		// Message required? Ignore this email.
 		if ($hesk_settings['eml_req_msg'])
 		{
-			return hesk_cleanExit();
+			return hesk_cleanExit('Missing email message');
 		}
 
 		// Message not required? Assign a default message
@@ -109,24 +138,56 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
     # die( bin2hex($tmpvar['message']) );
     # die($tmpvar['message']);
 
-	// Try to detect "delivery failed" and "noreply" emails - ignore if detected
-	if ( hesk_isReturnedEmail($tmpvar) )
-	{
-		return hesk_cleanExit();
-	}
+    // Try to detect emails from "noreply" addresses
+    if ($hesk_settings['pipe_block_noreply'] && hesk_isDoNotReplyEmail($tmpvar))
+    {
+        return hesk_cleanExit('Email sent from a "noreply" email address: ' . $tmpvar['email']);
+    }
+
+    // Try to detect "delivery failed" emails
+    if ($hesk_settings['pipe_block_returned'] && hesk_isReturnedEmail($tmpvar))
+    {
+        return hesk_cleanExit('Looks like a returned email');
+    }
+
+    // Get email ID and Reply to ID
+    $tmpvar['email_id'] = isset($results['Message-ID']) ? preg_replace('[^a-zA-Z0-9!#$%&\'*+/=?^_`{|}~-]', '', $results['Message-ID']) : '';
+    $tmpvar['email_reply_to'] = isset($results['In-Reply-To']) ? preg_replace('[^a-zA-Z0-9!#$%&\'*+/=?^_`{|}~-]', '', $results['In-Reply-To']) : '';
 
 	// Check for email loops
-	if ( hesk_isEmailLoop($tmpvar['email'], $message_hash) )
+	if (($reason = hesk_isEmailLoop($tmpvar['email'], $message_hash)) !== false)
 	{
-		return hesk_cleanExit();
+		return hesk_cleanExit($reason);
 	}
 
-	// OK, everything seems OK. Now determine if this is a reply to a ticket or a new ticket
-	if ( preg_match('/\[#([A-Z0-9]{3}\-[A-Z0-9]{3}\-[A-Z0-9]{4})\]/', str_replace(' ', '', $tmpvar['subject']), $matches) )
-	{
-		// We found a possible tracking ID
-		$tmpvar['trackid'] = $matches[1];
+    //-- Retrieve (or create) customer
+    if ($hesk_settings['customer_accounts'] === 0 || ($hesk_settings['customer_accounts'] === 1 && $hesk_settings['customer_accounts_required'] === 0)) {
+        $tmpvar['customer_id'] = hesk_get_or_create_customer($tmpvar['name'], $tmpvar['email']);
+    } else {
+        // Only allow existing customers to email their tickets/replies
+        $tmpvar['customer_id'] = hesk_get_customer_id_by_email($tmpvar['email'], true);
+        if ($tmpvar['customer_id'] === null) {
+            if ($hesk_settings['pipe_customer_rejection_notification']) {
+                hesk_notifyRejectedCustomer($tmpvar);
+            }
 
+            $reason = "Could not find customer with email '{$tmpvar['email']}' and helpdesk settings require an account to be created prior to sending tickets via e-mail.";
+            return hesk_cleanExit($reason);
+        }
+    }
+
+	// OK, everything seems OK. Now determine if this is a reply to a ticket or a new ticket
+    $tmpvar['trackid'] = '';
+    if (isset($results['X-Hesk-Tracking_ID']) && preg_match('/([A-Z0-9]{3}\-[A-Z0-9]{3}\-[A-Z0-9]{4})/', $results['X-Hesk-Tracking_ID'])) {
+        // Tracking ID found in custom X-Hesk-Tracking_ID email header
+        $tmpvar['trackid'] = $results['X-Hesk-Tracking_ID'];
+    } elseif ( preg_match('/\[#([A-Z0-9]{3}\-[A-Z0-9]{3}\-[A-Z0-9]{4})\]/', str_replace(' ', '', $tmpvar['subject']), $matches) ) {
+        // Tracking ID found in email subject
+        $tmpvar['trackid'] = $matches[1];
+    }
+
+	if ($tmpvar['trackid'] != '')
+	{
 	    // Does it match one in the database?
 		$res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `trackid`='".hesk_dbEscape($tmpvar['trackid'])."' LIMIT 1");
 		if (hesk_dbNumRows($res))
@@ -134,7 +195,10 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 			$ticket = hesk_dbFetchAssoc($res);
 
 	        // Do email addresses match?
-	        if ( strpos( strtolower($ticket['email']), strtolower($tmpvar['email']) ) === false )
+            $customers = hesk_get_customers_for_ticket($ticket['id']);
+            $customer_emails = array_map(function($customer) {return strtolower($customer['email']);}, $customers);
+
+            if (!in_array(strtolower($tmpvar['email']), $customer_emails))
 	        {
 	        	$tmpvar['trackid'] = '';
 	        }
@@ -219,6 +283,7 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
         if (strlen($tmpvar['attachmment_notices']))
         {
         	$tmpvar['message'] .= "<br /><br />" . hesk_input($hesklang['attrem'],'','',1) . "<br />" . nl2br(hesk_input($tmpvar['attachmment_notices'],'','',1));
+            $tmpvar['message_html'] .= "<br /><br />" . hesk_input($hesklang['attrem'],'','',1) . "<br />" . nl2br(hesk_input($tmpvar['attachmment_notices'],'','',1));
         }
 	}
 
@@ -230,6 +295,7 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 	{
 		// Set last replier name to customer name
 		$ticket['lastreplier'] = ($tmpvar['name'] == $hesklang['pde']) ? $tmpvar['email'] : $tmpvar['name'];;
+        $ticket['customer_id'] = hesk_get_or_create_customer($tmpvar['name'], $tmpvar['email']);
 
 		// If staff hasn't replied yet, keep ticket status "New", otherwise set it to "Waiting reply from staff"
 		$ticket['status'] = $ticket['status'] ? 1 : 0;
@@ -241,19 +307,23 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 		hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` SET `read` = '1' WHERE `replyto` = '".intval($ticket['id'])."' AND `staffid` != '0' ");
 
 		// Insert reply into database
-		hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`name`,`message`,`message_html`,`dt`,`attachments`) VALUES ('".intval($ticket['id'])."','".hesk_dbEscape($ticket['lastreplier'])."','".hesk_dbEscape($tmpvar['message'])."','".hesk_dbEscape($tmpvar['message'])."',NOW(),'".hesk_dbEscape($tmpvar['attachments'])."')");
+		hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`customer_id`,`message`,`message_html`,`dt`,`attachments`,`eid`) VALUES ('".intval($ticket['id'])."','".intval($ticket['customer_id'])."','".hesk_dbEscape($tmpvar['message'])."','".hesk_dbEscape($tmpvar['message'])."',NOW(),'".hesk_dbEscape($tmpvar['attachments'])."', " . (!empty($tmpvar['email_id']) ? "'" . hesk_dbEscape($tmpvar['email_id']) . "'" : "NULL") . ")");
 
 		// --> Prepare reply message
+        $customers = hesk_get_customers_for_ticket($ticket['id']);
+        $customer_names = array_map(function($customer) { return $customer['name']; }, $customers);
+        $customer_emails = array_map(function($customer) { return $customer['email']; }, $customers);
 
 		// 1. Generate the array with ticket info that can be used in emails
 		$info = array(
-		'email'			=> $ticket['email'],
+		'email'			=> implode(';', $customer_emails),
 		'category'		=> $ticket['category'],
 		'priority'		=> $ticket['priority'],
 		'owner'			=> $ticket['owner'],
+        'collaborators' => hesk_getTicketsCollaboratorIDs($ticket['id']),
 		'trackid'		=> $ticket['trackid'],
 		'status'		=> $ticket['status'],
-		'name'			=> $ticket['name'],
+		'name'			=> implode(',', $customer_names),
 		'lastreplier'	=> $ticket['lastreplier'],
 		'subject'		=> $ticket['subject'],
 		'message'		=> stripslashes($tmpvar['message']),
@@ -262,6 +332,7 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 		'lastchange'	=> hesk_date($ticket['lastchange'], true),
         'due_date'      => hesk_format_due_date($ticket['due_date']),
         'id'			=> $ticket['id'],
+        'time_worked'   => $ticket['time_worked'],
 		);
 
 		// 2. Add custom fields to the array
@@ -270,7 +341,10 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 			$info[$k] = $v['use'] ? $ticket[$k] : '';
 		}
 
-		// 3. Make sure all values are properly formatted for email
+        // 3. Add HTML message to the array
+        $info['message_html'] = $info['message'];
+
+        // 4. Make sure all values are properly formatted for email
 		$ticket = hesk_ticketToPlain($info, 1, 0);
 
 		// --> Process custom fields before sending
@@ -279,16 +353,18 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 			$ticket[$k] = $v['use'] ? hesk_msgToPlain($ticket[$k], 1) : '';
 		}
 
-		// --> If ticket is assigned just notify the owner
-		if ($ticket['owner'])
-		{
-			hesk_notifyAssignedStaff(false, 'new_reply_by_customer', 'notify_reply_my');
-		}
-		// --> No owner assigned, find and notify appropriate staff
-		else
-		{
-			hesk_notifyStaff('new_reply_by_customer',"`notify_reply_unassigned`='1'");
-		}
+        // --> If ticket is assigned, notify the owner plus collaborators
+        if ($ticket['owner']) {
+            hesk_notifyAssignedStaff(false, 'new_reply_by_customer', 'notify_reply_my', 'notify_collaborator_customer_reply');
+        }
+        // --> No owner assigned, find and notify appropriate staff, including collaborators
+        elseif ($ticket['collaborators']) {
+            hesk_notifyStaff('new_reply_by_customer',"`notify_reply_unassigned`='1' OR (`notify_collaborator_customer_reply`='1' AND `id` IN (',', ".implode($ticket['collaborators'])."))");
+        }
+        // --> No owner assigned, find and notify appropriate staff, no collaborators
+        else {
+            hesk_notifyStaff('new_reply_by_customer',"`notify_reply_unassigned`='1'");
+        }
 
 		return $ticket['trackid'];
 
@@ -339,7 +415,22 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 		$tmpvar[$k] = '';
 	}
 
+    if (($default_due_date_info = hesk_getCategoryDueDateInfo($tmpvar['category'])) !== null)
+    {
+        $due_date = new DateTime('today midnight');
+        $due_date->add(DateInterval::createFromDateString("+{$default_due_date_info['amount']} {$default_due_date_info['unit']}s"));
+        $tmpvar['due_date'] = hesk_datepicker_format_date($due_date->getTimestamp());
+
+        // Don't set a due date if any unexpected errors
+        if ($tmpvar['due_date'] === false) {
+            $tmpvar['due_date'] = '';
+        }
+    }
+
 	// Insert ticket to database
+    $tmpvar['follower_ids'] = [];
+
+    // Create ticket
 	$ticket = hesk_newTicket($tmpvar);
 
 	// Notify the customer
@@ -385,20 +476,29 @@ function hesk_email2ticket($results, $protocol = 0, $set_category = 1, $set_prio
 
 function hesk_encodeUTF8($in, $encoding)
 {
-	$encoding = strtoupper($encoding);
+    if (empty($in)) {
+        return $in;
+    }
 
-	switch($encoding)
-	{
-		case 'UTF-8':
-			return $in;
-            break;
-		case 'ISO-8859-1':
-			return utf8_encode($in);
-			break;
-		default:
-			return function_exists('iconv') ? iconv($encoding, 'UTF-8', $in) : utf8_encode($in);
-			break;
-	}
+    $encoding = strtoupper($encoding);
+
+    // It's utf-8, just return it
+    if ($encoding == 'UTF-8') {
+        return $in;
+    }
+
+    // try with iconv
+    if (function_exists('iconv') && ($out = iconv($encoding, 'UTF-8', $in)) !== false) {
+        return $out;
+    }
+
+    // try with MB functions
+    if (function_exists('mb_convert_encoding') && ($out = mb_convert_encoding($in, 'UTF-8', $encoding)) !== false) {
+        return $out;
+    }
+
+    // last resort
+    return hesk_iso8859_1_to_utf8($in);
 } // END hesk_encodeUTF8()
 
 
@@ -431,14 +531,20 @@ function hesk_stripQuotedText($message)
 } // END hesk_stripQuotedText()
 
 
+function hesk_isDoNotReplyEmail($tmpvar)
+{
+    // Check noreply email addresses
+    if ( preg_match('/not?[\-_\.]?reply@/i', $tmpvar['email']) )
+    {
+        return true;
+    }
+
+    return false;
+} // END hesk_isDoNotReplyEmail()
+
+
 function hesk_isReturnedEmail($tmpvar)
 {
-	// Check noreply email addresses
-	if ( preg_match('/not?[\-_\.]?reply@/i', $tmpvar['email']) )
-	{
-		return true;
-	}
-
 	// Check mailer daemon email addresses
 	if ( preg_match('/mail(er)?[\-_\.]?daemon@/i', $tmpvar['email']) )
 	{
@@ -462,7 +568,8 @@ function hesk_isReturnedEmail($tmpvar)
 	preg_match('/DELIVERY FAILURE/i', $tmpvar['subject']) ||
 	preg_match('/Undelivered Mail Returned to Sender/i', $tmpvar['subject']) ||
 	preg_match('/Delivery Status Notification \(Failure\)/i', $tmpvar['subject']) ||
-	preg_match('/Returned mail\: see transcript for details/i', $tmpvar['subject'])
+	preg_match('/Returned mail\: see transcript for details/i', $tmpvar['subject']) ||
+    preg_match('/^Undeliverable\:/i', $tmpvar['subject'])
 	)
 	{
 		return true;
@@ -491,7 +598,7 @@ function hesk_isEmailLoop($email, $message_hash)
 	global $hesk_settings, $hesklang, $hesk_db_link;
 
 	// If $hesk_settings['loop_hits'] is set to 0 this function is disabled
-    if ( ! $hesk_settings['loop_hits'])
+    if ( ! $hesk_settings['pipe_block_duplicate'] && ! $hesk_settings['loop_hits'])
     {
     	return false;
     }
@@ -513,15 +620,15 @@ function hesk_isEmailLoop($email, $message_hash)
 		$num++;
 
 		// Number of emails in a time period reached?
-		if ($num >= $hesk_settings['loop_hits'])
+		if ($hesk_settings['loop_hits'] && $num >= $hesk_settings['loop_hits'])
 		{
-			return true;
+            return "Email loop detected. Received {$num} emails from {$email} in {$hesk_settings['loop_time']} seconds.";
 		}
 
         // Message exactly the same as in previous email?
-        if ($message_hash == $md5)
+        if ($hesk_settings['pipe_block_duplicate'] && $message_hash == $md5)
         {
-        	return true;
+            return "Duplicate email. An email with this exact message was already received from {$email} in the last {$hesk_settings['loop_time']} seconds.";
         }
 
 		// Update DB entry
@@ -539,9 +646,13 @@ function hesk_isEmailLoop($email, $message_hash)
 } // END hesk_isEmailLoop()
 
 
-function hesk_cleanExit()
+function hesk_cleanExit($exit_reason = null)
 {
-	global $results;
+    global $hesk_settings, $results;
+
+    if ($hesk_settings['debug_mode']) {
+        $hesk_settings['DEBUG_LOG']['PIPE'] = $exit_reason;
+    }
 
 	// Delete the temporary files
 	deleteAll($results['tempdir']);
@@ -549,3 +660,38 @@ function hesk_cleanExit()
 	// Return NULL
 	return NULL;
 } // END hesk_cleanExit()
+
+function hesk_notifyRejectedCustomer($email_info) {
+    global $hesk_settings;
+
+    $send_failure_email_rs = hesk_dbQuery("SELECT `id`, 
+                    CASE
+                        WHEN (`timestamp` + INTERVAL ".intval($hesk_settings['pipe_customer_rejection_email_cooldown_hours'])." HOUR) < NOW() THEN 1
+                        ELSE 0 
+                    END AS `should_send_email` 
+                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."pipe_rejections` 
+                WHERE `email` = '".hesk_dbEscape($email_info['email'])."'");
+    $send_failure_email = hesk_dbFetchAssoc($send_failure_email_rs);
+    if ($send_failure_email === null || $send_failure_email['should_send_email']) {
+        $possible_spam = false;
+        if ($hesk_settings['notify_skip_spam']) {
+            foreach ($hesk_settings['notify_spam_tags'] as $tag) {
+                if ( strpos($email_info['subject'], $tag) !== false ) {
+                    $possible_spam = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$possible_spam) {
+            $rejection_template = $hesk_settings['customer_accounts_customer_self_register'] === 1 ?
+                'email_rejected_can_self_register' :
+                'email_rejected_cannot_self_register';
+            hesk_sendCustomerTicket2EmailFailure($email_info, $rejection_template);
+            if ($send_failure_email !== null) {
+                hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."pipe_rejections` WHERE `id` = ".intval($send_failure_email['id']));
+            }
+            hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."pipe_rejections` (`timestamp`,`email`) VALUES (NOW(), '".hesk_dbEscape($email_info['email'])."')");
+        }
+    }
+}

@@ -1,0 +1,10 @@
+Dear %%NAME%%,
+
+Unfortunately, your account registration has been rejected.
+
+If you believe this was done in error, please try registering again.
+
+Sincerely,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

@@ -1,0 +1,10 @@
+Prezado(a) %%NAME%%,
+
+Obrigado por criar uma conta. Clique no link abaixo para ativar sua conta:
+
+%%VERIFICATION_URL%%
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

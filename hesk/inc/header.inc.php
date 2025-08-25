@@ -24,20 +24,31 @@ $onload='';
 	<meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <meta name="viewport" content="width=device-width,minimum-scale=1.0,maximum-scale=1.0">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo HESK_PATH; ?>img/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo HESK_PATH; ?>img/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo HESK_PATH; ?>img/favicon/favicon-16x16.png">
-    <link rel="manifest" href="<?php echo HESK_PATH; ?>img/favicon/site.webmanifest">
-    <link rel="mask-icon" href="<?php echo HESK_PATH; ?>img/favicon/safari-pinned-tab.svg" color="#5bbad5">
-    <link rel="shortcut icon" href="<?php echo HESK_PATH; ?>img/favicon/favicon.ico">
-    <meta name="msapplication-TileColor" content="#2d89ef">
-    <meta name="msapplication-config" content="<?php echo HESK_PATH; ?>img/favicon/browserconfig.xml">
-    <meta name="theme-color" content="#ffffff">
+    <?php include(HESK_PATH . 'inc/favicon.inc.php'); ?>
     <meta name="format-detection" content="telephone=no">
+
+    <?php
+    // Do we need to load JS/CSS for attachments? Needs to go before our app.css
+    if (defined('ATTACHMENTS')) {
+        ?>
+        <link rel="stylesheet" href="<?php echo HESK_PATH; ?>css/dropzone.min.css?<?php echo $hesk_settings['hesk_version']; ?>" type="text/css" />
+        <script src="<?php echo HESK_PATH; ?>js/dropzone.min.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+        <?php
+    }
+    ?>
+
     <link rel="stylesheet" media="all" href="<?php echo HESK_PATH; ?>css/app<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.css?<?php echo $hesk_settings['hesk_version']; ?>">
     <script src="<?php echo HESK_PATH; ?>js/jquery-3.5.1.min.js"></script>
-	<script type="text/javascript" src="<?php echo HESK_PATH; ?>js/hesk_javascript<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
-    <script src="<?php echo HESK_PATH; ?>js/selectize.min.js"></script>
+    <?php
+    // Do we need to load CSV parsing?
+    if (defined('CSV')) {
+        ?>
+        <script src="<?php echo HESK_PATH; ?>js/jquery.csv.min.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+        <?php
+    }
+    ?>
+    <script src="<?php echo HESK_PATH; ?>js/selectize.min.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
+    <script type="text/javascript" src="<?php echo HESK_PATH; ?>js/hesk_javascript<?php echo $hesk_settings['debug_mode'] ? '' : '.min'; ?>.js?<?php echo $hesk_settings['hesk_version']; ?>"></script>
 
     <?php
 	/* Tickets shouldn't be indexed by search engines */
@@ -49,11 +60,11 @@ $onload='';
 	}
 
 	/* If page requires WYSIWYG editor include TinyMCE Javascript */
-	if (defined('WYSIWYG') && ($hesk_settings['staff_ticket_formatting'] == 2 || $hesk_settings['kb_wysiwyg']))
+	if (defined('WYSIWYG') && ($hesk_settings['staff_ticket_formatting'] == 2 || $hesk_settings['kb_wysiwyg'] || defined('HTML_EMAIL_TEMPLATE')))
 	{
         require(HESK_PATH . 'inc/tiny_mce/tinymce.inc.php');
 		?>
-		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tiny_mce/5.7.0/tinymce.min.js"></script>
+		<script type="text/javascript" src="<?php echo HESK_PATH; ?>inc/tiny_mce/7.9.1/tinymce.min.js"></script>
 		<?php
 	}
 
@@ -104,7 +115,7 @@ $onload='';
 	}
 
 	// Auto reload
-	if (defined('AUTO_RELOAD') && hesk_checkPermission('can_view_tickets',0) && ! isset($_SESSION['hide']['ticket_list']) )
+	if (defined('AUTO_RELOAD') && hesk_checkPermission('can_view_tickets',0))
 	{
 		?>
 		<script type="text/javascript">
@@ -219,7 +230,12 @@ $onload='';
     <link rel="stylesheet" href="<?php echo $hesk_settings['admin_css_url']; ?>">
     <?php endif; ?>
 
+    <?php if ($hesk_settings['admin_js']): ?>
+    <script type="text/javascript" src="<?php echo $hesk_settings['admin_js_url']; ?>"></script>
+    <?php endif; ?>
+
 </head>
 <body onload="<?php echo $onload; unset($onload); ?>">
+<a href="#maincontent" class="skiplink"><?php echo $hesklang['skip_to_main_content']; ?></a>
 
 <div class="wrapper">

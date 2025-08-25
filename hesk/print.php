@@ -18,9 +18,10 @@ define('HESK_PATH','./');
 require(HESK_PATH . 'hesk_settings.inc.php');
 define('TEMPLATE_PATH', HESK_PATH . "theme/{$hesk_settings['site_theme']}/");
 require(HESK_PATH . 'inc/common.inc.php');
+require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
 hesk_load_database_functions();
 
-hesk_session_start();
+hesk_session_start('CUSTOMER');
 
 // Do we have parameters in query string? If yes, store them in session and redirect
 if ( isset($_GET['track']) || isset($_GET['e']) )
@@ -45,15 +46,12 @@ require_once(HESK_PATH . 'inc/custom_fields.inc.php');
 require_once(HESK_PATH . 'inc/statuses.inc.php');
 
 // Perform additional checks for customers
-if ( empty($_SESSION['id']) )
-{
-	// Are we in maintenance mode?
-	hesk_check_maintenance();
+// Are we in maintenance mode?
+hesk_check_maintenance();
 
-	// Verify email address match
-    $my_email = hesk_getCustomerEmail(0, 'p_email');
-    hesk_verifyEmailMatch($trackingID, $my_email);
-}
+// Verify email address match
+$my_email = hesk_getCustomerEmail(0, 'p_email');
+hesk_verifyEmailMatch($trackingID, $my_email);
 
 /* Clean ticket parameters from the session data, we don't need them anymore */
 hesk_cleanSessionVars( array('p_track', 'p_email') );
@@ -68,11 +66,14 @@ if (hesk_dbNumRows($res) != 1)
 	hesk_error($hesklang['ticket_not_found']);
 }
 $ticket = hesk_dbFetchAssoc($res);
+$customers = hesk_get_customers_for_ticket($ticket['id']);
 
 // Demo mode
 if ( defined('HESK_DEMO') )
 {
-	$ticket['email'] = 'hidden@demo.com';
+    foreach ($customers as $customer) {
+        $customer['email'] = 'hidden@demo.com';
+    }
 	$ticket['ip']	 = '127.0.0.1';
 }
 
@@ -87,7 +88,23 @@ if (hesk_dbNumRows($res) != 1)
 $category = hesk_dbFetchAssoc($res);
 
 /* Get replies */
-$res  = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` WHERE `replyto`='{$ticket['id']}' ORDER BY `id` ASC");
+$res  = hesk_dbQuery("SELECT `replies`.*, `reply_customer`.`name` AS `customer_name`, `reply_staff`.`name` AS `staff_name` 
+FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` AS `replies`
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `reply_customer`
+    ON `replies`.`customer_id` = `reply_customer`.`id`
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."users` AS `reply_staff`
+    ON `replies`.`staffid` = `reply_staff`.`id`
+WHERE `replyto`='{$ticket['id']}' ORDER BY `replies`.`id` ASC");
+
+$replies = [];
+while ($row = hesk_dbFetchAssoc($res)) {
+    if (intval($row['staffid']) > 0) {
+        $row['name'] = $row['staff_name'];
+    } else {
+        $row['name'] = $row['customer_name'];
+    }
+    $replies[] = $row;
+}
 
 /* Get notes */
 $notes = array();
@@ -101,8 +118,9 @@ if (!empty($_SESSION['id']))
 }
 
 $ticket['notes'] = $notes;
-$ticket['replies'] = $res;
+$ticket['replies'] = $replies;
 $ticket['categoryName'] = $category['name'];
+$ticket['customers'] = $customers;
 
 $tickets = array($ticket);
 require_once(HESK_PATH . 'inc/print_template.inc.php');

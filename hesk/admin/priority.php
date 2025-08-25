@@ -34,20 +34,15 @@ hesk_token_check('POST');
 /* Ticket ID */
 $trackingID = hesk_cleanID() or die($hesklang['int_error'].': '.$hesklang['no_trackID']);
 
-$priority   = intval( hesk_POST('priority') );
-if ($priority < 0 || $priority > 3)
-{
-	hesk_process_messages($hesklang['inpr'],'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'NOTICE');
+// Load priorities
+require_once(HESK_PATH . 'inc/priorities.inc.php');
+
+$priority = intval( hesk_POST('priority') );
+if ( ! isset($hesk_settings['priorities'][$priority])) {
+    hesk_error($hesklang['priority_e_id']);
 }
 
-$options = array(
-	0 => $hesklang['critical'],
-	1 => $hesklang['high'],
-	2 => $hesklang['medium'],
-	3 => $hesklang['low']
-);
-
-$revision = sprintf($hesklang['thist8'],hesk_date(),$options[$priority],addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
+$revision = sprintf($hesklang['thist8'],hesk_date(),$hesk_settings['priorities'][$priority]['name'],addslashes($_SESSION['name']).' ('.$_SESSION['user'].')');
 
 hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `priority`='{$priority}', `history`=CONCAT(`history`,'".hesk_dbEscape($revision)."') WHERE `trackid`='".hesk_dbEscape($trackingID)."'");
 if (hesk_dbAffectedRows() != 1)
@@ -55,5 +50,4 @@ if (hesk_dbAffectedRows() != 1)
 	hesk_process_messages($hesklang['inpr'],'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'NOTICE');
 }
 
-hesk_process_messages(sprintf($hesklang['chpri2'],$options[$priority]),'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'SUCCESS');
-?>
+hesk_process_messages(sprintf($hesklang['chpri2'],$hesk_settings['priorities'][$priority]['name']),'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'SUCCESS');

@@ -51,6 +51,11 @@ if ($status != 3)
 
 $locked = 0;
 
+// Is the new status same as old status?
+if (hesk_get_ticket_status_from_DB($trackingID) == $status) {
+    hesk_process_messages($hesklang['noch'],'admin_ticket.php?track='.$trackingID.'&Refresh='.mt_rand(10000,99999),'NOTICE');
+}
+
 if ($status == 3) // Closed
 {
     if ( ! hesk_checkPermission('can_resolve', 0))
@@ -66,24 +71,53 @@ if ($status == 3) // Closed
     	$locked = 1;
     }
 
+    // If customer notifications are off, we need to check if the tickets has collaborators for potential notification
+    if ( ! $hesk_settings['notify_closed']) {
+        $result = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `trackid`='".hesk_dbEscape($trackingID)."' LIMIT 1");
+        if (hesk_dbNumRows($result) != 1) {
+            hesk_error($hesklang['ticket_not_found']);
+        }
+        $ticket = hesk_dbFetchAssoc($result);
+        $ticket['collaborators'] = hesk_getTicketsCollaboratorIDs($ticket['id']);
+    }
+
 	// Notify customer of closed ticket?
-	if ($hesk_settings['notify_closed'])
+	if ($hesk_settings['notify_closed'] || ! empty( $ticket['collaborators']))
 	{
-		// Get ticket info
-		$result = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `trackid`='".hesk_dbEscape($trackingID)."' LIMIT 1");
-		if (hesk_dbNumRows($result) != 1)
-		{
-			hesk_error($hesklang['ticket_not_found']);
-		}
-		$ticket = hesk_dbFetchAssoc($result);
+        // Get ticket info
+        if ( ! isset($ticket)) {
+            $result = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `trackid`='".hesk_dbEscape($trackingID)."' LIMIT 1");
+            if (hesk_dbNumRows($result) != 1) {
+                hesk_error($hesklang['ticket_not_found']);
+            }
+            $ticket = hesk_dbFetchAssoc($result);
+            $ticket['collaborators'] = hesk_getTicketsCollaboratorIDs($ticket['id']);
+        }
+
 		$ticket['dt'] = hesk_date($ticket['dt'], true);
 		$ticket['lastchange'] = hesk_date($ticket['lastchange'], true);
         $ticket['due_date'] = hesk_format_due_date($ticket['due_date']);
+
+        require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
+        $customers = hesk_get_customers_for_ticket($ticket['id']);
+        $customer_emails = array_map(function($customer) { return $customer['email']; }, $customers);
+        $customer_names = array_map(function($customer) { return $customer['name']; }, $customers);
+        
+        $ticket['email'] = implode(';', $customer_emails);
+        $ticket['name'] = implode(';', $customer_names);
+        $ticket['last_reply_by'] = hesk_getReplierName($ticket);
 		$ticket = hesk_ticketToPlain($ticket, 1, 0);
 
 		// Notify customer
 		require(HESK_PATH . 'inc/email_functions.inc.php');
-		hesk_notifyCustomer('ticket_closed');
+
+        if ($hesk_settings['notify_closed']) {
+            hesk_notifyCustomer('ticket_closed');
+        }
+
+        if (count($ticket['collaborators'])) {
+            hesk_notifyAssignedStaff(false, 'collaborator_resolved', 'notify_collaborator_resolved', 'notify_collaborator_resolved', array($_SESSION['id']));
+        }
 	}
 
 	// Log who marked the ticket resolved

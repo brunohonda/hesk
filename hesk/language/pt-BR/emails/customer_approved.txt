@@ -1,0 +1,11 @@
+Prezado(a) %%NAME%%,
+
+O registro da sua conta foi aprovado.
+
+Agora você pode fazer login abaixo usando o nome de usuário e a senha que usou ao criar sua conta:
+%%CUSTOMER_LOGIN_URL%%
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

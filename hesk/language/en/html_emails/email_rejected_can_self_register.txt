@@ -1,0 +1,4 @@
+<p>Dear %%NAME%%,</p>
+<p>We couldn't process your email "%%SUBJECT%%" because you don't have an account with us.<br /><br />To submit support tickets via email, please register first at:<br /><a href="%%CUSTOMER_REGISTER_URL%%">%%CUSTOMER_REGISTER_URL%%</a></p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

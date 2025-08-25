@@ -428,3 +428,96 @@ function deleteCookie(name, path, domain)
                         "; expires=Thu, 01-Jan-70 00:00:01 GMT";
         }
 }
+
+//region Customer Migration
+function getCustomerCount() {
+    $.ajax({
+        url: 'ajax/customer_migrations.php?action=intro',
+        method: 'GET',
+        success: function(data) {
+            var customerCount = 0;
+            try {
+                customerCount = JSON.parse(data).numberOfCustomers;
+                $('#intro-loader').hide();
+                $('#customer-intro-count').text(customerCount);
+                $('#migrating').find('#count-total').text(customerCount);
+                $('#continue-block').show();
+            } catch (e) {
+                alert('An error occurred when attempting to fetch the number of customers to migrate.');
+                console.error(e);
+            }
+        },
+        error: function(err) {
+            try {
+                var errorBody = JSON.parse(err.responseText);
+                alert(errorBody.title + ':\n' + errorBody.message);
+            } catch (e) {
+                alert(err.responseText);
+            }
+            console.error(err.responseText);
+        }
+    })
+}
+function beginCustomerMigration() {
+    $('#intro').hide();
+    $('#migrating').show();
+    doMigrationAjax();
+}
+
+function doMigrationAjax() {
+    $.ajax({
+        url: 'ajax/customer_migrations.php?action=migrate',
+        method: 'GET',
+        success: function(data) {
+            var $migratingDiv = $('#migrating');
+            var migratedCount = parseInt($('#count-completed').text(), 10);
+            try {
+                var batchCount = JSON.parse(data).migratedCount;
+                migratedCount += batchCount;
+
+                $('#count-completed').text(migratedCount);
+                var completedPercentage = (migratedCount / parseInt($migratingDiv.find('#count-total').text())) * 100;
+                $migratingDiv.find('.progress-bar').css('width', completedPercentage + '%');
+
+                if (batchCount === 0) {
+                    dropOldColumns();
+                } else {
+                    doMigrationAjax();
+                }
+            } catch (e) {
+                alert('An error occurred when attempting to migrate customers.');
+                console.error(e);
+            }
+        },
+        error: function(err) {
+            try {
+                var errorBody = JSON.parse(err.responseText);
+                alert(errorBody.title + ':\n' + errorBody.message);
+            } catch (e) {
+                alert(err.responseText);
+            }
+            console.error(err.responseText);
+        }
+    });
+}
+
+function dropOldColumns() {
+    $.ajax({
+        url: 'ajax/customer_migrations.php?action=cleanup',
+        method: 'GET',
+        success: function(data) {
+            $('#migrating').hide();
+            $('#complete').show();
+        },
+        error: function(err) {
+            try {
+                var errorBody = JSON.parse(err.responseText);
+                alert(errorBody.title + ':\n' + errorBody.message);
+            } catch (e) {
+                alert(err.responseText);
+            }
+            console.error(err.responseText);
+        }
+    })
+}
+//endregion

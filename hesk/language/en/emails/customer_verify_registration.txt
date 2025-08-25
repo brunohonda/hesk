@@ -1,0 +1,10 @@
+Dear %%NAME%%,
+
+Thank you for creating an account. Click the link below to activate your account:
+
+%%VERIFICATION_URL%%
+
+Sincerely,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

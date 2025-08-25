@@ -55,23 +55,28 @@ function parser($eml_file='')
 
 	// get a unique temporary file name
 	$tmpfilepath = tempnam($tempdir, strval(mt_rand(1000,9999)));
+    if( ! file_exists($tmpfilepath))
+    {
+        die('Cannot create temporary file: '.$tmpfilepath);
+    }
 
     if (defined('HESK_IMAP'))
     {
         global $imap, $email_number;
-        @file_put_contents($tmpfilepath, imap_fetchbody($imap, $email_number, ""));
+        $is_saved = $imap->saveMessageToFile($email_number, $tmpfilepath);
     }
     else
     {
         // read the mail that is forwarded to the script
         // then save the mail to a temporary file
-        save_forward_mail($tmpfilepath, $eml_file);
+        $is_saved = save_forward_mail($tmpfilepath, $eml_file);
     }
 
-	if(file_exists($tmpfilepath) === FALSE)
-	{
-		die('Failed to save the mail as '.$tmpfilepath.'.');
-	}
+    if ($is_saved === false)
+    {
+        deleteAll($tempdir);
+        return false;
+    }
 
 	$ret = analyze($tmpfilepath,$tempdir);
     //die (print_r($ret));
@@ -98,11 +103,12 @@ function analyze($tmpfilepath,$tempdir)
 	{
 		if($mime->decode_bodies)
 		{
+            # print_r($decoded);
 			if($mime->Analyze($decoded[0], $results))
             {
-            	#echo "MIME:\n\n";
-            	#print_r($results);
-                #echo "\nEND MIME\n\n";
+                # echo "MIME:\n\n";
+                # print_r($results);
+                # echo "\nEND MIME\n\n";
 				return process_results($results,$tempdir) ;
 			}
             else
@@ -165,7 +171,7 @@ function process_attachments($attachments)
 		}
         elseif ($type == 'message')
         {
-            $orig_name = ($key + 1) . ".msg";
+            $orig_name = ($key + 1) . ".eml";
         }
 
 		if ( ! strlen($orig_name))
@@ -289,7 +295,7 @@ function process_results($result,$tempdir)
 	// Convert to UTF-8 before processing further
 	if ($r["encoding"] != "" && $r["encoding"] != 'UTF-8')
 	{
-		$result["Data"] = $result["Data"] == "" ? "" : (function_exists('iconv') ? iconv($r["encoding"], 'UTF-8', $result["Data"]) : utf8_encode($result["Data"]));
+		$result["Data"] = $result["Data"] == "" ? "" : (function_exists('iconv') ? iconv($r["encoding"], 'UTF-8', $result["Data"]) : hesk_iso8859_1_to_utf8($result["Data"]));
 		$r["encoding"] = 'UTF-8';
 	}
 
@@ -352,6 +358,13 @@ function process_results($result,$tempdir)
     	if ( array_key_exists("Attachments", $result) )
         {
             $r["attachments"] = array_merge($r["attachments"], process_attachments($result["Attachments"]) );
+
+            // Attachments to attachments?
+            foreach ($result["Attachments"] as $att) {
+                if (isset($att["Attachments"])) {
+                    $r["attachments"] = array_merge($r["attachments"], process_attachments($att["Attachments"]) );
+                }
+            }
         }
 
     	// Save embedded files (for example embedded images)
@@ -363,6 +376,17 @@ function process_results($result,$tempdir)
 
 	// Name of the temporary folder
 	$r["tempdir"] = $tempdir;
+
+    // Custom Hesk tag with tracking ID
+    $r["X-Hesk-Tracking_ID"] = isset($result["X-Hesk-Tracking_ID"]) ? strtoupper($result["X-Hesk-Tracking_ID"]) : "";
+
+    // Do we have a priority tag?
+    $r["X-Priority"] = isset($result["X-Priority"]) ? strtolower($result["X-Priority"]) : "low";
+
+    // Message ID and related tags
+    $r["Message-ID"] = isset($result["Message-ID"]) ? $result["Message-ID"] : "";
+    $r["In-Reply-To"] = isset($result["In-Reply-To"]) ? $result["In-Reply-To"] : "";
+    $r["References"] = isset($result["References"]) ? $result["References"] : "";
 
 	return $r;
 }
@@ -385,6 +409,7 @@ function save_forward_mail($tmpfilepath, $eml_file)
     fwrite($tmpfp, $fileContent);
 
 	fclose($tmpfp);
+    return true;
 }
 
 

@@ -86,29 +86,48 @@ $(document).ready(function() {
   dropdownSelectRender = function(el) {
     var select = $(el).find("select");
     var options = [];
-    var value;
+    var value,data_class,data_style;
+    var selected_icon = '';
     select.find("option").each(function(i, el) {
       options.push({
         val: $(el).val(),
         text: $(el).text(),
-        selected: $(el).is(":selected")
+        selected: $(el).is(":selected"),
+        data_class:$(el).attr('data-class') !== undefined ? $(el).attr('data-class') : '',
+        data_style:$(el).attr('data-style') !== undefined ? $(el).attr('data-style') : ''
       });
       if ($(el).is(":selected")) {
         value = $(el).text();
+        data_class = $(el).attr('data-class') !== undefined ? $(el).attr('data-class') : '';
+        data_style = $(el).attr('data-style') !== undefined ? $(el).attr('data-style') : '';
       }
     });
-    var template =
-      '<div class="label"><span>' +
+      let prependIconToSelect = '';
+      let appendIconClass = select.attr('data-append-icon-class');
+      if (appendIconClass) {
+          prependIconToSelect = '<svg class="icon ' + appendIconClass + '"><use xlink:href="./img/sprite.svg#' + appendIconClass + '"></use></svg>';
+      }
+      if(data_class !== undefined && data_style !== undefined && selected_icon == ''){
+        var selected_icon = '<div class="'+data_class+' remove_on_select" style = "'+data_style+'"></div>';
+      }
+      var template =
+      '<div class="label">' + prependIconToSelect +' '+ selected_icon +'<span>' +
       escapeHtml(value) +
       '</span><svg class="icon icon-chevron-down"><use xlink:href="./img/sprite.svg#icon-chevron-down"></use></svg></div><ul class="dropdown-list">';
     for (var i in options) {
       if (options[i].selected) $(el).attr("data-value", options[i].val);
+      /*Check for custom icon class*/
+      var img_icon = '';
+      if(options[i].data_class !== undefined && options[i].data_style !== undefined){
+          var img_icon = '<div class="'+options[i].data_class+'" style = "'+options[i].data_style+'"></div>';
+      }
+       /*Check for custom icon class*/
       template +=
         '<li data-option="' +
         options[i].val +
         '"' +
         (options[i].selected ? ' class="selected"' : "") +
-        ">" +
+        ">" + img_icon +""+
         escapeHtml(options[i].text) +
         "</li>";
     }
@@ -229,7 +248,7 @@ $(document).ready(function() {
   $(document).click(closeAllSelect);
   $(document).on("touchend", "body", function(e) {
     if (documentClick) {
-      $(document).unbind("click");
+      //$(document).unbind("click");
       documentClick = false;
     }
     closeAllSelect(e);
@@ -345,6 +364,9 @@ $(document).ready(function() {
           .toLowerCase()
           .charAt(0)
           .toUpperCase() + text.toLowerCase().substr(1);
+    }else if ($(e.currentTarget).closest('.dropdown-select').hasClass('select-priority')) {
+      //Checking for custom priority option value
+      text = $(e.currentTarget).html();
     } else {
       text = $(e.currentTarget).text();
     }
@@ -353,11 +375,17 @@ $(document).ready(function() {
       .find("li")
       .removeClass("selected");
     $(e.currentTarget).addClass("selected");
+    //Checking for custom priority option value
+    if ($(e.currentTarget).closest('.dropdown-select').hasClass('select-priority')) {
+      $(e.currentTarget).closest('.dropdown-select').attr('data-value', value).find('.label .remove_on_select').remove();
+      $(e.currentTarget).closest('.dropdown-select').attr('data-value', value).find('.label span').html(text);
+    }else{
     $(e.currentTarget)
       .closest(".dropdown-select")
       .attr("data-value", value)
       .find(".label span")
       .text(text);
+    }
     $(e.currentTarget)
       .closest(".dropdown-select")
       .removeClass("active");
@@ -493,7 +521,7 @@ $(document).ready(function() {
         .find('.datepicker')
         .data("datepicker")
         .clear();
-    $(".ticket-create .param.calendar .calendar--value").fadeOut(
+    $(this).parent().parent().find('.calendar--value').fadeOut(
       150,
       function() {
         $(this)
@@ -539,7 +567,17 @@ $(document).ready(function() {
   });
 
   // Never allow typing in dropdowns
-  $('.selectize-input input').prop('readonly', 'true');
+    $('.selectize-control:not(.read-write) .selectize-input input').prop('readonly', 'true');
+
+  // Profile dropdown
+  $('[data-action="show-profile"]').click(function (e) {
+    if ($('.profile__user').hasClass('active')) {
+      $('.profile__user').removeClass('active').find('.profile__menu').slideUp(150);
+    } else {
+      outClose();
+      $('.profile__user').addClass('active').find('.profile__menu').slideDown(150);
+    }
+  });
 });
 
 window.onload = function() {

@@ -1,0 +1,6 @@
+<p>Caro %%NAME%%,</p>
+<p>Seu chamado "%%SUBJECT%%" foi atualizado para o estado de fechado/solucionado.</p>
+<p>Você pode ver o status do seu chamado aqui:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p>Se o link acima não for clicável, tente copiá-lo e colá-lo na barra de endereços do seu navegador da web.</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

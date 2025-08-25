@@ -65,16 +65,20 @@ if (!hesk_SESSION(array('new_cf','errors'))) {
 }
 
 // Did we reach the custom fields limit?
-if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
+if ($hesk_settings['num_custom_fields'] >= 100 && $action !== 'edit_cf')
 {
-    hesk_show_info($hesklang['cf_limit']);
+    hesk_show_info($hesklang['cf_limit_all']);
 }
+
+$hesk_settings['datepicker']['#dmin']['position'] = 'left top';
+$hesk_settings['datepicker']['#dmax']['position'] = 'left bottom';
 ?>
 
 <div class="main__content tools">
     <section class="tools__between-head wider">
         <h2>
             <?php echo $hesklang['tab_4']; ?>
+            <?php echo '(' . $hesk_settings['num_custom_fields'] . '/100)'; ?>
             <div class="tooltype right out-close">
                 <svg class="icon icon-info">
                     <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
@@ -86,7 +90,7 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                 </div>
             </div>
         </h2>
-        <?php if ($hesk_settings['num_custom_fields'] < 50 && $action !== 'edit_cf'): ?>
+        <?php if ($hesk_settings['num_custom_fields'] < 100 && $action !== 'edit_cf'): ?>
         <div class="btn btn--blue-border" ripple="ripple" data-action="create-custom-field">
             <?php echo $hesklang['new_cf']; ?>
         </div>
@@ -181,7 +185,7 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                         <td><?php echo $cf['req']; ?></td>
                         <td><?php echo $cf['category']; ?></td>
                         <td class="nowrap buttons">
-                            <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                            <?php $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                                 $hesklang['del_cf'],
                                 'custom_fields.php?a=remove_cf&amp;id='. $tmp_id .'&amp;token='. hesk_token_echo(0)); ?>
                             <p>
@@ -325,7 +329,7 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                 <div class="form-group">
                     <label><?php echo $hesk_settings['language']; ?></label>
                     <input type="text" name="name[<?php echo $hesk_settings['language']; ?>]" class="form-control <?php echo in_array('name', $errors) ? 'isError' : ''; ?>"
-                           value="<?php echo isset($names[$hesk_settings['language']]) ? $names[$hesk_settings['language']] : ''; ?>" />
+                           value="<?php echo isset($names[$hesk_settings['language']]) ? $names[$hesk_settings['language']] : (is_array($names) ? reset($names) : ''); ?>" />
                 </div>
             <?php } ?>
             <div class="form-select">
@@ -423,6 +427,19 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                               rows="6"
                               cols="40"><?php echo isset($value['select_options']) && is_array($value['select_options']) ? implode("\n", $value['select_options']) : ''; ?></textarea>
                 </div>
+
+                <h4><?php echo $hesklang['custom_is_searchable']; ?></h4>
+                <section class="item--section">
+                    <?php $is_searchable = (!empty($value['is_searchable'])) ? $value['is_searchable'] : 0; ?>
+                    <div class="radio-custom">
+                        <input type="radio" name="is_searchable" id="is_searchable0" value="0" <?php if ($is_searchable == 0) {echo 'checked';} ?>>
+                        <label for="is_searchable0"><?php echo $hesklang['no']; ?></label>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" name="is_searchable" id="is_searchable1" value="1" <?php if ($is_searchable == 1) {echo 'checked';} ?>>
+                        <label for="is_searchable1"><?php echo $hesklang['yes_via_autocomplete']; ?></label>
+                    </div>
+                </section>
             </div>
             <div id="checkbox" style="display:<?php echo ($type == 'checkbox') ? 'block' : 'none' ?>">
                 <p><?php echo $hesklang['opt4']; ?></p>
@@ -457,7 +474,15 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                     // Minimum date is in "MM/DD/YYYY" format
                     elseif (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $dmin))
                     {
-                        $dmin_rf = 1;
+                        try {
+                            $date = new DateTime($dmin . ' t00:00:00');
+                            $dmin = hesk_datepicker_format_date($date->getTimestamp());
+                            $hesk_settings['datepicker']['#dmin']['timestamp'] = $date->getTimestamp();
+                            $dmin_rf = 1;
+                        } catch(Exception $e) {
+                            $dmin = '';
+                            $dmin_rf = 0;
+                        }
                     }
                     else
                     {
@@ -500,8 +525,8 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                         <label for="dmin_rf2"><?php echo $hesklang['d_relative']; ?></label>
                         <div class="dropdown-select center out-close" style="margin-left: 5px;">
                             <select class="form-control" name="dmin_pm" onclick="document.getElementById('dmin_rf2').checked = true" onchange="document.getElementById('dmin_rf2').checked = true">
-                                <option <?php if ($dmin_pm == '+') {echo 'selected';} ?>>+</option>
-                                <option <?php if ($dmin_pm == '-') {echo 'selected';} ?>>-</option>
+                                <option value="+" <?php if ($dmin_pm == '+') {echo 'selected';} ?>>+</option>
+                                <option value="-" <?php if ($dmin_pm == '-') {echo 'selected';} ?>>-</option>
                             </select>
                         </div>
                         <input type="text" class="form-control" style="height: inherit; width: inherit; margin-left: 5px; margin-right: 5px;"
@@ -527,7 +552,7 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                     $dmax_num = 1;
                     $dmax_type = 'day';
 
-                    // Minimum date is in "+1 day" format
+                    // Maximum date is in "+1 day" format
                     if (preg_match("/^([+-]{1})(\d+) (day|week|month|year)$/", $dmax, $matches))
                     {
                         $dmax = '';
@@ -536,10 +561,18 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                         $dmax_num = $matches[2];
                         $dmax_type = $matches[3];
                     }
-                    // Minimum date is in "MM/DD/YYYY" format
+                    // Maximum date is in "MM/DD/YYYY" format
                     elseif (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $dmax))
                     {
-                        $dmax_rf = 1;
+                        try {
+                            $date = new DateTime($dmax . ' t00:00:00');
+                            $dmax = hesk_datepicker_format_date($date->getTimestamp());
+                            $hesk_settings['datepicker']['#dmax']['timestamp'] = $date->getTimestamp();
+                            $dmax_rf = 1;
+                        } catch(Exception $e) {
+                            $dmax = '';
+                            $dmax_rf = 0;
+                        }
                     }
                     else
                     {
@@ -581,9 +614,9 @@ if ($hesk_settings['num_custom_fields'] >= 50 && $action !== 'edit_cf')
                         <input type="radio" name="dmax_rf" id="dmax_rf2" value="2" <?php if ($dmax_rf == 2) {echo 'checked';} ?>>
                         <label for="dmax_rf2"><?php echo $hesklang['d_relative']; ?></label>
                         <div class="dropdown-select center out-close" style="margin-left: 5px;">
-                            <select class="form-control" name="dmax_pm" onclick="document.getElementById('dmax_rf2').checked = true" onchange="document.getElementById('dmin_rf2').checked = true">
-                                <option <?php if ($dmax_pm == '+') {echo 'selected';} ?>>+</option>
-                                <option <?php if ($dmax_pm == '-') {echo 'selected';} ?>>-</option>
+                            <select class="form-control" name="dmax_pm" onclick="document.getElementById('dmax_rf2').checked = true" onchange="document.getElementById('dmax_rf2').checked = true">
+                                <option value="+" <?php if ($dmax_pm == '+') {echo 'selected';} ?>>+</option>
+                                <option value="-" <?php if ($dmax_pm == '-') {echo 'selected';} ?>>-</option>
                             </select>
                         </div>
                         <input type="text" class="form-control" style="height: inherit; width: inherit; margin-left: 5px; margin-right: 5px;"
@@ -854,7 +887,7 @@ function edit_cf()
 	$cf['names'] = json_decode($cf['name'], true);
 	unset($cf['name']);
 
-	if (strlen($cf['category']))
+	if (isset($cf['category']) && strlen($cf['category']))
 	{
 		$cf['categories'] = json_decode($cf['category'], true);
 		$cf['category'] = 1;
@@ -1030,8 +1063,9 @@ function cf_validate()
 			$options = preg_split("/\\r\\n|\\r|\\n/", $cf['select_options']);
 
 			$show_select = hesk_POST('show_select') ? 1 : 0;
+			$is_searchable = hesk_POST('is_searchable') ? 1 : 0;
 
-			$cf['value'] = array('show_select' => $show_select, 'select_options' => $options);
+			$cf['value'] = array('show_select' => $show_select, 'is_searchable' => $is_searchable, 'select_options' => $options);
 
 			if (count($options) < 2)
 			{
@@ -1067,8 +1101,9 @@ function cf_validate()
             {
             	$dmin = hesk_POST('dmin');
 
-            	if (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $dmin))
+                if ($date = hesk_datepicker_get_date($dmin))
                 {
+                    $dmin = $date->format('m/d/Y');
                 	$cf['dmin'] = $dmin;
                 }
             }
@@ -1092,8 +1127,9 @@ function cf_validate()
             {
             	$dmax = hesk_POST('dmax');
 
-            	if (preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $dmax))
+                if ($date = hesk_datepicker_get_date($dmax))
                 {
+                    $dmax = $date->format('m/d/Y');
                 	$cf['dmax'] = $dmax;
                 }
             }

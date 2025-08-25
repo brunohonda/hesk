@@ -1,0 +1,5 @@
+<p>Hi %%NAME%%,</p>
+<p>Below is your multi-factor authentication verification code. This code expires in 20 minutes.</p>
+<p><strong>%%VERIFICATION_CODE%%</strong></p>
+<p>Thanks,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

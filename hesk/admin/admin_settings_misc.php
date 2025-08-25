@@ -25,7 +25,6 @@ require(HESK_PATH . 'hesk_settings.inc.php');
 // Save the default language for the settings page before choosing user's preferred one
 $hesk_settings['language_default'] = $hesk_settings['language'];
 require(HESK_PATH . 'inc/common.inc.php');
-$hesk_settings['language'] = $hesk_settings['language_default'];
 require(HESK_PATH . 'inc/admin_functions.inc.php');
 require(HESK_PATH . 'inc/setup_functions.inc.php');
 hesk_load_database_functions();
@@ -116,10 +115,10 @@ hesk_handle_messages();
                         ?>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group flex-row">
                     <label>
                         <span><?php echo $hesklang['tfor']; ?></span>
-                        <a onclick="hesk_window('<?php echo $help_folder; ?>misc.html#20','400','500')">
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>misc.html#65','400','500')">
                             <div class="tooltype right">
                                 <svg class="icon icon-info">
                                     <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
@@ -127,7 +126,134 @@ hesk_handle_messages();
                             </div>
                         </a>
                     </label>
-                    <input type="text" class="form-control" name="s_timeformat" maxlength="255" value="<?php echo $hesk_settings['timeformat']; ?>">
+                    <input type="text" class="form-control" style="max-width: 200px; margin-right: 5px;" id="s_format_time" name="s_format_time" maxlength="255" value="<?php echo $hesk_settings['format_time']; ?>">
+                    <select name="ex-time" id="ex-time">
+                        <?php
+                        $examples = array(
+                            'H:i',
+                            'H:i:s',
+                            'g:i a',
+                        );
+
+                        $is_custom = true;
+                        foreach ($examples as $example) {
+                            if ($example == $hesk_settings['format_time']) {
+                                $is_custom = false;
+                                $selected = 'selected';
+                            } else {
+                                $selected = '';
+                            }
+                            echo '<option value="'.$example.'" '.$selected.'>'.hesk_date('now', false, true, true, $example).'</option>';
+                        }
+                        ?>
+                        <option value="custom" <?php echo $is_custom ? 'selected' : ''; ?>><?php echo $hesklang['custom']; ?></option>
+                    </select>
+                    <script>
+                        $('#ex-time').selectize();
+                        $('#ex-time').on('change', function() {
+                            if (this.value != 'custom') {
+                                $('#s_format_time').val(this.value);
+                            }
+                        });
+                    </script>
+                </div>
+                <div class="form-group flex-row">
+                    <label>
+                        <span><?php echo $hesklang['dfor']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>misc.html#66','400','500')">
+                            <div class="tooltype right">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </label>
+                    <input type="text" class="form-control" style="max-width: 200px; margin-right: 5px;" id="s_format_date" name="s_format_date" maxlength="255" value="<?php echo $hesk_settings['format_date']; ?>">
+                    <select name="ex-date" id="ex-date">
+                        <?php
+                        $examples = array(
+                            'm/d/Y',
+                            'd/m/Y',
+                            'm-d-Y',
+                            'd-m-Y',
+                            'Y-m-d',
+                            'Y-d-m',
+                            'd.m.Y',
+                            'M j Y',
+                            'j M Y',
+                            'j M y',
+                            'F j, Y',
+                        );
+
+                        $is_custom = true;
+                        foreach ($examples as $example) {
+                            if ($example == $hesk_settings['format_date']) {
+                                $is_custom = false;
+                                $selected = 'selected';
+                            } else {
+                                $selected = '';
+                            }
+                            echo '<option value="'.$example.'" '.$selected.'>'.hesk_date('now', false, true, true, $example).'</option>';
+                        }
+                        ?>
+                        <option value="custom" <?php echo $is_custom ? 'selected' : ''; ?>><?php echo $hesklang['custom']; ?></option>
+                    </select>
+                    <script>
+                        $('#ex-date').selectize();
+                        $('#ex-date').on('change', function() {
+                            if (this.value != 'custom') {
+                                $('#s_format_date').val(this.value);
+                            }
+                        });
+                    </script>
+                </div>
+                <div class="form-group flex-row">
+                    <label>
+                        <span><?php echo $hesklang['dtfor']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>misc.html#67','400','500')">
+                            <div class="tooltype right">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </label>
+                    <input type="text" class="form-control" style="max-width: 200px; margin-right: 5px;" id="s_format_timestamp" name="s_format_timestamp" maxlength="255" value="<?php echo $hesk_settings['format_timestamp']; ?>">
+                    <select name="ex-timestamp" id="ex-timestamp">
+                        <?php
+                        $examples = array(
+                            'm/d/Y g:i a',
+                            'd/m/Y H:i:s',
+                            'm-d-Y H:i:s',
+                            'd-m-Y H:i:s',
+                            'Y-m-d H:i:s',
+                            'Y-d-m H:i:s',
+                            'd.m.Y H:i:s',
+                            'd M Y H:i',
+                            'F jS, Y, g:i a',
+                        );
+
+                        $is_custom = true;
+                        foreach ($examples as $example) {
+                            if ($example == $hesk_settings['format_timestamp']) {
+                                $is_custom = false;
+                                $selected = 'selected';
+                            } else {
+                                $selected = '';
+                            }
+                            echo '<option value="'.$example.'" '.$selected.'>'.hesk_date('now', false, true, true, $example).'</option>';
+                        }
+                        ?>
+                        <option value="custom" <?php echo $is_custom ? 'selected' : ''; ?>><?php echo $hesklang['custom']; ?></option>
+                    </select>
+                    <script>
+                        $('#ex-timestamp').selectize();
+                        $('#ex-timestamp').on('change', function() {
+                            if (this.value != 'custom') {
+                                $('#s_format_timestamp').val(this.value);
+                            }
+                        });
+                    </script>
                 </div>
                 <div class="radio-group">
                     <h5>
@@ -154,6 +280,54 @@ hesk_handle_messages();
                             <label for="s_time_display1"><?php echo $hesklang['tdisa']; ?></label>
                         </div>
                     </div>
+                </div>
+                <p>&nbsp;</p>
+                <?php hesk_show_info( sprintf($hesklang['jsc_notice'], '<svg class="icon icon-info"><use xlink:href="'.HESK_PATH.'img/sprite.svg#icon-info"></use></svg>') ); ?>
+                <div class="form-group flex-row">
+                    <label>
+                        <span><?php echo $hesklang['cdfor']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>misc.html#68','400','500')">
+                            <div class="tooltype right">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </label>
+                    <input type="text" class="form-control" style="max-width: 200px; margin-right: 5px;" id="s_format_datepicker_js" name="s_format_datepicker_js" maxlength="255" value="<?php echo $hesk_settings['format_datepicker_js']; ?>">
+                    <select name="ex-js" id="ex-js">
+                        <?php
+                        $examples = array(
+                            'mm/dd/yyyy',
+                            'dd/mm/yyyy',
+                            'mm-dd-yyyy',
+                            'dd-mm-yyyy',
+                            'd M yy',
+                            'd M yyyy',
+                            'D, d M yyyy'
+                        );
+
+                        $is_custom = true;
+                        foreach ($examples as $example) {
+                            if ($example == $hesk_settings['format_datepicker_js']) {
+                                $is_custom = false;
+                                $selected = 'selected';
+                            } else {
+                                $selected = '';
+                            }
+                            echo '<option value="'.$example.'" '.$selected.'>'.hesk_date('now', false, true, true, hesk_map_datepicker_date_format_to_php($example)).'</option>';
+                        }
+                        ?>
+                        <option value="custom" <?php echo $is_custom ? 'selected' : ''; ?>><?php echo $hesklang['custom']; ?></option>
+                    </select>
+                    <script>
+                        $('#ex-js').selectize();
+                        $('#ex-js').on('change', function() {
+                            if (this.value != 'custom') {
+                                $('#s_format_datepicker_js').val(this.value);
+                            }
+                        });
+                    </script>
                 </div>
             </section>
             <section class="settings__form_block">

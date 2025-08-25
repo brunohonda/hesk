@@ -1,0 +1,6 @@
+<p>Hello,</p>
+<p>New customer accounts are pending staff approval.</p>
+<p>Number of pending approvals: <strong>%%NUM%%</strong></p>
+<p>You can approve or reject customer account registrations here:<br /><a href="%%VERIFICATION_URL%%">%%VERIFICATION_URL%%</a></p>
+<p>Regards,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

@@ -17,7 +17,6 @@ define('HESK_PATH','./');
 // Get all the required files and functions
 require(HESK_PATH . 'hesk_settings.inc.php');
 require(HESK_PATH . 'inc/common.inc.php');
-require(HESK_PATH . 'inc/knowledgebase_functions.inc.php');
 define('TEMPLATE_PATH', HESK_PATH . "theme/{$hesk_settings['site_theme']}/");
 require(TEMPLATE_PATH . 'customer/util/rating.php');
 
@@ -42,12 +41,12 @@ $artid = intval( hesk_GET('id', 0) ) or die($hesklang['attempt']);
 // Check cookies for already rated, rate and set cookie if not already
 $_COOKIE['hesk_kb_rate'] = hesk_COOKIE('hesk_kb_rate');
 
+// Connect to database
+hesk_load_database_functions();
+hesk_dbConnect();
+
 if (strpos($_COOKIE['hesk_kb_rate'],'a'.$artid.'%')===false)
 {
-    // Connect to database
-    hesk_load_database_functions();
-    hesk_dbConnect();
-
     // Update rating, make sure it's a public article in a public category
     hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_articles` AS `t1`
     	LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_categories` AS `t2` ON t1.`catid` = t2.`id`

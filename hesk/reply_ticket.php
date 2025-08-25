@@ -24,6 +24,7 @@ hesk_check_maintenance();
 hesk_load_database_functions();
 require(HESK_PATH . 'inc/email_functions.inc.php');
 require(HESK_PATH . 'inc/posting_functions.inc.php');
+require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
 
 // We only allow POST requests to this file
 if ( $_SERVER['REQUEST_METHOD'] != 'POST' )
@@ -38,7 +39,7 @@ if ( empty($_POST) && ! empty($_SERVER['CONTENT_LENGTH']) )
 	hesk_error($hesklang['maxpost']);
 }
 
-hesk_session_start();
+hesk_session_start('CUSTOMER');
 
 // Prevent flooding - multiple replies within a few seconds are probably not valid
 if ($hesk_settings['flood'])
@@ -62,7 +63,11 @@ $hesk_error_buffer = array();
 $trackingID  = hesk_cleanID('orig_track') or die($hesklang['int_error'].': No orig_track');
 
 // Email required to view ticket?
-$my_email = hesk_getCustomerEmail();
+if (hesk_isCustomerLoggedIn(false)) {
+    $my_email = $_SESSION['customer']['email'];
+} else {
+    $my_email = hesk_getCustomerEmail();
+}
 
 // Setup required session vars
 $_SESSION['t_track'] = $trackingID;
@@ -85,19 +90,33 @@ else
 	$hesk_error_buffer[] = $hesklang['enter_message'];
 }
 
+/* Connect to database */
+hesk_dbConnect();
+
 /* Attachments */
+$use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 if ($hesk_settings['attachments']['use'])
 {
     require(HESK_PATH . 'inc/attachments.inc.php');
     $attachments = array();
-    for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-    {
-        $att = hesk_uploadFile($i);
-        if ($att !== false && !empty($att))
-        {
-            $attachments[$i] = $att;
-        }
-    }
+	if ($use_legacy_attachments) {
+		for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
+			$att = hesk_uploadFile($i);
+			if ($att !== false && !empty($att)) {
+				$attachments[$i] = $att;
+			}
+		}
+	} else {
+		// The user used the new drag-and-drop system.
+		$temp_attachment_names = hesk_POST_array('attachments');
+		foreach ($temp_attachment_names as $temp_attachment_name) {
+			$temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+			if ($temp_attachment !== null) {
+				$attachments[] = $temp_attachment;
+			}
+		}
+	}
 }
 $myattachments='';
 
@@ -115,7 +134,12 @@ if (count($hesk_error_buffer)!=0)
 	// Remove any successfully uploaded attachments
 	if ($hesk_settings['attachments']['use'])
 	{
-		hesk_removeAttachments($attachments);
+		if ($use_legacy_attachments) {
+			hesk_removeAttachments($attachments);
+		} else {
+			$_SESSION['r_attachments'] = $attachments;
+		}
+
 	}
 
     $tmp = '';
@@ -129,9 +153,6 @@ if (count($hesk_error_buffer)!=0)
     hesk_process_messages($hesk_error_buffer,'ticket.php');
 }
 
-/* Connect to database */
-hesk_dbConnect();
-
 // Check if this IP is temporarily locked out
 $res = hesk_dbQuery("SELECT `number` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."logins` WHERE `ip`='".hesk_dbEscape(hesk_getClientIP())."' AND `last_attempt` IS NOT NULL AND DATE_ADD(`last_attempt`, INTERVAL ".intval($hesk_settings['attempt_banmin'])." MINUTE ) > NOW() LIMIT 1");
 if (hesk_dbNumRows($res) == 1)
@@ -144,15 +165,17 @@ if (hesk_dbNumRows($res) == 1)
 }
 
 /* Get details about the original ticket */
-$res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE `trackid`='{$trackingID}' LIMIT 1");
+$res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `ticket` WHERE `trackid`='{$trackingID}' LIMIT 1");
 if (hesk_dbNumRows($res) != 1)
 {
 	hesk_error($hesklang['ticket_not_found']);
 }
 $ticket = hesk_dbFetchAssoc($res);
+$customers = hesk_get_customers_for_ticket($ticket['id']);
+$customer_emails = array_map(function($customer) { return $customer['email']; }, $customers);
 
 /* If we require e-mail to view tickets check if it matches the one in database */
-hesk_verifyEmailMatch($trackingID, $my_email, $ticket['email']);
+hesk_verifyEmailMatch($trackingID, $my_email, $customer_emails);
 
 /* Ticket locked? */
 if ($ticket['locked'])
@@ -180,6 +203,11 @@ if (hesk_dbNumRows($res) > 0)
 /* Insert attachments */
 if ($hesk_settings['attachments']['use'] && !empty($attachments))
 {
+	// Delete temp attachment records and set the new filename
+	if (!$use_legacy_attachments) {
+		$attachments = hesk_migrateTempAttachments($attachments, $trackingID);
+	}
+
     foreach ($attachments as $myatt)
     {
         hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."attachments` (`ticket_id`,`saved_name`,`real_name`,`size`) VALUES ('{$trackingID}','".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -197,7 +225,24 @@ if (hesk_can_customer_change_status($ticket['status']))
 $res = hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `lastchange`=NOW(), `status`='{$ticket['status']}', `replies`=`replies`+1, `lastreplier`='0' WHERE `id`='{$ticket['id']}'");
 
 // Insert reply into database
-hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`name`,`message`,`message_html`,`dt`,`attachments`) VALUES ({$ticket['id']},'".hesk_dbEscape(addslashes($ticket['name']))."','".hesk_dbEscape($message)."','".hesk_dbEscape($message)."',NOW(),'".hesk_dbEscape($myattachments)."')");
+$my_customer = null;
+foreach ($customers as $customer) {
+	if ($customer['email'] === $my_email) {
+		$my_customer = $customer;
+		break;
+	}
+}
+
+if (empty($my_customer)) {
+    foreach ($customers as $customer) {
+        if ($customer['customer_type'] == 'REQUESTER') {
+            $my_customer = $customer;
+            break;
+        }
+    }
+}
+
+hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` (`replyto`,`message`,`message_html`,`dt`,`attachments`, `customer_id`) VALUES ({$ticket['id']},'".hesk_dbEscape($message)."','".hesk_dbEscape($message)."',NOW(),'".hesk_dbEscape($myattachments)."', ".intval($my_customer['id']).")");
 
 
 /*** Need to notify any staff? ***/
@@ -205,23 +250,28 @@ hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` 
 // --> Prepare reply message
 
 // 1. Generate the array with ticket info that can be used in emails
+$combined_emails = implode(';', $customer_emails);
+$customer_names = array_map(function($customer) { return $customer['name']; }, $customers);
+$combined_names = implode(',', $customer_names);
+
 $info = array(
-'email'			=> $ticket['email'],
+'email'			=> $combined_emails,
 'category'		=> $ticket['category'],
 'priority'		=> $ticket['priority'],
 'owner'			=> $ticket['owner'],
+'collaborators' => hesk_getTicketsCollaboratorIDs($ticket['id']),
 'trackid'		=> $ticket['trackid'],
 'status'		=> $ticket['status'],
-'name'			=> $ticket['name'],
+'name'			=> $combined_names,
 'subject'		=> $ticket['subject'],
 'message'		=> stripslashes($message),
 'attachments'	=> $myattachments,
 'dt'			=> hesk_date($ticket['dt'], true),
-'lastchange'	=> hesk_date($ticket['lastchange'], true),
+'lastchange'	=> hesk_date(),
 'due_date'      => hesk_format_due_date($ticket['due_date']),
 'id'			=> $ticket['id'],
 'time_worked'   => $ticket['time_worked'],
-'last_reply_by' => $ticket['name'],
+'last_reply_by' => $my_customer['name'],
 );
 
 // 2. Add custom fields to the array
@@ -230,24 +280,29 @@ foreach ($hesk_settings['custom_fields'] as $k => $v)
 	$info[$k] = $v['use'] ? $ticket[$k] : '';
 }
 
-// 3. Make sure all values are properly formatted for email
+// 3. Add HTML message to the array
+$info['message_html'] = $info['message'];
+
+// 4. Make sure all values are properly formatted for email
 $ticket = hesk_ticketToPlain($info, 1, 0);
 
-// --> If ticket is assigned just notify the owner
-if ($ticket['owner'])
-{
-	hesk_notifyAssignedStaff(false, 'new_reply_by_customer', 'notify_reply_my');
+// --> If ticket is assigned, notify the owner plus collaborators
+if ($ticket['owner']) {
+    hesk_notifyAssignedStaff(false, 'new_reply_by_customer', 'notify_reply_my', 'notify_collaborator_customer_reply');
 }
-// --> No owner assigned, find and notify appropriate staff
-else
-{
-	hesk_notifyStaff('new_reply_by_customer',"`notify_reply_unassigned`='1'");
+// --> No owner assigned, find and notify appropriate staff, including collaborators
+elseif ($ticket['collaborators']) {
+    hesk_notifyStaff('new_reply_by_customer',"`notify_reply_unassigned`='1' OR (`notify_collaborator_customer_reply`='1' AND `id` IN (".implode(",", $ticket['collaborators'])."))");
+}
+// --> No owner assigned, find and notify appropriate staff, no collaborators
+else {
+    hesk_notifyStaff('new_reply_by_customer',"`notify_reply_unassigned`='1'");
 }
 
 /* Clear unneeded session variables */
 hesk_cleanSessionVars('ticket_message');
+hesk_cleanSessionVars('r_attachments');
 
 /* Show the ticket and the success message */
 hesk_process_messages($hesklang['reply_submitted_success'],'ticket.php','SUCCESS');
 exit();
-?>

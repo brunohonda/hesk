@@ -52,6 +52,7 @@ if ( ! $hesk_settings['kb_enable'])
 
 /* This will tell the header to include WYSIWYG editor Javascript */
 define('WYSIWYG',1);
+define('ATTACHMENTS',1);
 
 /* What should we do? */
 if ( $action = hesk_REQUEST('a') )
@@ -292,10 +293,9 @@ if (!isset($_SESSION['hide']))
 if (!isset($_SESSION['hide']['treemenu']))
 {
 	?>
-    <div class="main__content categories">
-        <div class="table-wrap">
-
-            <h3 style="font-size: 1.3rem">
+    <div class="main__content knowledgebase">
+        <section class="knowledgebase__head">
+            <h2>
                 <?php echo $hesklang['kb']; ?>
                 <div class="tooltype right out-close">
                     <svg class="icon icon-info">
@@ -307,7 +307,9 @@ if (!isset($_SESSION['hide']['treemenu']))
                         </div>
                     </div>
                 </div>
-            </h3>
+            </h2>
+        </section>
+        <div class="table-wrap">
             <?php
             // Show a notice if total public articles is less than 5
             if ($total_articles < 5)
@@ -319,6 +321,7 @@ if (!isset($_SESSION['hide']['treemenu']))
             ?>
             <!-- SUB NAVIGATION -->
             <?php show_subnav(); ?>
+            <hr class="sub-navigation-border">
             <!-- SUB NAVIGATION -->
             <!-- SHOW THE CATEGORY TREE -->
             <?php show_treeMenu(); ?>
@@ -421,7 +424,7 @@ if (!isset($_SESSION['hide']['new_article']))
                             <label for="add_catid"><?php echo $hesklang['kb_cat']; ?></label>
                         </div>
                         <div class="descr">
-                            <div class="dropdown-select center out-close">
+                            <div class="dropdown-select right out-close">
                                 <select id="add_catid" name="catid"><?php $listBox->printMenu(); ?></select>
                             </div>
                         </div>
@@ -462,19 +465,19 @@ if (!isset($_SESSION['hide']['new_article']))
                     </label>
                 </div>
                 <?php
-                if ($hesk_settings['attachments']['use'])
-                {
+                if ($hesk_settings['attachments']['use']) {
+                    require_once(HESK_PATH . 'inc/attachments.inc.php');
                 ?>
-                <div style="margin-top: 16px">
+                <div class="attachments">
                     <svg class="icon icon-attach">
                         <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
                     </svg>
-                    <?php echo $hesklang['attachments']; ?> (<a href="Javascript:void(0)" onclick="hesk_window('../file_limits.php',250,500);return false;"><?php echo $hesklang['ful']; ?></a>)
+                    <?php echo $hesklang['attachments']; ?>
                     <?php
-                    for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                    {
-                        echo '<div><input type="file" name="attachment['.$i.']"></div>';
-                    }
+                    build_dropzone_markup(true);
+                    display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                    dropzone_display_existing_files(hesk_SESSION_array('edit_attachments'));
+                    hesk_cleanSessionVars('edit_attachments');
                     ?>
                 </div>
                     <?php
@@ -518,7 +521,7 @@ if (!isset($_SESSION['hide']['new_category']))
                 </div>
                 <div class="form-group">
                     <label for="add_cat_parent"><?php echo $hesklang['kb_cat_parent']; ?></label>
-                    <div class="dropdown-select center out-close">
+                    <div class="dropdown-select out-close">
                         <select id="add_cat_parent" name="parent"><?php $listBox->printMenu()?></select>
                     </div>
                 </div>
@@ -662,7 +665,7 @@ function list_draft() {
                                             </svg>
                                         </a>
                                         <?php
-                                        $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                                        $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                                             $hesklang['del_art'],
                                             'manage_knowledgebase.php?a=remove_article&amp;id='. $article['id'] .'&amp;token='. hesk_token_echo(0));
                                         ?>
@@ -800,7 +803,7 @@ function list_private() {
                                             </svg>
                                         </a>
                                         <?php
-                                        $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                                        $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                                             $hesklang['del_art'],
                                             'manage_knowledgebase.php?a=remove_article&amp;id='. $article['id'] .'&amp;token='. hesk_token_echo(0));
                                         ?>
@@ -1144,20 +1147,33 @@ function save_article()
 	define('KB',1);
     require_once(HESK_PATH . 'inc/posting_functions.inc.php');
     $attachments = array();
+    $use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 	$myattachments='';
 
 	if ($hesk_settings['attachments']['use'])
 	{
 		require_once(HESK_PATH . 'inc/attachments.inc.php');
 
-		for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
-		{
-			$att = hesk_uploadFile($i);
-			if ( ! empty($att))
-			{
-				$attachments[$i] = $att;
-			}
-		}
+        if ($use_legacy_attachments) {
+            for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
+            {
+                $att = hesk_uploadFile($i);
+                if ( ! empty($att))
+                {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_names = hesk_POST_array('attachments');
+            foreach ($temp_attachment_names as $temp_attachment_name) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
+            }
+        }
 	}
 
     /* Any errors? */
@@ -1166,7 +1182,11 @@ function save_article()
 		// Remove any successfully uploaded attachments
 		if ($hesk_settings['attachments']['use'])
 		{
-			hesk_removeAttachments($attachments);
+            if ($use_legacy_attachments) {
+                hesk_removeAttachments($attachments);
+            } else {
+                $_SESSION['edit_attachments'] = $attachments;
+            }
 		}
 
 		$_SESSION['edit_article'] = array(
@@ -1195,6 +1215,10 @@ function save_article()
 	/* Add to database */
 	if (!empty($attachments))
 	{
+        if (!$use_legacy_attachments) {
+            $attachments = hesk_migrateTempAttachments($attachments);
+        }
+
 	    foreach ($attachments as $myatt)
 	    {
 	        hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_attachments` (`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($myatt['saved_name'])."', '".hesk_dbEscape($myatt['real_name'])."', '".intval($myatt['size'])."')");
@@ -1240,7 +1264,7 @@ function save_article()
             $redirect_action = 'a=list_private';
             break;
         default:
-            $redirect_action = 'a=manage_cat&catid='.$catid;
+            $redirect_action = 'a=edit_article&id='.$id.'&from='.$from;
             break;
     }
 
@@ -1438,7 +1462,7 @@ function edit_article()
                             <label for="edit_catid"><?php echo $hesklang['kb_cat']; ?></label>
                         </div>
                         <div class="descr">
-                            <div class="dropdown-select center out-close">
+                            <div class="dropdown-select right out-close">
                                 <select id="edit_catid" name="catid"><?php $listBox->printMenu()?></select>
                             </div>
                         </div>
@@ -1447,7 +1471,7 @@ function edit_article()
                 <div class="article__detalies_action">
                     <button type="submit" class="btn btn-full" ripple="ripple"><?php echo $hesklang['kb_save']; ?></button>
                     <?php
-                    $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                    $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                         $hesklang['del_art'],
                         'manage_knowledgebase.php?a=remove_article&amp;id='. $article['id'] .'&amp;token='. hesk_token_echo(0));
                     ?>
@@ -1506,11 +1530,11 @@ function edit_article()
                 if ( ! empty($article['attachments']) || $hesk_settings['attachments']['use'])
                 {
                     ?>
-                    <div style="margin-top: 16px">
+                    <div class="attachments">
                         <svg class="icon icon-attach">
                             <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
                         </svg>
-                        <?php echo $hesklang['attachments']; ?> (<a href="Javascript:void(0)" onclick="hesk_window('../file_limits.php',250,500);return false;"><?php echo $hesklang['ful']; ?></a>)<br>
+                        <?php echo $hesklang['attachments']; ?><br>
                         <?php
                         // Existing attachments
                         if ( ! empty($article['attachments']))
@@ -1529,7 +1553,7 @@ function edit_article()
                                             <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-delete"></use>
                                         </svg>
                                     </a>&raquo; ';
-                                echo '<a href="../download_attachment.php?kb_att='.$att_id.'" title="'.$hesklang['dnl'].' '.$att_name.'">'.$att_name.'</a><br />';
+                                echo '<a href="download_attachment.php?kb_att='.$att_id.'" title="'.$hesklang['dnl'].' '.$att_name.'">'.$att_name.'</a><br />';
                             }
                             echo '<br>';
                         }
@@ -1537,10 +1561,12 @@ function edit_article()
                         // New attachments
                         if ($hesk_settings['attachments']['use'])
                         {
-                            for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                            {
-                                echo '<input type="file" name="attachment['.$i.']" size="50"><br>';
-                            }
+                            require_once(HESK_PATH . 'inc/attachments.inc.php');
+
+                            build_dropzone_markup(true);
+                            display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                            dropzone_display_existing_files(hesk_SESSION_array('edit_attachments'));
+                            hesk_cleanSessionVars('edit_attachments');
                         }
                         ?>
                     </div>
@@ -1557,7 +1583,7 @@ function edit_article()
             </div>
             <div class="d-flex-center sm-hidden mt2">
                 <?php
-                $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                     $hesklang['del_art'],
                     'manage_knowledgebase.php?a=remove_article&amp;id='. $article['id'] .'&amp;token='. hesk_token_echo(0));
                 ?>
@@ -1864,7 +1890,7 @@ function manage_category() {
                                         ?>
                                         <a class="tooltip" href="manage_knowledgebase.php?a=sticky&amp;s=<?php echo $article['sticky'] ? 0 : 1 ?>&amp;id=<?php echo $article['id']; ?>&amp;catid=<?php echo $catid; ?>&amp;token=<?php hesk_token_echo(); ?>"
                                            title="<?php echo $article['sticky'] ? $hesklang['stickyoff'] : $hesklang['stickyon']; ?>">
-                                            <svg class="icon icon-pin" <?php echo $article['sticky'] ? ' style="fill: #38bc7d; transform: rotate(50deg);"' : ''; ?>>
+                                            <svg class="icon icon-pin <?php echo $article['sticky'] ? 'is-bookmark' : ''; ?>">
                                                 <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-pin"></use>
                                             </svg>
                                         </a>
@@ -1875,7 +1901,7 @@ function manage_category() {
                                             </svg>
                                         </a>
                                         <?php
-                                        $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                                        $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                                             $hesklang['del_art'],
                                             'manage_knowledgebase.php?a=remove_article&amp;id='. $article['id'] .'&amp;token='. hesk_token_echo(0));
                                         ?>
@@ -1919,7 +1945,7 @@ function manage_category() {
                     </div>
                     <div class="form-group">
                         <label for="edit_cat_parent"><?php echo $hesklang['kb_cat_parent']; ?></label>
-                        <div class="dropdown-select center out-close">
+                        <div class="dropdown-select out-close">
                             <select id="edit_cat_parent" name="parent"><?php $listBox->printMenu();  ?></select>
                         </div>
                     </div>
@@ -2096,20 +2122,33 @@ function new_article()
 	define('KB',1);
 	require_once(HESK_PATH . 'inc/posting_functions.inc.php');
     $attachments = array();
+    $use_legacy_attachments = hesk_POST('use-legacy-attachments', 0);
 	$myattachments='';
 
 	if ($hesk_settings['attachments']['use'])
 	{
 		require_once(HESK_PATH . 'inc/attachments.inc.php');
 
-		for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
-		{
-			$att = hesk_uploadFile($i);
-			if ( ! empty($att))
-			{
-				$attachments[$i] = $att;
-			}
-		}
+        if ($use_legacy_attachments) {
+            for ($i=1; $i<=$hesk_settings['attachments']['max_number']; $i++)
+            {
+                $att = hesk_uploadFile($i);
+                if ( ! empty($att))
+                {
+                    $attachments[$i] = $att;
+                }
+            }
+        } else {
+            // The user used the new drag-and-drop system.
+            $temp_attachment_names = hesk_POST_array('attachments');
+            foreach ($temp_attachment_names as $temp_attachment_name) {
+                $temp_attachment = hesk_getTemporaryAttachment($temp_attachment_name);
+
+                if ($temp_attachment !== null) {
+                    $attachments[] = $temp_attachment;
+                }
+            }
+        }
 	}
 
     /* Any errors? */
@@ -2118,7 +2157,11 @@ function new_article()
 		// Remove any successfully uploaded attachments
 		if ($hesk_settings['attachments']['use'])
 		{
-			hesk_removeAttachments($attachments);
+            if ($use_legacy_attachments) {
+                hesk_removeAttachments($attachments);
+            } else {
+                $_SESSION['edit_attachments'] = $attachments;
+            }
 		}
 
 		$_SESSION['new_article'] = array(
@@ -2146,6 +2189,10 @@ function new_article()
 	/* Add to database */
 	if ( ! empty($attachments))
 	{
+        if (!$use_legacy_attachments) {
+            $attachments = hesk_migrateTempAttachments($attachments);
+        }
+
 	    foreach ($attachments as $myatt)
 	    {
 	        hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."kb_attachments` (`saved_name`,`real_name`,`size`) VALUES ('".hesk_dbEscape($myatt['saved_name'])."','".hesk_dbEscape($myatt['real_name'])."','".intval($myatt['size'])."')");
@@ -2381,7 +2428,7 @@ function show_subnav($hide='',$catid=1)
         </svg>
         <form style="display: inline" class="form" method="get" action="manage_knowledgebase.php">
         <input type="hidden" name="a" value="edit_article">
-        '. $hesklang['aid'] .': <input type="text" name="id" class="form-control" style="width: 75px; height: inherit"> <button type="submit" class="btn btn--blue-border" style="height: 26px;">'. $hesklang['edit'] .'</button>
+        '. $hesklang['aid'] .': <input type="text" name="id" class="form-control" style="width: 75px; height: inherit"> <button type="submit" class="btn btn--blue-border" style="height: 27px;">'. $hesklang['edit'] .'</button>
         </form>
     ';
 

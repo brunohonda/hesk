@@ -12,10 +12,17 @@ function hesk3_show_messages($messages) {
         '3' => 'orange',
         '4' => 'red'
     );
+    $style_to_ada_role = array(
+        '0' => 'log',
+        '1' => 'status',
+        '2' => 'status',
+        '3' => 'alert',
+        '4' => 'alert'
+    );
     foreach ($messages as $message):
     ?>
     <div class="main__content notice-flash">
-        <div class="notification <?php echo $style_to_class[$message['style']]; ?> browser-default">
+        <div role="<?php echo $style_to_ada_role[$message['style']]; ?>" class="notification <?php echo $style_to_class[$message['style']]; ?> browser-default">
             <p><b><?php echo $message['title']; ?></b></p>
             <?php echo $message['message']; ?>
         </div>

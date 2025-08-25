@@ -1,0 +1,5 @@
+<p>Caro %%NAME%%,</p>
+<p>Este e-mail contém uma lista de chamados enviados com seu endereço de e-mail. Número de chamados encontrados: <strong>%%NUM%%</strong></p>
+<p>%%LIST_TICKETS%%</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

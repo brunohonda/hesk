@@ -69,7 +69,7 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 * @access  public
 * @package HTML_TreeMenu
 */
-
+#[AllowDynamicProperties]
 class HTML_TreeMenu
 {
     /**
@@ -304,6 +304,7 @@ class HTML_TreeMenu
 * @access  public
 * @package HTML_TreeMenu
 */
+#[AllowDynamicProperties]
 class HTML_TreeNode
 {
     /**
@@ -491,6 +492,7 @@ class HTML_TreeNode
 * Base class for other presentation classes to
 * inherit from.
 */
+#[AllowDynamicProperties]
 class HTML_TreeMenu_Presentation
 {
     /**
@@ -538,6 +540,7 @@ class HTML_TreeMenu_Presentation
 * traditional tree, static for browsers that can't handle
 * the DHTML.
 */
+#[AllowDynamicProperties]
 class HTML_TreeMenu_DHTML extends HTML_TreeMenu_Presentation
 {
     /**
@@ -726,6 +729,7 @@ class HTML_TreeMenu_DHTML extends HTML_TreeMenu_Presentation
 *
 * This class presents the menu as a listbox
 */
+#[AllowDynamicProperties]
 class HTML_TreeMenu_Listbox extends HTML_TreeMenu_Presentation
 {
     /**

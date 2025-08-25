@@ -1,0 +1,13 @@
+<p>Olá,</p>
+<p>Um chamado foi escalado por %%ESCALATED_BY_RULE%%:</p>
+<p> </p>
+<p>Assunto: %%SUBJECT%%</p>
+<p>Categoria: %%CATEGORY%%</p>
+<p>Prioridade: %%PRIORITY%%</p>
+<p>Estado: %%STATUS%%</p>
+<p>Atribuido à: %%OWNER%%</p>
+<p>ID: %%TRACK_ID%%</p>
+<p> </p>
+<p>Você consegue ver este chamado por aqui:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a></p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

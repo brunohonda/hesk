@@ -1,0 +1,13 @@
+Olá,
+
+Novas contas de clientes estão pendentes de aprovação da equipe.
+
+Número de aprovações pendentes: %%NUM%%
+
+Você pode aprovar ou rejeitar registros de contas de clientes aqui:
+%%VERIFICATION_URL%%
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

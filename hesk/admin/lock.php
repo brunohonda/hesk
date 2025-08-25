@@ -27,7 +27,6 @@ hesk_isLoggedIn();
 /* Check permissions for this feature */
 hesk_checkPermission('can_view_tickets');
 hesk_checkPermission('can_reply_tickets');
-hesk_checkPermission('can_edit_tickets');
 hesk_checkPermission('can_resolve');
 
 /* A security check */
@@ -66,9 +65,15 @@ else
 		if ($ticket['status'] != 3)
 		{
 			require(HESK_PATH . 'inc/email_functions.inc.php');
-
+            $customers = hesk_get_customers_for_ticket($ticket['id']);
+            $customer_emails = array_map(function($customer) { return $customer['email']; }, $customers);
+            $customer_names = array_map(function($customer) { return $customer['name']; }, $customers);
+            $ticket['email'] = implode(';', $customer_emails);
+            $ticket['name'] = implode(';', $customer_names);
 			$ticket['dt'] = hesk_date($ticket['dt'], true);
 			$ticket['lastchange'] = hesk_date($ticket['lastchange'], true);
+            $ticket['due_date'] = hesk_format_due_date($ticket['due_date']);
+            $ticket['last_reply_by'] = hesk_getReplierName($ticket);
 			hesk_notifyCustomer('ticket_closed');
 		}
 	}

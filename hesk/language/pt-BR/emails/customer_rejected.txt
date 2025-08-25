@@ -1,0 +1,10 @@
+Prezado(a) %%NAME%%,
+
+Infelizmente, o registro da sua conta foi rejeitado.
+
+Se você acredita que isso foi feito por engano, tente registrar-se novamente.
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

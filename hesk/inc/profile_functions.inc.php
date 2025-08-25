@@ -17,7 +17,7 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 function hesk_profile_tab($session_array='new',$is_profile_page=true)
 {
-	global $hesk_settings, $hesklang, $can_reply_tickets, $can_view_tickets, $can_view_unassigned;
+	global $hesk_settings, $hesklang, $can_reply_tickets, $can_view_tickets, $can_view_unassigned, $can_man_customers;
 
 	$show_permissions = false;
 	$show_preferences = false;
@@ -73,34 +73,33 @@ function hesk_profile_tab($session_array='new',$is_profile_page=true)
                 </div>
                 <?php
             }
+
+            if ( ! $is_profile_page || $hesk_settings['autoassign']):
             ?>
             <section class="item--section">
+                <?php if ( ! $is_profile_page): ?>
                 <h4>
                     <?php echo $hesklang['pass']; ?>
-                    <?php if ($is_profile_page): ?>
-                    <span>
-                        <?php echo $hesklang['optional']; ?>
-                    </span>
-                    <?php endif; ?>
                 </h4>
                 <div class="form-group">
-                    <label for="prof_newpass"><?php echo $is_profile_page ? $hesklang['new_pass'] : $hesklang['pass']; ?></label>
+                    <label for="prof_newpass"><?php echo (empty($_SESSION[$session_array]['id']) ? $hesklang['pass'] : $hesklang['new_pass']); ?></label>
                     <input type="password" id="prof_newpass" name="newpass" autocomplete="off" class="form-control <?php echo in_array('passwords', $errors) ? 'isError' : ''; ?>"
                            value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>"
                            onkeyup="hesk_checkPassword(this.value)">
                 </div>
                 <div class="form-group">
-                    <label for="prof_newpass2"><?php echo $hesklang['confirm_pass']; ?></label>
+                    <label for="prof_newpass2"><?php echo (empty($_SESSION[$session_array]['id']) ? $hesklang['confirm_pass'] : $hesklang['confirm_new_pass']); ?></label>
                     <input type="password" class="form-control <?php echo in_array('passwords', $errors) ? 'isError' : ''; ?>" id="prof_newpass2" name="newpass2" autocomplete="off"
                            value="<?php echo isset($_SESSION[$session_array]['cleanpass']) ? $_SESSION[$session_array]['cleanpass'] : ''; ?>">
                 </div>
                 <div class="form-group">
                     <label><?php echo $hesklang['pwdst']; ?></label>
-                    <div style="border: 1px solid #d4d6e3; width: 100%; height: 40px">
-                        <div id="progressBar" style="font-size: 1px; height: 38px; width: 0px; border: none;">
+                    <div style="border: 1px solid #d4d6e3; width: 100%; height: 14px">
+                        <div id="progressBar" style="font-size: 1px; height: 12px; width: 0px; border: none;">
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
                 <?php if (!$is_profile_page && $hesk_settings['autoassign']): ?>
                     <div class="form-switcher">
                         <label class="switch-checkbox">
@@ -121,6 +120,7 @@ function hesk_profile_tab($session_array='new',$is_profile_page=true)
                     </div>
                 <?php endif; ?>
             </section>
+            <?php endif; ?>
         </div>
         <?php if ($show_permissions): ?>
         <div class="step-item step-<?php echo $current_step++; ?>">
@@ -345,7 +345,53 @@ function hesk_profile_tab($session_array='new',$is_profile_page=true)
                     <label for="prof_notify_pm"><?php echo $hesklang['npms']; ?></label>
                 </div>
             </section>
-            <?php hesk_show_notice($hesklang['ovdcron'] . ' <a href="https://www.hesk.com/knowledgebase/?article=103" target="_blank">'.$hesklang['instructions'].'</a>', '*', false); ?>
+            <?php if (!$is_profile_page || $can_man_customers): ?>
+            <section class="item--section">
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_customer_approval" name="notify_customer_approval" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_customer_approval'])) {echo 'checked';}?>>
+                    <label for="prof_notify_customer_approval"><?php echo $hesklang['n_cust_app']; ?></label>
+                </div>
+            </section>
+            <?php endif; ?>
+            <?php if (!$is_profile_page || $can_view_tickets): ?>
+            <section class="item--section">
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_collaborator_added" name="notify_collaborator_added" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_collaborator_added'])) {echo 'checked';}?>>
+                    <label for="prof_notify_collaborator_added"><?php echo $hesklang['notify_collaborator_added']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_collaborator_customer_reply" name="notify_collaborator_customer_reply" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_collaborator_customer_reply'])) {echo 'checked';}?>>
+                    <label for="prof_notify_collaborator_customer_reply"><?php echo $hesklang['notify_collaborator_customer_reply']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_collaborator_staff_reply" name="notify_collaborator_staff_reply" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_collaborator_staff_reply'])) {echo 'checked';}?>>
+                    <label for="prof_notify_collaborator_staff_reply"><?php echo $hesklang['notify_collaborator_staff_reply']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_collaborator_note" name="notify_collaborator_note" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_collaborator_note'])) {echo 'checked';}?>>
+                    <label for="prof_notify_collaborator_note"><?php echo $hesklang['notify_collaborator_note']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_collaborator_resolved" name="notify_collaborator_resolved" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_collaborator_resolved'])) {echo 'checked';}?>>
+                    <label for="prof_notify_collaborator_resolved"><?php echo $hesklang['notify_collaborator_resolved']; ?></label>
+                </div>
+                <div class="checkbox-custom">
+                    <input type="checkbox" id="prof_notify_collaborator_overdue" name="notify_collaborator_overdue" value="1"
+                        <?php if (!empty($_SESSION[$session_array]['notify_collaborator_overdue'])) {echo 'checked';}?>>
+                    <label for="prof_notify_collaborator_overdue"><?php echo $hesklang['notify_collaborator_overdue']; ?></label>
+                </div>
+            </section>
+            <?php endif; ?>
+            <?php
+            if ($can_view_tickets) {
+                hesk_show_notice($hesklang['ovdcron'] . ' <a href="https://www.hesk.com/knowledgebase/?article=103" target="_blank">'.$hesklang['instructions'].'</a>', '*', false);
+            }?>
         </div>
     </div>
 

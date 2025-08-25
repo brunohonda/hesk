@@ -1,0 +1,5 @@
+<p>Dear %%NAME%%,</p>
+<p>Your account registration has been approved.</p>
+<p>You may now log in below using the username and password you used when creating your account:<br /><a href="%%CUSTOMER_LOGIN_URL%%">%%CUSTOMER_LOGIN_URL%%</a></p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

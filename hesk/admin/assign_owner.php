@@ -129,20 +129,25 @@ else
 }
 
 $ticket['owner'] = $owner;
+$customers = hesk_get_customers_for_ticket($ticket['id']);
+$customer_emails = array_map(function($customer) { return $customer['email']; }, $customers);
+$customer_names = array_map(function($customer) { return $customer['name']; }, $customers);
 
 /* --> Prepare message */
 
 // 1. Generate the array with ticket info that can be used in emails
 $info = array(
-'email'			=> $ticket['email'],
+'email'			=> implode(';', $customer_emails),
 'category'		=> $ticket['category'],
 'priority'		=> $ticket['priority'],
 'owner'			=> $ticket['owner'],
+'collaborators' => hesk_getTicketsCollaboratorIDs($ticket['id']),
 'trackid'		=> $ticket['trackid'],
 'status'		=> $ticket['status'],
-'name'			=> $ticket['name'],
+'name'			=> implode(';', $customer_names),
 'subject'		=> $ticket['subject'],
 'message'		=> $ticket['message'],
+'message_html'  => $ticket['message_html'],
 'attachments'	=> $ticket['attachments'],
 'dt'			=> hesk_date($ticket['dt'], true),
 'lastchange'	=> hesk_date($ticket['lastchange'], true),
@@ -164,9 +169,9 @@ $ticket = hesk_ticketToPlain($info, 1, 0);
 /* Notify the new owner? */
 if ($ticket['owner'] != intval($_SESSION['id']))
 {
-	hesk_notifyAssignedStaff(false, 'ticket_assigned_to_you');
+	hesk_notifyAssignedStaff(false, 'ticket_assigned_to_you', 'notify_assigned', false);
 }
 
 $tmp = ($owner == $_SESSION['id']) ? $hesklang['tasy'] : $hesklang['taso'];
 hesk_process_messages($tmp,$_SERVER['PHP_SELF'],'SUCCESS');
-?>
+

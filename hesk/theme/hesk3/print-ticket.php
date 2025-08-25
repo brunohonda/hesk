@@ -9,6 +9,10 @@ global $hesk_settings, $hesklang;
 if (!defined('IN_SCRIPT')) {
     die();
 }
+
+if ($hesk_settings['barcode']['print'] && ( ! $hesk_settings['barcode']['staff_only'] || $showStaffOnlyFields)) {
+    require(HESK_PATH . 'inc/tecnick/autoload.php');
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -22,6 +26,10 @@ if (!defined('IN_SCRIPT')) {
             font-size: <?php echo $hesk_settings['print_font_size']; ?>px;
             word-wrap: break-word;
             word-break: break-word;
+        }
+
+        td:first-child {
+            vertical-align: top;
         }
 
         table {
@@ -40,11 +48,44 @@ if (!defined('IN_SCRIPT')) {
 </head>
 <body onload="window.print()">
 <?php foreach ($tickets as $ticket): ?>
+
+<?php
+// generate a barcode
+if ($hesk_settings['barcode']['print'] && ( ! $hesk_settings['barcode']['staff_only'] || $showStaffOnlyFields)) {
+    $padding_bottom = ($hesk_settings['barcode']['format'] == 'png') ? 20 : 2;
+    $barcode = new \Com\Tecnick\Barcode\Barcode();
+    $bobj = $barcode->getBarcodeObj(
+        $hesk_settings['barcode']['type'],   // barcode type
+        $ticket['trackid'],                  // data string to encode
+        $hesk_settings['barcode']['width'],  // bar width (use absolute or negative value as multiplication factor)
+        $hesk_settings['barcode']['height'], // bar height (use absolute or negative value as multiplication factor)
+        $hesk_settings['barcode']['color'],  // foreground color
+        array(2, 2, $padding_bottom, 2)      // padding (use absolute or negative values as multiplication factors)
+        )->setBackgroundColor($hesk_settings['barcode']['bg']); // background color
+
+    if ($hesk_settings['barcode']['format'] == 'png') {
+        echo '<img alt="Barcode" src="data:image/png;base64,'.base64_encode($bobj->getPngData()).'">';
+    } else {
+        echo '<p style="font-family:monospace;">' . $bobj->getSvgCode() . '</p>';
+    }
+}
+?>
+
+    <?php
+    $requester = array_filter($ticket['customers'], function($customer) { return $customer['customer_type'] === 'REQUESTER'; });
+    $followers = array_filter($ticket['customers'], function($customer) { return $customer['customer_type'] === 'FOLLOWER'; });
+    ?>
     <table border="0">
         <tr>
             <td><?php echo $hesklang['subject']; ?>:</td>
             <td><b><?php echo $ticket['subject']; ?></b></td>
         </tr>
+        <?php if ($hesk_settings['sequential'] || $showStaffOnlyFields): ?>
+        <tr>
+            <td><?php echo $hesklang['seqid']; ?>:</td>
+            <td><?php echo $ticket['id']; ?></td>
+        </tr>
+        <?php endif; ?>
         <tr>
             <td><?php echo $hesklang['trackID']; ?>:</td>
             <td><?php echo $ticket['trackid']; ?></td>
@@ -89,15 +130,28 @@ if (!defined('IN_SCRIPT')) {
                 <td><?php echo $ticket['ip']; ?></td>
             </tr>
             <tr>
-                <td><?php echo $hesklang['email']; ?>:</td>
-                <td><?php echo $ticket['email']; ?></td>
+                <td><?php echo $hesklang['m_from']; ?>:</td>
+                <td><?php echo count($requester) ? hesk_output_customer_name_and_email(reset($requester)) : $hesklang['anon_name']; ?></td>
             </tr>
-        <?php endif; ?>
-        <tr>
-            <td><?php echo $hesklang['name']; ?>:</td>
-            <td><?php echo $ticket['name']; ?></td>
-        </tr>
-        <?php foreach ($ticket['custom_fields'] as $customField): ?>
+            <tr>
+                <td><?php echo $hesklang['cc']; ?>:</td>
+                <td>
+                    <?php
+                    $first = true;
+                    foreach ($followers as $follower) {
+                        if (!$first) {
+                            echo '<br>';
+                        }
+                        echo hesk_output_customer_name_and_email($follower);
+
+                        $first = false;
+                    }
+                    ?>
+                </td>
+            </tr>
+        <?php
+        endif;
+        foreach ($ticket['custom_fields'] as $customField): ?>
             <tr>
                 <td><?php echo $customField['name']; ?></td>
                 <td><?php echo $customField['value']; ?></td>
@@ -112,8 +166,8 @@ if (!defined('IN_SCRIPT')) {
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <?php if ($ticket['message'] != ''): ?>
-        <p><?php echo $ticket['message']; ?></p>
+    <?php if ($ticket['message_html'] != ''): ?>
+        <p><?php echo $ticket['message_html']; ?></p>
     <?php endif; ?>
 
     <?php foreach ($ticket['replies'] as $reply): ?>
@@ -128,7 +182,7 @@ if (!defined('IN_SCRIPT')) {
                 <td><?php echo $reply['name']; ?></td>
             </tr>
         </table>
-        <p><?php echo $reply['message']; ?></p>
+        <p><?php echo $reply['message_html']; ?></p>
     <?php endforeach; ?>
     <div style="page-break-after: always;"><?php echo $hesklang['end_ticket']; ?></div>
 <?php endforeach; ?>

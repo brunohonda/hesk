@@ -1,0 +1,10 @@
+Prezado(a) %%NAME%%,
+
+Não conseguimos processar seu e-mail "%%SUBJECT%%" porque você não tem uma conta conosco.
+
+Este help desk está disponível apenas para usuários registrados.
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

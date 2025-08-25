@@ -1,0 +1,11 @@
+Prezado(a) %%NAME%%,
+
+Não conseguimos processar seu e-mail "%%SUBJECT%%" porque você não tem uma conta conosco.
+
+Para enviar tickets de suporte por e-mail, registre-se primeiro em:
+%%CUSTOMER_REGISTER_URL%%
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

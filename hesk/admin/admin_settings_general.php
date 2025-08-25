@@ -25,7 +25,6 @@ require(HESK_PATH . 'hesk_settings.inc.php');
 // Save the default language for the settings page before choosing user's preferred one
 $hesk_settings['language_default'] = $hesk_settings['language'];
 require(HESK_PATH . 'inc/common.inc.php');
-$hesk_settings['language'] = $hesk_settings['language_default'];
 require(HESK_PATH . 'inc/admin_functions.inc.php');
 require(HESK_PATH . 'inc/setup_functions.inc.php');
 hesk_load_database_functions();
@@ -56,6 +55,9 @@ $enable_use_attachments = 0;
 // Print header
 require_once(HESK_PATH . 'inc/header.inc.php');
 
+// Loader file include for AJAX Request
+require_once(HESK_PATH . 'inc/loader.inc.php');
+
 // Print main manage users page
 require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
 
@@ -83,8 +85,6 @@ hesk_handle_messages();
             if (d.s_hesk_url.value=='') {alert('<?php echo addslashes($hesklang['err_hurl']); ?>'); return false;}
             if (d.s_webmaster_mail.value=='' || d.s_webmaster_mail.value.indexOf(".") == -1 || d.s_webmaster_mail.value.indexOf("@") == -1)
             {alert('<?php echo addslashes($hesklang['err_wmmail']); ?>'); return false;}
-            if (d.s_noreply_mail.value=='' || d.s_noreply_mail.value.indexOf(".") == -1 || d.s_noreply_mail.value.indexOf("@") == -1)
-            {alert('<?php echo addslashes($hesklang['err_nomail']); ?>'); return false;}
 
             if (d.s_db_host.value=='') {alert('<?php echo addslashes($hesklang['err_dbhost']); ?>'); return false;}
             if (d.s_db_name.value=='') {alert('<?php echo addslashes($hesklang['err_dbname']); ?>'); return false;}
@@ -192,33 +192,7 @@ hesk_handle_messages();
                     </label>
                     <input type="text" class="form-control" name="s_webmaster_mail" maxlength="255" value="<?php echo $hesk_settings['webmaster_mail']; ?>">
                 </div>
-                <div class="form-group">
-                    <label>
-                        <span><?php echo $hesklang['email_noreply']; ?></span>
-                        <a onclick="hesk_window('<?php echo $help_folder; ?>general.html#5','400','500')">
-                            <div class="tooltype right">
-                                <svg class="icon icon-info">
-                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
-                                </svg>
-                            </div>
-                        </a>
-                    </label>
-                    <input type="text" class="form-control" name="s_noreply_mail" maxlength="255" value="<?php echo $hesk_settings['noreply_mail']; ?>">
-                </div>
-                <div class="form-group">
-                    <label>
-                        <span><?php echo $hesklang['email_name']; ?></span>
-                        <a onclick="hesk_window('<?php echo $help_folder; ?>general.html#6','400','500')">
-                            <div class="tooltype right">
-                                <svg class="icon icon-info">
-                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
-                                </svg>
-                            </div>
-                        </a>
-                    </label>
-                    <input type="text" class="form-control" name="s_noreply_name" maxlength="255" value="<?php echo $hesk_settings['noreply_name']; ?>">
-                </div>
-                <div class="form-group">
+                <div class="form-group flex-row">
                     <label>
                         <span><?php echo $hesklang['site_theme']; ?></span>
                         <a onclick="hesk_window('<?php echo $help_folder; ?>general.html#58','400','500')">
@@ -260,10 +234,31 @@ hesk_handle_messages();
                         </div>
                     </div>
                 </div>
+                <div class="checkbox-group">
+                    <h5>
+                        <span><?php echo $hesklang['admin_js']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>general.html#60','400','500')">
+                            <div class="tooltype right" style="vertical-align: top;">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </h5>
+                    <div class="checkbox-list">
+                        <div class="checkbox-custom">
+                            <input type="checkbox" id="s_admin_js" name="s_admin_js" value="1" onchange="hesk_toggleLayerDisplay('admin_js');" <?php if ($hesk_settings['admin_js']) {echo 'checked';} ?>>
+                            <label for="s_admin_js"><?php echo $hesklang['admin_js2']; ?></label>
+                        </div>
+                        <div id="admin_js" style="margin-left:25px;display:<?php echo $hesk_settings['admin_js'] ? 'block' : 'none'; ?>">
+                            <input type="text" class="form-control" name="s_admin_js_url" maxlength="255" value="<?php echo $hesk_settings['admin_js_url']; ?>">
+                        </div>
+                    </div>
+                </div>
             </section>
             <section class="settings__form_block language">
                 <h3><?php echo $hesklang['lgs']; ?></h3>
-                <div class="form-group row">
+                <div class="form-group row flex-row">
                     <label>
                         <span><?php echo $hesklang['hesk_lang']; ?></span>
                         <a onclick="hesk_window('<?php echo $help_folder; ?>general.html#9','400','500')">
@@ -284,6 +279,23 @@ hesk_handle_messages();
                         <?php echo $hesklang['s_inl']; ?>
                     </button>
                 </div>
+                <!--Installed Language Changes-->
+                <div class="form-group row flex-row">
+                    <label>
+                        <span><?php echo $hesklang['available_language']; ?></span>
+                        <a onclick="hesk_window('<?php echo $help_folder; ?>general.html#44','400','500')">
+                            <div class="tooltype right">
+                                <svg class="icon icon-info">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-info"></use>
+                                </svg>
+                            </div>
+                        </a>
+                    </label>
+                    <div>
+                        <?php require_once(HESK_PATH . 'inc/admin_settings_language.inc.php');?>
+                    </div>
+                </div>
+                <!--Installed Language Changes-->
                 <div class="checkbox-group row">
                     <h5>
                         <span><?php echo $hesklang['s_mlang']; ?></span>
@@ -349,7 +361,7 @@ hesk_handle_messages();
                             </div>
                         </a>
                     </label>
-                    <input type="text" class="form-control" name="s_db_user" id="m3" maxlength="255" value="<?php echo $hesk_settings['db_user']; ?>" autocomplete="off">
+                    <input type="text" class="form-control" name="s_db_user" id="m3" maxlength="255" value="<?php echo str_replace('&', '&amp;', $hesk_settings['db_user']); ?>" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>
@@ -362,7 +374,20 @@ hesk_handle_messages();
                             </div>
                         </a>
                     </label>
-                    <input type="password" class="form-control" name="s_db_pass" id="m4" maxlength="255" value="<?php echo $hesk_settings['db_pass'] ; ?>" autocomplete="off">
+                    <div class="input-wrapper has-side-checkbox">
+                        <input type="password" class="form-control" name="s_db_pass" id="m4" maxlength="255" value="<?php echo str_replace(array('&', '>', '<'), array('&amp;', '&gt;', '&lt;'), $hesk_settings['db_pass']); ?>" autocomplete="off">
+                        <div class="checkbox-custom">
+                            <input type="checkbox" id="m4_pass" onchange="hesk_toggleShowPassword('m4');">
+                            <label for="m4_pass">
+                                <svg class="icon icon-eye-open">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-eye-open"></use>
+                                </svg>
+                                <svg class="icon icon-eye-close">
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-eye-close"></use>
+                                </svg>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>
@@ -650,6 +675,7 @@ function hesk_testLanguage($return_options = 0)
         	$add   = 1;
 	    	$langu = $dir . $subdir . '/text.php';
 	        $email = $dir . $subdir . '/emails';
+            $html_email = $dir . $subdir . '/html_emails';
 
 			/* Check the text.php */
 			$text .= "   |-> /$subdir\n";
@@ -686,7 +712,7 @@ function hesk_testLanguage($return_options = 0)
 	            }
 
                 /* Check if language file is for current version */
-	            if (strpos($tmp,'$hesklang[\'TIMEAGO_LANG_FILE\']') === false)
+                if (strpos($tmp,'$hesklang[\'email_authentication_method\']') === false)
 	            {
 	            	$err .= "              |---->  WRONG VERSION (not ".$hesk_settings['hesk_version'].")\n";
 	            }
@@ -740,12 +766,41 @@ function hesk_testLanguage($return_options = 0)
                 $add   = 0;
 	        }
 
+            $text .= "        |-> /html_emails:  ";
+            if (file_exists($html_email) && filetype($html_email) == 'dir')
+            {
+                $err = '';
+                foreach ($valid_emails as $eml)
+                {
+                    if (!file_exists($html_email.'/'.$eml.'.txt'))
+                    {
+                        $err .= "              |---->  MISSING: $eml.txt\n";
+                    }
+                }
+
+                if ($err)
+                {
+                    $text .= "ERROR\n" . $err;
+                    $add   = 0;
+                }
+                else
+                {
+                    $text .= "OK\n";
+                }
+            }
+            else
+            {
+                $text .= "ERROR\n";
+                $text .= "              |---->  MISSING: /html_emails folder\n";
+                $add   = 0;
+            }
+
 	        $text .= "\n";
 
             /* Add an option for the <select> if needed */
             if ($add)
             {
-				if ($l[1] == $hesk_settings['language'])
+				if ($l[1] == $hesk_settings['language_default'])
 				{
 					$html .= '<option value="'.$subdir.'|'.$l[1].'" selected="selected">'.$l[1].'</option>';
 				}

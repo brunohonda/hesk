@@ -7,7 +7,7 @@
 </head>
 <body>
 
-<!-- next: 85 -->
+<!-- next: 95 -->
 
 <h3>Interactive help for Hesk settings</h3>
 
@@ -265,7 +265,7 @@ Hide in customer form = hide &quot;Subject&quot; form field from customer side*
 
 <a name="74"></a><p class="title">Require message</p>
 
-<p>Do your require customers to write a message when submitting a new support ticket?</p>
+<p>Do you require customers to write a message when submitting a new support ticket?</p>
 
 <p>
 OFF = do not require a message<br />
@@ -741,6 +741,39 @@ If disabled, only entering ticket tracking ID will suffice.</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 
+<a name="85"></a><p class="title">Multi-Factor Authentication (MFA)</p>
+<p>Use multi-factor authentication to require users to authenticate with their password along with a secondary authentication method.</p>
+
+<p>- Enabling "Require Multi-Factor Authentication" <b>will</b> enable MFA for both new and existing users.</p>
+<p>- Disabling "Require Multi-Factor Authentication" <b>will not</b> disable MFA for existing users; it will only affect new users.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="86"></a><p class="title">Secure Area Duration</p>
+<p>Specifies how long users are permitted to access areas which require security verification before having to enter their MFA token / password again.</p>
+<p>This timer is reset when a user logs out.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
 
 <span class="section">&raquo; Attachments</span>
 
@@ -762,6 +795,186 @@ If disabled, only entering ticket tracking ID will suffice.</p>
 
 <a name="40"></a><p class="title">Allowed file types</p>
 <p>Allowed file extensions for attaching files. To add more extensions use the same formatting <b>.ext</b> and separate them with a comma. This setting is only available if &quot;Use attachments&quot; is set to YES.</p>
+
+<a name="41"></a><p class="title">Email Attachment Options</p>
+<p>There are two options are available for email attachment options.</p>
+<ul>
+    <li><b>Link Attachments in Emails:</b> All attachments are included as links within the email.<br>&nbsp;</li>
+    <li>
+        <b>Direct Attachments in Emails:</b> Depending on the selected settings, some attachments are sent as links, while others are attached directly to the email.
+        <p>For examples:</p>
+        <p>I have 10 attachments. 5 of them are 2000 Kb and 5 of them are 500 Kb.</p>
+        <p><b>EXAMPLE 1:</b></p>
+        <ul>
+            <li><b>Selected Option:</b> Directly attach only files smaller than 1000 Kb.</li>
+            <li>Not Selected: Directly attach files of any size.</li>
+            <li>Not Selected: Directly attach only the first X attachments.</li>
+            <li><b>Selected Option:</b> Directly attach all attachments.</li>
+        </ul>
+        <p><b>Result:</b></p>
+        <p>The email will include 5 attachments (all files smaller than 1000 Kb) and 5 links (files larger than 1000 Kb).</p>
+
+        <p><b>EXAMPLE 2:</b></p>
+        <ul>
+            <li><b>Selected Option:</b> Directly attach only files smaller than 1000 Kb.</li>
+            <li>Not Selected: Directly attach files of any size.</li>
+            <li><b>Selected Option:</b> Directly attach only the first X attachments.</li>
+            <li>Not Selected: Directly attach all attachments.</li>
+        </ul>
+        <p><b>Result:</b></p>
+        <p>The email will include 3 attachments (the first 3 files smaller than 1000 Kb) and 7 links (remaining files).</p>
+
+        <p><b>EXAMPLE 3:</b></p>
+        <ul>
+            <li>Not Selected: Directly attach only files smaller than 1000 Kb.</li>
+            <li><b>Selected Option:</b> Directly attach files of any size.</li>
+            <li><b>Selected Option:</b> Directly attach only the first X attachments.</li>
+            <li>Not Selected: Directly attach all attachments.</li>
+        </ul>
+        <p><b>Result:</b></p>
+        <p>The email will include 6 attachments (based on the order, regardless of file size) and 4 links (remaining files).</p>
+    </li>
+</ul>
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<a name="87"></a><p class="title">Customer accounts</p>
+<p>Registering an account allows customers to manage their tickets in a single location and gives you control over who can submit support tickets.</p>
+
+<p>Options explained:</p>
+
+<ul>
+<li><b>Disabled</b><br>
+Customers do not have to register or log in to submit, view, and respond to support tickets.<br><br>Note that support tickets are still private; customers access them using a unique tracking ID and (optionally) their email address.<br>&nbsp;</li>
+<li><b>Enabled - Optional</b><br>
+Creating a customer account is possible and optional for their convenience. Customers can submit support tickets even if they do not have an account.<br>&nbsp;</li>
+<li><b>Enabled - Required for tickets</b><br>
+Only customers with a valid account will be able to submit support tickets. Other help-desk features (knowledgebase, service messages) are public.<br>&nbsp;</li>
+<li><b>Enabled - Required to access</b><br>
+Only logged-in customers with a valid account will be able to access any of the help desk features.<br><br>Note that service messages specifically set to display on the customer login and registration pages (if customers can register an account) will be public.</li>
+</ul>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="88"></a><p class="title">Account registration</p>
+<p>This setting gives you control over how customer accounts are created.</p>
+
+<p>Options explained:</p>
+
+<ul>
+<li><b>Customers can register accounts</b><br>
+Customers can register an account and verify it via email.<br>&nbsp;</li>
+<li><b>Customers can register account, staff must approve new registrations</b><br>
+Customers can register an account and verify it via email. Staff members must review and approve all accounts before the customer can log in.<br>&nbsp;</li>
+<li><b>Only staff can register customer accounts</b><br>
+Only staff can register customer accounts; customers cannot register an account themselves.</li>
+</ul>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<a name="90"></a><p class="title">Barcode</p>
+
+<p>If enabled, Hesk will display a barcode when printing tickets.</p>
+
+<p>The barcode can be hidden from customers (printed only from the staff side).</p>
+
+<p>Parameters:</p>
+
+<p><b>Type</b> - choose the type of the barcode to be printed<br>
+<b>Format</b> - choose the display/image format on the HTML page<br>
+<b>Width</b> - width of the barcode image in pixel<br>
+<b>Height</b> - height of the barcode image in pixel<br>
+<b>Color</b> - color of the barcode data<br>
+<b>Background</b> - barcode background color</p>
+
+<p>Colors are in Web notation (color name, or hexadecimal code, or CSS syntax): black, white, red, #000000, #ffffff, #ff0000...</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="91"></a><p class="title">Show &quot;Submitting, please wait&quot;</p>
+<p>If enabled, when someone submits a ticket or reply to a ticket, the submit button will be disabled and a &quot;Submitting, please wait...&quot; message displayed.</p>
+
+<p>Used for preventing multiple clicks on the submit button.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="94"></a><p class="title">Allow customer automatic login</p>
+<p>If enabled, customers will have an option to automatically login to their account every time they click the "Login" link on the helpdesk homepage.</p>
+
+<p>If disabled HESK will only be able to remember customer's email addresses, not passwords.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+
+<a name="92"></a><p class="title">Allow customers to change their email address</p>
+<p>If enabled, customers will be allowed to change their email addresses after registering. Otherwise, customers will
+    need to ask staff to change their email address for them.</p>
+
+<p>&nbsp;</p>
+
+<p align="center"><a href="#" onclick="Javascript:window.close()">Close window</a></p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<a name="93"></a><p class="title">Time until customers can request new verification email</p>
+<p>Indicates the amount of time, in minutes, a customer must wait before being able to request a new verification email (0 = immediately).</p>
+<p>Staff will always be able to send a new verification email to the customer without having to wait.</p>
 
 <p>&nbsp;</p>
 

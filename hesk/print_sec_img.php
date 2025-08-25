@@ -19,10 +19,18 @@ require(HESK_PATH . 'hesk_settings.inc.php');
 require(HESK_PATH . 'inc/common.inc.php');
 require(HESK_PATH . 'inc/secimg.inc.php');
 
-hesk_session_start();
+hesk_session_start('CUSTOMER');
 
-$_SESSION['secnum']   = rand(10000,99999);
-$_SESSION['checksum'] = sha1($_SESSION['secnum'] . $hesk_settings['secimg_sum']);
+// We may have more than one instance of the anti-spam image on the page
+$page = hesk_GET('p', '');
+
+// Let's allow whitelisted page variables only
+if ( ! in_array($page, array('', 'reset'))) {
+    $page = '';
+}
+
+$_SESSION['secnum' . $page]   = mt_rand(10000,99999);
+$_SESSION['checksum' . $page] = sha1($_SESSION['secnum' . $page] . $hesk_settings['secimg_sum']);
 
 /* This will make sure the security image is not cached */
 header("expires: -1");
@@ -31,7 +39,6 @@ header("cache-control: post-check=0, pre-check=0", false);
 header("pragma: no-store,no-cache");
 
 $sc = new PJ_SecurityImage($hesk_settings['secimg_sum']);
-$sc->printImage($_SESSION['secnum']);
+$sc->printImage($_SESSION['secnum' . $page]);
 
 exit();
-?>

@@ -1,0 +1,11 @@
+Prezado(a) %%NAME%%,
+
+Recebemos uma solicitação para alterar seu endereço de e-mail.
+
+Para confirmar esta alteração, clique no link abaixo (expira em 1 hora):
+%%VERIFICATION_URL%%
+
+Atenciosamente,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

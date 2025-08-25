@@ -1,0 +1,10 @@
+Hi %%NAME%%,
+
+Below is your multi-factor authentication verification code. This code expires in 20 minutes.
+
+%%VERIFICATION_CODE%%
+
+Thanks,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

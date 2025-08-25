@@ -19,11 +19,23 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 function hesk_newTicket($ticket)
 {
 	global $hesk_settings, $hesklang, $hesk_db_link;
+    require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
 
+    $primary_customer = hesk_get_customer_account_by_id($ticket['customer_id']);
+    $name = $primary_customer['name'];
+    $email = $primary_customer['email'];
+    if ($primary_customer['verified'] !== 1) {
+        if (isset($ticket['name'])) {
+            $name = $ticket['name'];
+        }
+        if (isset($ticket['email'])) {
+            $email = $ticket['email'];
+        }
+    }
     // Generate a subject if necessary
     if (hesk_mb_strlen($ticket['subject']) < 1)
     {
-        $ticket['subject'] = sprintf($hesklang['default_subject'], $ticket['name']);
+        $ticket['subject'] = sprintf($hesklang['default_subject'], $primary_customer['name']);
     }
 
 	// If language is not set or default, set it to NULL
@@ -38,11 +50,24 @@ function hesk_newTicket($ticket)
         $language = "'" . hesk_dbEscape($hesklang['LANGUAGE']) . "'";
     }
 
+    $ticket['status'] = isset($ticket['status']) ? intval($ticket['status']) : 0;
+    if ($ticket['status'] < 0) {
+        $ticket['status'] = 0;
+    }
+
+    if ( ! isset($hesk_settings['priorities'])) {
+        require_once(HESK_PATH . 'inc/priorities.inc.php');
+    }
+
+    if ( ! isset($hesk_settings['priorities'][$ticket['priority']])) {
+        $priority = array_keys($hesk_settings['priorities'])[0];
+    }
+
 	// Prepare SQL for custom fields
 	$custom_where = '';
 	$custom_what  = '';
 
-	for ($i=1; $i<=50; $i++)
+	for ($i=1; $i<=100; $i++)
 	{
 		$custom_where .= ", `custom{$i}`";
 		$custom_what  .= ", '" . (isset($ticket['custom'.$i]) ? hesk_dbEscape($ticket['custom'.$i]) : '') . "'";
@@ -61,12 +86,29 @@ function hesk_newTicket($ticket)
     }
 
     if (isset($ticket['due_date']) && $ticket['due_date'] != '') {
-        $date = new DateTime($ticket['due_date'] . 'T00:00:00');
-        $formatted_date = $date->format('Y-m-d');
-        $due_date = "'" . hesk_dbEscape($formatted_date) . "'";
+        $date = hesk_datepicker_get_date($ticket['due_date']);
+        if ($date === false) {
+            $due_date = 'NULL';
+            $ticket['due_date'] = '';
+        } else {
+            $formatted_date = $date->format('Y-m-d');
+            $due_date = "'" . hesk_dbEscape($formatted_date) . "'";
+        }
     } else {
         $due_date = 'NULL';
         $ticket['due_date'] = '';
+    }
+
+    $locked = isset($ticket['locked']) ? 1 : 0;
+    $closedat = isset($ticket['closedat']) ? 'NOW()' : 'NULL';
+    $closedby = isset($ticket['closedby']) ? intval($ticket['closedby']) : 'NULL';
+
+    if ( ! empty($ticket['email_id'])) {
+        $eid_where = ", `eid` ";
+        $eid_what  = ", '" . hesk_dbEscape($ticket['email_id']) . "' ";
+    } else {
+        $eid_where = '';
+        $eid_what  = '';
     }
 
 	// Insert ticket into database
@@ -74,8 +116,8 @@ function hesk_newTicket($ticket)
 	INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets`
 	(
 		`trackid`,
-		`name`,
-		`email`,
+		`u_name`,
+		`u_email`,
 		`category`,
 		`priority`,
 		`subject`,
@@ -83,23 +125,28 @@ function hesk_newTicket($ticket)
 		`message_html`,
 		`dt`,
 		`lastchange`,
+        `closedat`,
 		`articles`,
 		`ip`,
 		`language`,
+        `status`,
 		`openedby`,
+        `closedby`,
 		`owner`,
+        `locked`,
 		`attachments`,
 		`merged`,
 		`history`,
 		`due_date`
 		{$custom_where}
         {$ab_where}
+        {$eid_where}
 	)
 	VALUES
 	(
 		'".hesk_dbEscape($ticket['trackid'])."',
-		'".hesk_dbEscape( hesk_mb_substr($ticket['name'], 0, 255) )."',
-		'".hesk_dbEscape( hesk_mb_substr($ticket['email'], 0, 1000) )."',
+		'".hesk_dbEscape( hesk_mb_substr($name, 0, 255) )."',
+		'".hesk_dbEscape( hesk_mb_substr($email, 0, 1000) )."',
 		'".intval($ticket['category'])."',
 		'".intval($ticket['priority'])."',
 		'".hesk_dbEscape( hesk_mb_substr($ticket['subject'], 0, 255) )."',
@@ -107,37 +154,57 @@ function hesk_newTicket($ticket)
 		'".hesk_dbEscape($ticket['message_html'])."',
 		NOW(),
 		NOW(),
+        {$closedat},
 		".( isset($ticket['articles']) ? "'{$ticket['articles']}'" : 'NULL' ).",
 		'".hesk_dbEscape(hesk_getClientIP())."',
 		$language,
+        '{$ticket['status']}',
 		'".( isset($ticket['openedby']) ? intval($ticket['openedby']) : 0 )."',
+        {$closedby},
 		'".intval($ticket['owner'])."',
+        '$locked',
 		'".hesk_dbEscape($ticket['attachments'])."',
 		'',
 		'".hesk_dbEscape($ticket['history'])."',
 		{$due_date}
 		{$custom_what}
         {$ab_what}
+        {$eid_what}
 	)
 	");
+    $ticket_id = hesk_dbInsertID();
+
+    // Insert ticket/customer mapping(s)
+    hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` (`ticket_id`, `customer_id`, `customer_type`)
+        VALUES (".intval($ticket_id).", ".intval($ticket['customer_id']).", 'REQUESTER')");
+    foreach ($ticket['follower_ids'] as $follower_id) {
+        // Do we have the customer in the list of followers?  If so, skip it.
+        if ($follower_id === $ticket['customer_id']) {
+            continue;
+        }
+
+        hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` (`ticket_id`, `customer_id`, `customer_type`)
+        VALUES (".intval($ticket_id).", ".intval($follower_id).", 'FOLLOWER')");
+    }
 
 	// Generate the array with ticket info that can be used in emails
 	$info = array(
-	'email'			=> $ticket['email'],
+	'email'			=> $primary_customer['email'],
 	'category'		=> $ticket['category'],
 	'priority'		=> $ticket['priority'],
 	'owner'			=> $ticket['owner'],
 	'trackid'		=> $ticket['trackid'],
-	'status'		=> 0,
-	'name'			=> $ticket['name'],
-	'last_reply_by'	=> $ticket['name'],
+	'status'		=> $ticket['status'],
+	'name'			=> addslashes($primary_customer['name']),
+	'last_reply_by'	=> addslashes($primary_customer['name']),
 	'subject'		=> $ticket['subject'],
 	'message'		=> $ticket['message'],
+    'message_html'  => stripslashes($ticket['message_html']),
 	'attachments'	=> $ticket['attachments'],
 	'dt'			=> hesk_date(),
 	'lastchange'	=> hesk_date(),
     'due_date'      => hesk_format_due_date($ticket['due_date']),
-	'id'			=> hesk_dbInsertID(),
+	'id'			=> $ticket_id,
     'time_worked'   => '00:00:00',
     'language'      => $ticket['language'],
 	);
@@ -148,6 +215,12 @@ function hesk_newTicket($ticket)
 		$info[$k] = $v['use'] ? $ticket[$k] : '';
 	}
 
+    // Extra actions for achieving landmarks
+    if (in_array($info['id'], array(100, 1000, 10000)))
+    {
+        hesk_PMtoMainAdmin($info['id']);
+    }
+
     return hesk_ticketToPlain($info, 1);
 
 } // END hesk_newTicket()
@@ -156,6 +229,12 @@ function hesk_newTicket($ticket)
 function hesk_cleanFileName($filename)
 {
 	$parts = pathinfo($filename);
+
+    if ( ! isset($parts['extension']))
+    {
+        $parts['extension'] = 'unknown-file-type';
+    }
+    $parts['extension'] = preg_replace('/[^A-Za-z0-9\-_]/', '', $parts['extension']);
 
 	if ( isset($parts['filename']) )
 	{
@@ -198,6 +277,14 @@ function hesk_getCategoryPriority($id)
 	{
 		$priority = hesk_dbResult($res);
 	}
+
+    if ( ! isset($hesk_settings['priorities'])) {
+        require_once(HESK_PATH . 'inc/priorities.inc.php');
+    }
+
+    if ( ! isset($hesk_settings['priorities'][$priority])) {
+        $priority = array_keys($hesk_settings['priorities'])[0];
+    }
 
 	return $priority;
 

@@ -38,6 +38,9 @@ if (strlen($delete) && preg_match('/^hesk_export_[0-9_\-]+$/', $delete))
 // Load custom fields
 require_once(HESK_PATH . 'inc/custom_fields.inc.php');
 
+// Load priorities
+require_once(HESK_PATH . 'inc/priorities.inc.php');
+
 // Load statuses
 require_once(HESK_PATH . 'inc/statuses.inc.php');
 
@@ -53,34 +56,48 @@ $selected = array(
 $is_all_time = 0;
 
 // Default this month to date
-$date_from = date('Y-m-d',mktime(0, 0, 0, date("m"), 1, date("Y")));
-$date_to = date('Y-m-d');
-$input_datefrom = date('m/d/Y', strtotime('last month'));
-$input_dateto = date('m/d/Y');
+$hesk_settings['datepicker'] = array();
+
+$df = new DateTime("first day of this month");
+$date_from = $df->format('Y-m-d');
+$hesk_settings['datepicker']['#datefrom']['timestamp'] = $df->getTimestamp();
+
+$dt = new DateTime();
+$date_to = $dt->format('Y-m-d');
+$hesk_settings['datepicker']['#dateto']['timestamp'] = $dt->getTimestamp();
+
+$input_datefrom = hesk_translate_date_string(date($hesk_settings['format_datepicker_php'], strtotime('last month')));
+$input_dateto = hesk_translate_date_string(date($hesk_settings['format_datepicker_php']));
 
 /* Date */
 if (!empty($_GET['w']))
 {
-	$df = preg_replace('/[^0-9]/','', hesk_GET('datefrom') );
-    if (strlen($df) == 8)
-    {
-    	$date_from = substr($df,4,4) . '-' . substr($df,0,2) . '-' . substr($df,2,2);
-        $input_datefrom = substr($df,0,2) . '/' . substr($df,2,2) . '/' . substr($df,4,4);
-    }
-    else
-    {
-    	$date_from = date('Y-m-d', strtotime('last month') );
+    $df = hesk_datepicker_get_date( hesk_GET('datefrom') );
+    if ($df === false) {
+        try {
+            $df = new DateTime( hesk_GET('datefrom') );
+            $date_from = $df->format('Y-m-d');
+            $input_datefrom = hesk_translate_date_string($df->format($hesk_settings['format_datepicker_php']));
+        } catch(Exception $e) {
+            $date_from = date('Y-m-d', strtotime('last month') );
+        }
+    } else {
+        $date_from = $df->format('Y-m-d');
+        $input_datefrom = hesk_translate_date_string($df->format($hesk_settings['format_datepicker_php']));
     }
 
-	$dt = preg_replace('/[^0-9]/','', hesk_GET('dateto') );
-    if (strlen($dt) == 8)
-    {
-    	$date_to = substr($dt,4,4) . '-' . substr($dt,0,2) . '-' . substr($dt,2,2);
-        $input_dateto = substr($dt,0,2) . '/' . substr($dt,2,2) . '/' . substr($dt,4,4);
-    }
-    else
-    {
-    	$date_to = date('Y-m-d');
+    $dt = hesk_datepicker_get_date( hesk_GET('dateto') );
+    if ($dt === false) {
+        try {
+            $dt = new DateTime( hesk_GET('dateto') );
+            $date_to = $dt->format('Y-m-d');
+            $input_dateto = hesk_translate_date_string($dt->format($hesk_settings['format_datepicker_php']));
+        } catch(Exception $e) {
+            $date_to = date('Y-m-d');
+        }
+    } else {
+        $date_to = $dt->format('Y-m-d');
+        $input_dateto = hesk_translate_date_string($dt->format($hesk_settings['format_datepicker_php']));
     }
 
     if ($date_from > $date_to)
@@ -95,14 +112,30 @@ if (!empty($_GET['w']))
         $input_dateto = $tmp2;
 
         $note_buffer = $hesklang['datetofrom'];
+
+        $df2 = $df;
+        $df = $dt;
+        $dt = $df2;
+        unset($df2);
     }
 
     if ($date_to > date('Y-m-d'))
     {
-    	$date_to = date('Y-m-d');
-        $input_dateto = date('m/d/Y');
+        $dt = new DateTime();
+        $date_to = $dt->format('Y-m-d');
+        $input_dateto = hesk_translate_date_string(date($hesk_settings['format_datepicker_php']));
     }
 
+    if ($df instanceof DateTime) {
+        $hesk_settings['datepicker']['#datefrom']['timestamp'] = $df->getTimestamp();
+    } elseif (isset($hesk_settings['datepicker']['#datefrom']['timestamp'])) {
+        unset($hesk_settings['datepicker']['#datefrom']['timestamp']);
+    }
+    if ($dt instanceof DateTime) {
+        $hesk_settings['datepicker']['#dateto']['timestamp'] = $dt->getTimestamp();
+    } elseif (isset($hesk_settings['datepicker']['#dateto']['timestamp'])) {
+        unset($hesk_settings['datepicker']['#dateto']['timestamp']);
+    }
 	$selected['w'][1]='checked="checked"';
     $selected['time'][3]='selected="selected"';
 }
@@ -201,7 +234,15 @@ else
 unset($tmp);
 
 // Start SQL statement for selecting tickets
-$sql = "SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE ";
+$sql = "SELECT `tickets`.*, `requester`.`name` AS `name`
+    FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `tickets`
+    LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` AS `w` ON (`tickets`.`id` = `w`.`ticket_id` AND `w`.`user_id` = ".intval($_SESSION['id']).")
+    LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+        ON `tickets`.`id` = `ticket_to_customer`.`ticket_id`
+        AND `ticket_to_customer`.`customer_type` = 'REQUESTER'
+    LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `requester`
+        ON `ticket_to_customer`.`customer_id` = `requester`.`id` 
+    WHERE ";
 
 // Some default settings
 $archive = array(1=>0,2=>0);
@@ -249,7 +290,7 @@ foreach ($status as $k => $v)
 $tmp = count($status);
 
 // Do we need to search by status?
-if ( $tmp < 6 )
+if ( $tmp < count($hesk_settings['statuses']) )
 {
 	// If no statuses selected, show all
 	if ($tmp == 0)
@@ -264,13 +305,7 @@ if ( $tmp < 6 )
 }
 
 // --> TICKET PRIORITY
-$possible_priority = array(
-0 => 'CRITICAL',
-1 => 'HIGH',
-2 => 'MEDIUM',
-3 => 'LOW',
-);
-
+$possible_priority = hesk_possible_priorities();
 $priority = $possible_priority;
 
 foreach ($priority as $k => $v)
@@ -321,7 +356,7 @@ while ($row=hesk_dbFetchAssoc($res2))
 if (isset($_GET['w']))
 {
     require_once(HESK_PATH . 'inc/export_functions.inc.php');
-    list($success_msg, $tickets_exported) = hesk_export_to_XML($sql);
+    list($success_msg, $tickets_exported) = hesk_export_to_XML($sql, false, $history);
 }
 
 /* Print header */
@@ -444,22 +479,9 @@ if (isset($success_msg))
         </section>
         <section class="reports__checkbox">
             <h3><?php echo $hesklang['priority']; ?></h3>
-            <div class="checkbox-custom">
-                <input type="checkbox" name="p0" id="p0" value="1" <?php if (isset($priority[0])) {echo 'checked';} ?>>
-                <label for="p0"><span class="priority0"><?php echo $hesklang['critical']; ?></span></label>
-            </div>
-            <div class="checkbox-custom">
-                <input type="checkbox" name="p1" id="p1" value="1" <?php if (isset($priority[1])) {echo 'checked';} ?>>
-                <label for="p1"><span class="priority1"><?php echo $hesklang['high']; ?></span></label>
-            </div>
-            <div class="checkbox-custom">
-                <input type="checkbox" name="p2" id="p2" value="1" <?php if (isset($priority[2])) {echo 'checked';} ?>>
-                <label for="p2"><span class="priority2"><?php echo $hesklang['medium']; ?></span></label>
-            </div>
-            <div class="checkbox-custom">
-                <input type="checkbox" name="p3" id="p3" value="1" <?php if (isset($priority[3])) {echo 'checked';} ?>>
-                <label for="p3"><span class="priority3"><?php echo $hesklang['low']; ?></span></label>
-            </div>
+            <?php
+                hesk_get_priority_checkboxes($priority);
+            ?>
         </section>
         <section class="reports__checkbox">
             <h3><?php echo $hesklang['assigned_to']; ?></h3>
@@ -483,7 +505,7 @@ if (isset($success_msg))
                 ?>
                 <div class="checkbox-custom">
                     <input type="checkbox" name="s_ot" id="s_ot" value="1" <?php if ($s_ot[1]) echo 'checked'; ?>>
-                    <label for="reportCheck14"><?php echo $hesklang['s_ot']; ?></label>
+                    <label for="s_ot"><?php echo $hesklang['s_ot']; ?></label>
                 </div>
                 <?php
             }
@@ -542,6 +564,13 @@ if (isset($success_msg))
                     <input type="radio" name="asc" id="asc_0" value="0" <?php if (!$asc) {echo 'checked';} ?>>
                     <label for="asc_0"><?php echo $hesklang['descending']; ?></label>
                 </div>
+            </div>
+        </section>
+        <section class="reports__checkbox">
+            <h3><?php echo $hesklang['opt']; ?></h3>
+            <div class="checkbox-custom">
+                <input type="checkbox" name="history" id="history" value="1" <?php if ($history) echo 'checked'; ?>>
+                <label for="history"><?php echo $hesklang['ex_history']; ?></label>
             </div>
         </section>
         <div class="reports__export">

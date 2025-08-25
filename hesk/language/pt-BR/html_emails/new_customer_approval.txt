@@ -1,0 +1,6 @@
+<p>Olá,</p>
+<p>Novas contas de clientes estão pendentes de aprovação da equipe.</p>
+<p>Número de aprovações pendentes: <strong>%%NUM%%</strong></p>
+<p>Você pode aprovar ou rejeitar registros de contas de clientes aqui:<br /><a href="%%VERIFICATION_URL%%">%%VERIFICATION_URL%%</a></p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

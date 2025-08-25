@@ -13,7 +13,7 @@
 
 /* Check if this is a valid include */
 if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
-
+#[AllowDynamicProperties]
 class PJ_SecurityImage
 {
 

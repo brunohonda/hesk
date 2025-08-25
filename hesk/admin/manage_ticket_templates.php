@@ -167,7 +167,7 @@ $num = hesk_dbNumRows($result);
                 echo '';
             }
 
-            $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+            $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                 $hesklang['delete_tpl'],
                 'manage_ticket_templates.php?a=remove&amp;id='.$mysaved['id'].'&amp;token='.hesk_token_echo(0));
 
@@ -222,7 +222,7 @@ $num = hesk_dbNumRows($result);
                 <div class="form-group">
                     <label for="canned_message"><?php echo $hesklang['message']; ?></label>
                     <span id="HeskMsg">
-                        <textarea class="form-control <?php echo in_array('msg', $errors) ? 'isError' : ''; ?>" name="msg" rows="40" cols="70" id="canned_message"><?php
+                        <textarea class="form-control <?php echo in_array('msg', $errors) ? 'isError' : ''; ?>" name="msg" rows="40" cols="70" id="canned_message" style="resize: vertical; transition: none;"><?php
                             if (isset($_SESSION['canned']['msg'])) {
                                 echo stripslashes($_SESSION['canned']['msg']);
                             }
@@ -264,9 +264,9 @@ function setMessage(msgid) {
     if (document.getElementById) {
         <?php if ($hesk_settings['staff_ticket_formatting'] == 2): ?>
         tinymce.get("canned_message").setContent('');
-        tinymce.get("canned_message").execCommand('mceInsertRawHTML', false, myMsgTxt[msgid]);
+        tinymce.get("canned_message").setContent(myMsgTxt[msgid]);
         <?php else: ?>
-        document.getElementById('HeskMsg').innerHTML='<textarea class="form-control" id="canned_message" name="msg" rows="40" cols="70">'+myMsgTxt[msgid]+'</textarea>';
+        document.getElementById('HeskMsg').innerHTML='<textarea class="form-control" id="canned_message" name="msg" rows="40" cols="70" style="resize: vertical; transition: none;">'+myMsgTxt[msgid]+'</textarea>';
         <?php endif; ?>
         document.getElementById('HeskTitle').innerHTML='<input type="text" class="form-control" id="canned_title" name="name" maxlength="50" value="'+myTitle[msgid]+'">';
     } else {
@@ -369,7 +369,7 @@ function edit_saved()
     }
 
     $result = hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_templates` SET `title`='".hesk_dbEscape($savename)."',`message`='".hesk_dbEscape($msg)."', `message_html`='".hesk_dbEscape($msg_html)."' WHERE `id`='".intval($id)."'");
-
+    $_SESSION['canned']['selcat2'] = $id;
 
     unset($_SESSION['canned']['what']);
     unset($_SESSION['canned']['id']);
@@ -445,6 +445,7 @@ function new_saved()
     $my_order = isset($row[0]) ? intval($row[0]) + 10 : 10;
 
     hesk_dbQuery("INSERT INTO `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_templates` (`title`,`message`,`message_html`,`tpl_order`) VALUES ('".hesk_dbEscape($savename)."','".hesk_dbEscape($msg)."','".hesk_dbEscape($msg_html)."','".intval($my_order)."')");
+    $_SESSION['canned']['selcat2'] = hesk_dbInsertID();
 
     unset($_SESSION['canned']['what']);
     unset($_SESSION['canned']['name']);

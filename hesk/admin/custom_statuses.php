@@ -107,7 +107,22 @@ if ($reached_status_limit && $action !== 'edit_status') {
                 // Number of tickets per status
                 $tickets_all = array();
 
-                $res = hesk_dbQuery('SELECT COUNT(*) AS `cnt`, `status` FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'tickets` GROUP BY `status`');
+                if ($_SESSION['isadmin']) {
+                    $res = hesk_dbQuery('SELECT COUNT(*) AS `cnt`, `status` FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'tickets` GROUP BY `status`');
+                } else {
+                    $res = hesk_dbQuery("SELECT COUNT(*) AS `cnt`, `status`
+                                        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `ticket`
+                                        LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` AS `w` ON (`ticket`.`id` = `w`.`ticket_id` AND `w`.`user_id` = ".intval($_SESSION['id']).")
+                                        WHERE
+                                        (
+                                            `w`.`user_id`=".intval($_SESSION['id'])."
+                                            OR
+                                            (".hesk_myOwnership().")
+                                        )
+                                        AND ".hesk_myCategories()."
+                                        GROUP BY `status`");
+                }
+
                 while ($tmp = hesk_dbFetchAssoc($res)) {
                     $tickets_all[$tmp['status']] = $tmp['cnt'];
                 }
@@ -143,7 +158,7 @@ if ($reached_status_limit && $action !== 'edit_status') {
                         <td><a class="tooltip" href="show_tickets.php?<?php echo 's'.$tmp_id.'=1'; ?>&amp;s_my=1&amp;s_ot=1&amp;s_un=1" alt="<?php echo $hesklang['list_tkt_status']; ?>" title="<?php echo $hesklang['list_tkt_status']; ?>"><?php echo $status['tickets']; ?></a></td>
                         <td><?php echo $status['can_customers_change']; ?></td>
                         <td class="nowrap buttons">
-                            <?php $modal_id = hesk_generate_delete_modal($hesklang['confirm_deletion'],
+                            <?php $modal_id = hesk_generate_old_delete_modal($hesklang['confirm_deletion'],
                                 $hesklang['confirm_delete_status'],
                                 'custom_statuses.php?a=remove_status&amp;id='. $tmp_id .'&amp;token='. hesk_token_echo(0)); ?>
                             <p>
@@ -155,8 +170,7 @@ if ($reached_status_limit && $action !== 'edit_status') {
                                 </a>
                                 <?php if ($status['tickets'] > 0): ?>
                                     <a onclick="alert('<?php echo hesk_makeJsString($hesklang['status_not_empty']); ?>');"
-                                       style="cursor: not-allowed"
-                                       class="delete tooltip"
+                                       class="delete tooltip not-allowed"
                                        title="<?php echo $hesklang['status_not_empty']; ?>">
                                         <svg class="icon icon-delete">
                                             <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-delete"></use>

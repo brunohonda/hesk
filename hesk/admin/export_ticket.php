@@ -41,6 +41,7 @@ $sql .= " AND " . hesk_myOwnership();
 $sql .= " LIMIT 1";
 
 require_once(HESK_PATH . 'inc/custom_fields.inc.php');
+require_once(HESK_PATH . 'inc/priorities.inc.php');
 require_once(HESK_PATH . 'inc/statuses.inc.php');
 require(HESK_PATH . 'inc/export_functions.inc.php');
 

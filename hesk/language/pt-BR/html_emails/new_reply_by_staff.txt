@@ -1,0 +1,6 @@
+<p>Caro %%NAME%%,</p>
+<p>Acabamos de responder ao seu chamado "%%SUBJECT%%".</p>
+<p>Para ler a mensagem, enviar uma resposta e ver os detalhes, visite:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a> <br /><br /></p>
+<p>Se o link acima não for clicável, tente copiá-lo e colá-lo na barra de endereços do seu navegador da web.</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

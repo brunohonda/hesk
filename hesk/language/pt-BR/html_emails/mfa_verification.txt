@@ -1,0 +1,5 @@
+<p>Olá! %%NAME%%,</p>
+<p>Abaixo está o seu código de verificação de autenticação. Este código expira em 20 minutos.</p>
+<p><strong>%%VERIFICATION_CODE%%</strong></p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

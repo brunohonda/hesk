@@ -1,0 +1,5 @@
+<p>Prezado(a) %%NAME%%,</p>
+<p>Não conseguimos processar seu e-mail "%%SUBJECT%%" porque você não tem uma conta conosco.</p>
+<p>Este help desk está disponível apenas para usuários registrados.</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

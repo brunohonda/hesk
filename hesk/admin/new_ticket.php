@@ -30,12 +30,21 @@ hesk_isLoggedIn();
 // Load custom fields
 require_once(HESK_PATH . 'inc/custom_fields.inc.php');
 
+// Load priorities
+require_once(HESK_PATH . 'inc/priorities.inc.php');
+
+// Load statuses
+require_once(HESK_PATH . 'inc/statuses.inc.php');
+
 // Load calendar JS and CSS
 define('CALENDAR',1);
+define('ATTACHMENTS',1);
 
 if ($hesk_settings['staff_ticket_formatting'] == 2) {
     define('WYSIWYG',1);
 }
+
+$hesk_settings['datepicker'] = array();
 
 // Pre-populate fields
 
@@ -43,6 +52,7 @@ if ($hesk_settings['staff_ticket_formatting'] == 2) {
 if (isset($_REQUEST['name']) ||
     isset($_REQUEST['email']) ||
     isset($_REQUEST['priority']) ||
+    isset($_REQUEST['status']) ||
     isset($_REQUEST['subject']) ||
     isset($_REQUEST['message']) ||
     isset($_REQUEST['due_date']) ||
@@ -58,14 +68,15 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v) {
 }
 
 // Customer name
+$predefined_name = '';
+$predefined_email = '';
 if (isset($_REQUEST['name'])) {
-	$_SESSION['as_name'] = $_REQUEST['name'];
+	$predefined_name = $_REQUEST['name'];
 }
 
 // Customer email address
 if (isset($_REQUEST['email'])) {
-	$_SESSION['as_email']  = $_REQUEST['email'];
-	$_SESSION['as_email2'] = $_REQUEST['email'];
+	$predefined_email = $_REQUEST['email'];
 }
 
 // Category ID
@@ -79,6 +90,11 @@ if (isset($_REQUEST['category'])) {
 // Priority
 if (isset($_REQUEST['priority'])) {
 	$_SESSION['as_priority'] = intval($_REQUEST['priority']);
+}
+
+// Status
+if (isset($_REQUEST['status'])) {
+    $_SESSION['as_status'] = intval($_REQUEST['status']);
 }
 
 // Subject
@@ -99,8 +115,26 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v) {
 }
 
 // Due date
-if (isset($_REQUEST['due_date']) && preg_match("/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/", $_REQUEST['due_date'])) {
-    $_SESSION['as_due_date'] = $_REQUEST['due_date'];
+$can_due_date = hesk_checkPermission('can_due_date',0);
+if ($can_due_date && isset($_REQUEST['due_date'])) {
+    // Should be in one of valid formats
+    // - in the datepicker format
+    if (($dd = hesk_datepicker_get_date($_REQUEST['due_date']))) {
+        $_SESSION['as_due_date'] = $_REQUEST['due_date'];
+        $hesk_settings['datepicker']['#due_date']['timestamp'] = $dd->getTimestamp();
+    }
+    // - in a valid datetime format: https://www.php.net/manual/en/datetime.formats.date.php
+    else {
+        try {
+            $current_date = new DateTime($_REQUEST['due_date']);
+            $hesk_settings['datepicker']['#due_date']['timestamp'] = $current_date->getTimestamp();
+            $_REQUEST['due_date'] = hesk_datepicker_format_date($current_date->getTimestamp());
+            $_SESSION['as_due_date'] = $_REQUEST['due_date'];
+        } catch(Exception $e) {
+            $_SESSION['HESK_2ND_NOTICE']  = true;
+            $_SESSION['HESK_2ND_MESSAGE'] = $hesklang['epdd'] . ' ' . $e->getMessage();
+        }
+    }
 }
 
 // Ticket language
@@ -128,16 +162,20 @@ $hesk_settings['categories'] = array();
 
 if (hesk_checkPermission('can_submit_any_cat', 0))
 {
-    $res = hesk_dbQuery("SELECT `id`, `name`, `priority` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` ORDER BY `cat_order` ASC");
+    $res = hesk_dbQuery("SELECT `id`, `name`, `priority`, `autoassign` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` ORDER BY `cat_order` ASC");
 }
 else
 {
-    $res = hesk_dbQuery("SELECT `id`, `name`, `priority` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE ".hesk_myCategories('id')." ORDER BY `cat_order` ASC");
+    $res = hesk_dbQuery("SELECT `id`, `name`, `priority`, `autoassign` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE ".hesk_myCategories('id')." ORDER BY `cat_order` ASC");
 }
 
 while ($row=hesk_dbFetchAssoc($res))
 {
-	$hesk_settings['categories'][$row['id']] = array('name' => $row['name'], 'priority' => $row['priority']);
+	$hesk_settings['categories'][$row['id']] = array(
+        'name' => $row['name'],
+        'priority' => $row['priority'],
+        'autoassign' => $row['autoassign']
+    );
 }
 
 $number_of_categories = count($hesk_settings['categories']);
@@ -192,6 +230,28 @@ if ( ! isset($_SESSION['as_priority']))
 {
     $_SESSION['as_priority'] = intval($hesk_settings['categories'][$category]['priority']);
 }
+
+// Set the default ticket status
+if ( ! isset($_SESSION['as_status']))
+{
+    $_SESSION['as_status'] = 0;
+}
+
+$show_create_modal = false;
+$existing_customer_id = hesk_SESSION('as_customer_id', null);
+//-- If name/email provided, prefill it or display a modal
+if ($predefined_name !== '') {
+    // If email is blank, always show the modal
+    if ($predefined_email !== '') {
+        require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
+        $existing_customer_id = hesk_get_or_create_customer($predefined_name, $predefined_email, false);
+    }
+
+    if ($existing_customer_id === null) {
+        $show_create_modal = true;
+    }
+}
+
 ?>
 <div class="main__content categories ticket-create">
     <div class="table-wrap">
@@ -209,7 +269,7 @@ if ( ! isset($_SESSION['as_priority']))
         <h3 style="font-size: 1.3rem; margin-top: 10px"><?php echo $hesklang['nti2']; ?></h3>
         <h4><?php echo $hesklang['req_marked_with']; ?> <span class="important">*</span></h4>
 
-        <form method="post" class="form <?php echo isset($_SESSION['iserror']) && count($_SESSION['iserror']) ? 'invalid' : ''; ?>" action="admin_submit_ticket.php" name="form1" enctype="multipart/form-data">
+        <form method="post" class="form <?php echo isset($_SESSION['iserror']) && count($_SESSION['iserror']) ? 'invalid' : ''; ?>" action="admin_submit_ticket.php" name="form1" id="submit-ticket" enctype="multipart/form-data">
 
             <?php if ($number_of_categories > 1): ?>
             <div class="form-group" style="margin-bottom: 0px;">
@@ -217,36 +277,242 @@ if ( ! isset($_SESSION['as_priority']))
                     <?php echo $hesklang['category']; ?>:
                 </label>
                 &nbsp;
-                <button type="submit" class="btn btn--blue-border change_category" name="change_category" value="1" title="<?php echo $hesklang['chg_cat']; ?>"><?php echo hesk_getCategoryName($category); ?>
+                <button type="button" class="btn btn--blue-border change_category" name="cc-btn" id="cc-btn" title="<?php echo $hesklang['chg_cat']; ?>"><?php echo hesk_getCategoryName($category); ?>
                     &nbsp;
                     <svg class="icon icon-edit">
                         <use xlink:href="../img/sprite.svg#icon-edit"></use>
                     </svg>
                 </button>
+                <input type="hidden" name="change_category" id="change_category" value="0">
+                <script>
+                $("#cc-btn").click(function() {
+                    $("#change_category").val(1);
+                    $("#submit-ticket").submit();
+                });
+                </script>
             </div>
-            <?php endif; ?>
+            <?php endif;
+
+            $session_customers = [];
+            $session_followers = [];
+            // Load in customers if validation failed
+            if ($existing_customer_id !== null) {
+                $sanitized_id = intval($existing_customer_id);
+                $customer_sql = "SELECT `id`,`name`,`email` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."customers`
+                    WHERE `id` = {$sanitized_id}";
+                $existing_customers_rs = hesk_dbQuery($customer_sql);
+                while ($row = hesk_dbFetchAssoc($existing_customers_rs)) {
+                    $session_customers[] = $row;
+                }
+            }
+
+            // Load in followers if validation failed
+            if (isset($_SESSION['as_follower_ids']) && count($_SESSION['as_follower_ids']) > 0) {
+                $sanitized_ids = array_map(function($id) { return intval($id); }, $_SESSION['as_follower_ids']);
+                $ids = implode(',', $sanitized_ids);
+                $follower_sql = "SELECT `id`,`name`,`email` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."customers`
+                    WHERE `id` IN ({$ids})";
+                $existing_followers_rs = hesk_dbQuery($follower_sql);
+                while ($row = hesk_dbFetchAssoc($existing_followers_rs)) {
+                    $session_followers[] = $row;
+                }
+            }
+            ?>
 
             <div class="form-group">
-                <label for="create_name">
-                    <?php echo $hesklang['name']; ?>: <span class="important">*</span>
+                <label for="create_customer_input">
+                    <?php echo $hesklang['customer']; ?> <span class="important">*</span><a href="javascript:" id="new-customer-link" data-modal="[data-modal-id='create-customer']">[<?php echo $hesklang['new_customer']; ?>]</a>
                 </label>
-                <input type="text" id="create_name" name="name" class="form-control <?php if (in_array('name',$_SESSION['iserror'])) {echo 'isError';} ?>" maxlength="50" value="<?php if (isset($_SESSION['as_name'])) {echo stripslashes(hesk_input($_SESSION['as_name']));} ?>">
+                <select name="customer_id"
+                        id="create_customer_input"
+                        class="read-write"
+                        placeholder="<?php echo hesk_addslashes($hesklang['search_by_name_or_email']); ?>">
+                    <?php foreach ($session_customers as $row) { ?>
+                        <option value="<?php echo $row['id']; ?>" selected><?php echo $row['email'] ? "{$row['name']} &lt;{$row['email']}&gt;" : $row['name']; ?></option>
+                    <?php } ?>
+                </select>
+                <script>
+                    var createUserEventHandler = function(userType = 'customer', event, extraData) {
+                        /*
+                        Generalized handling of creating new customers or followers.
+                        1) By default clear the input fields before showing the modal,
+                        but allow passing specific values to event and pre-fill the input fields (i.e. from Add Customer/Follower click from dropdown)
+                        */
+                        let nameValue = '';
+                        let emailValue = '';
+                        if (extraData) {
+                            if (typeof extraData.nameValue !== 'undefined' && typeof extraData.nameValue === 'string') {
+                                nameValue = extraData.nameValue;
+                            }
+                            if (typeof extraData.emailValue !== 'undefined' && typeof extraData.emailValue === 'string') {
+                                emailValue = extraData.emailValue;
+                            }
+                        }
+                        $('[data-modal-id="create-customer"] input[name="name"]').val(nameValue);
+                        $('[data-modal-id="create-customer"] input[name="email"]').val(emailValue);
+
+                        // 2.) Update any titles and other related meta data
+                        let createCustomerTitle = '<?php echo hesk_makeJsString($hesklang['new_customer']); ?>';
+                        let customerType = 'CUSTOMER';
+                        if (userType === 'customer') {
+                            $('#new-customer-prompt').css('display', 'none');
+                        } else if (userType === 'follower') {
+                            createCustomerTitle = '<?php echo hesk_makeJsString($hesklang['new_follower']); ?>';
+                            customerType = 'FOLLOWER';
+                        }
+                        $('#create-customer-title').text(createCustomerTitle);
+                        $('[data-modal-id="create-customer"] input[name="customer_type"]').val(customerType);
+
+                        if (extraData) {
+                            // If extra data was passed also run validation checks - but only if anything is actually entered,
+                            // otherwise it looks weird if errors shows up when user didn't enter anything yet.
+                            if (nameValue !== '') {
+                                $('#create_name').keyup();
+                            }
+                            if (emailValue!== '') {
+                                $('#email').keyup();
+                            }
+                        }
+                        // We also want to clear any unnecessary errors on empty fields, as it feels weird to leave them from previous modal opens.
+                        updateValidation(nameValue === '', emailValue === '');
+                    };
+
+                    $('#new-customer-link').click(function(event, extraData = null) {
+                        createUserEventHandler('customer', event, extraData);
+                    });
+
+                    <?php if ($show_create_modal): ?>
+                    $(document).ready(function() {
+                        $('[data-modal-id="create-customer"] input[name="name"]').val('<?php echo hesk_makeJsString($predefined_name); ?>');
+                        $('[data-modal-id="create-customer"] input[name="email"]').val('<?php echo hesk_makeJsString($predefined_email); ?>');
+                        $('[data-modal-id="create-customer"]').css('display', 'block');
+                        $('#create_name').keyup();
+                        $('#email').keyup();
+                    });
+                    <?php endif; ?>
+
+                    let $createCustomerInput = $('#create_customer_input');
+                    <?php
+                    // Don't pre-select a customer if there wasn't one in the session
+                    if ($existing_customer_id === null): ?>
+                    $createCustomerInput.val(-1);
+                    <?php endif; ?>
+                    hesk_loadNoResultsSelectizePlugin('<?php echo hesk_jsString($hesklang['no_results_found']); ?>');
+                    var plugins = ['no_results'];
+                    var createCustomerSelectize = $createCustomerInput.selectize({
+                        valueField: 'id',
+                        labelField: 'displayName',
+                        searchField: ['name','email'],
+                        copyClassesToDropdown: true,
+                        preload: true,
+                        options: [],
+                        loadThrottle: 300,
+                        persist: false,
+                        plugins: plugins,
+                        load: function(query, callback) {
+                            $.ajax({
+                                url: 'ajax/search_customers.php?query=' + query,
+                                dataType: 'json',
+                                success: function(data) {
+                                    callback(data);
+                                }
+                            });
+                        },
+
+                        /* Using deconstruct (requires EMCA6, but it's required in a bunch of other code already, so shouldn't be an issue)
+                        here to add a bunch of general functionality needed for the custom "Add Entry",
+                        And passing only the necessary custom behaviour for this specific dropdown.
+                        */
+                        ...hesk_selectizeAddCustomAddEntryToDropdown(
+                            {
+                                newEntryTextPrefix: '<?php echo hesk_jsString($hesklang['add_customer']); ?>',
+                                onAddEntryClickedFunction: function(selectizeInstance, selectizeSearchValue) {
+                                    // populate the customer input field with the selected search value (either name or email)
+                                    let nameValue = selectizeSearchValue;
+                                    let emailValue = '';
+                                    if (selectizeSearchValue.indexOf('@') > -1) {
+                                        // if there's an @ part of search string, we simply assume it's an email
+                                        nameValue = '';
+                                        emailValue = selectizeSearchValue;
+                                    }
+
+                                    // simply reuse what new-customer-link already does for adding a new customer.
+                                    $('#new-customer-link').trigger('click', { nameValue: nameValue, emailValue: emailValue });
+                                }
+                            }
+                        )
+                    });
+                </script>
             </div>
+            <?php if ($hesk_settings['multi_eml']): ?>
             <div class="form-group">
-                <label for="email">
-                    <?php echo $hesklang['email'] . ':' . ($hesk_settings['require_email'] ? ' <span class="important">*</span>' : '') ; ?>
+                <label for="followers_input">
+                    <?php echo $hesklang['followers']; ?><a href="javascript:" id="new-follower-link" data-modal="[data-modal-id='create-customer']">[<?php echo $hesklang['new_follower']; ?>]</a>
                 </label>
-                <input type="<?php echo ($hesk_settings['multi_eml'] ? 'text' : 'email'); ?>"
-                       class="form-control <?php if (in_array('email',$_SESSION['iserror'])) {echo 'isError';} elseif (in_array('email',$_SESSION['isnotice'])) {echo 'isNotice';} ?>"
-                       name="email" id="email" maxlength="1000"
-                       value="<?php if (isset($_SESSION['as_email'])) {echo stripslashes(hesk_input($_SESSION['as_email']));} ?>"
-                    <?php if($hesk_settings['detect_typos']) { echo ' onblur="Javascript:hesk_suggestEmail(\'email\', \'email_suggestions\', 1, 1)"'; } ?>>
+                <select name="follower_id[]"
+                        multiple
+                        id="followers_input"
+                        class="read-write"
+                        placeholder="<?php echo hesk_addslashes($hesklang['search_by_name_or_email']); ?>">
+                    <?php foreach ($session_followers as $row) { ?>
+                        <option value="<?php echo $row['id']; ?>" selected><?php echo $row['email'] ? "{$row['name']} &lt;{$row['email']}&gt;" : $row['name']; ?></option>
+                    <?php } ?>
+                </select>
+                <script>
+                    $('#new-follower-link').click(function(event, extraData = null) {
+                        createUserEventHandler('follower', event, extraData);
+                    });
+                    var plugins = ['no_results'<?php echo $hesk_settings['multi_eml'] ? ",'remove_button'" : ''; ?>];
+                    var createFollowerSelectize = $('#followers_input').selectize({
+                        valueField: 'id',
+                        labelField: 'displayName',
+                        searchField: ['name','email'],
+                        copyClassesToDropdown: true,
+                        preload: true,
+                        options: [],
+                        loadThrottle: 300,
+                        persist: false,
+                        plugins: plugins,
+                        load: function(query, callback) {
+                            $.ajax({
+                                url: 'ajax/search_customers.php?query=' + query,
+                                dataType: 'json',
+                                success: function(data) {
+                                    callback(data);
+                                }
+                            });
+                        },
+
+                        /* Using deconstruct (requires EMCA6, but it's required in a bunch of other code already, so shouldn't be an issue)
+                        here to add a bunch of general functionality needed for the custom "Add Entry",
+                        And passing only the necessary custom behaviour for this specific dropdown.
+                        */
+                        ...hesk_selectizeAddCustomAddEntryToDropdown(
+                            {
+                                newEntryTextPrefix: '<?php echo hesk_jsString($hesklang['add_follower']); ?>',
+                                onAddEntryClickedFunction: function(selectizeInstance, selectizeSearchValue) {
+                                    // populate the follower input field with the selected search value (either name or email)
+                                    let nameValue = selectizeSearchValue;
+                                    let emailValue = '';
+                                    if (selectizeSearchValue.indexOf('@') > -1) {
+                                        // if there's an @ part of search string, we simply assume it's an email
+                                        nameValue = '';
+                                        emailValue = selectizeSearchValue;
+                                    }
+
+                                    // simply reuse what new-follower-link already does for adding a new customer.
+                                    $('#new-follower-link').trigger('click', { nameValue: nameValue, emailValue: emailValue });
+                                }
+                            }
+                        )
+                    });
+                </script>
             </div>
-            <div id="email_suggestions"></div>
+            <?php endif;?>
             <div class="form-group">
-                <label><?php echo $hesklang['priority']; ?>: <span class="important">*</span></label>
-                <div class="dropdown-select center out-close priority">
-                    <select name="priority" <?php if (in_array('priority',$_SESSION['iserror'])) {echo ' class="isError" ';} ?> >
+                <label class="priority <?php if (in_array('priority',$_SESSION['iserror'])) {echo 'isErrorStr';} ?>"><?php echo $hesklang['priority']; ?>: <?php if ($hesk_settings['select_pri']) {echo '<span class="important">*</span>';} ?></label>
+                <div class="dropdown-select out-close priority select-priority">
+                    <select name="priority">
                         <?php
                         // Show the "Click to select"?
                         if ($hesk_settings['select_pri'])
@@ -254,10 +520,15 @@ if ( ! isset($_SESSION['as_priority']))
                             echo '<option value="">'.$hesklang['select'].'</option>';
                         }
                         ?>
-                        <option value="3" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==3) {echo 'selected';} ?>><?php echo $hesklang['low']; ?></option>
-                        <option value="2" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==2) {echo 'selected';} ?>><?php echo $hesklang['medium']; ?></option>
-                        <option value="1" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==1) {echo 'selected';} ?>><?php echo $hesklang['high']; ?></option>
-                        <option value="0" <?php if(isset($_SESSION['as_priority']) && $_SESSION['as_priority']==0) {echo 'selected';} ?>><?php echo $hesklang['critical']; ?></option>
+                        <?php echo hesk_get_priority_select('', true, $_SESSION['as_priority']); ?>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group ts" id="ticket-status-div">
+                <label><?php echo $hesklang['status']; ?>:</label>
+                <div class="dropdown-select out-close">
+                    <select id="status-select" name="status" onchange="hesk_update_status_color(this.value)">
+                        <?php echo hesk_get_status_select('', hesk_checkPermission('can_resolve', 0), $_SESSION['as_status']); ?>
                     </select>
                 </div>
             </div>
@@ -295,12 +566,12 @@ if ( ! isset($_SESSION['as_priority']))
                     {
                         /* Radio box */
                         case 'radio':
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isError' : '';
+
                             echo '
-                                <div class="form-group">
+                                <div class="form-group '.$cls.'">
                                     <label>'.$v['name:'].' '.$v['req'].'</label>
                                     <div class="radio-list">';
-
-                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError" ' : '';
 
                             $index = 0;
                             foreach ($v['value']['radio_options'] as $option)
@@ -322,7 +593,7 @@ if ( ! isset($_SESSION['as_priority']))
 
                                 echo '
                                             <div class="radio-custom" style="margin-bottom: 5px">
-                                                <input type="radio" id="edit_'.$k.$index.'" name="'.$k.'" value="'.$option.'" '.$checked.' '.$cls.'>
+                                                <input type="radio" id="edit_'.$k.$index.'" name="'.$k.'" value="'.$option.'" '.$checked.'>
                                                 <label for="edit_'.$k.$index.'">'.$option.'</label>
                                             </div>';
                                 $index++;
@@ -334,12 +605,27 @@ if ( ! isset($_SESSION['as_priority']))
                         /* Select drop-down box */
                         case 'select':
 
-                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError" ' : '';
+                            $extra_classes = '';
+                            $selectize_config = '';
+                            $extra_attributes = '';
+                            if (!empty($v['value']['is_searchable'])) {
+                                $extra_classes .= "read-write";
+                                $extra_attributes = ' placeholder="'.hesk_addslashes($hesklang['search_by_pattern']).'"';
+                                $selectize_config = '{
+                                        valueField: "id",
+                                        labelField: "displayName",
+                                        searchField: ["displayName"],
+                                        create: false,
+                                        copyClassesToDropdown: true,
+                                        plugins: ["no_results"],
+                                    }';
+                            }
+                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError ' . $extra_classes . '" ' : ' class="' . $extra_classes .'" ';
 
                             echo '
                                 <div class="form-group">
                                     <label for="edit_">'.$v['name:'].' '.$v['req'].'</label>
-                                        <select name="'.$k.'" id="'.$k.'" '.$cls.'>';
+                                        <select name="'.$k.'" id="'.$k.'" '.$cls.$extra_attributes.'>';
                             // Show "Click to select"?
                             if ( ! empty($v['value']['show_select']))
                             {
@@ -348,7 +634,7 @@ if ( ! isset($_SESSION['as_priority']))
 
                             foreach ($v['value']['select_options'] as $option)
                             {
-                                if ($k_value == $option)
+                                if ($k_value == trim($option))
                                 {
                                     $k_value = $option;
                                     $selected = 'selected';
@@ -363,18 +649,18 @@ if ( ! isset($_SESSION['as_priority']))
                             echo '</select>
                                 </div>
                                 <script>
-                                    $(\'#'.$k.'\').selectize();
+                                    $(\'#'.$k.'\').selectize(' . $selectize_config . ');
                                 </script>
                                 ';
                             break;
 
                         /* Checkbox */
                         case 'checkbox':
-                            echo '
-                                <div class="form-group">
-                                    <label>'.$v['name:'].' '.$v['req'].'</label>';
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isError' : '';
 
-                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError" ' : '';
+                            echo '
+                                <div class="form-group '.$cls.'">
+                                    <label>'.$v['name:'].' '.$v['req'].'</label>';
 
                             $index = 0;
                             foreach ($v['value']['checkbox_options'] as $option)
@@ -390,7 +676,7 @@ if ( ! isset($_SESSION['as_priority']))
 
                                 echo '
                                     <div class="checkbox-custom">
-                                        <input type="checkbox" id="edit_'.$k.$index.'" name="'.$k.'[]" value="'.$option.'" '.$checked.' '.$cls.'>
+                                        <input type="checkbox" id="edit_'.$k.$index.'" name="'.$k.'[]" value="'.$option.'" '.$checked.'>
                                         <label for="edit_'.$k.$index.'"> '.$option.'</label>
                                     </div>';
                                 $index++;
@@ -413,21 +699,25 @@ if ( ! isset($_SESSION['as_priority']))
 
                         // Date
                         case 'date':
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isErrorStr' : '';
+                            if (is_string($k_value) && ($dd = hesk_datepicker_get_date($k_value))) {
+                                $hesk_settings['datepicker']['#'.$k]['timestamp'] = $dd->getTimestamp();
+                            }
                             echo '
                                 <section class="param calendar">
-                                    <label>'.$v['name:'].' '.$v['req'].'</label>
+                                    <label class="'.$cls.'">'.$v['name:'].' '.$v['req'].'</label>
                                     <div class="calendar--button">
                                         <button type="button">
                                             <svg class="icon icon-calendar">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-calendar"></use>
                                             </svg>
                                         </button>
-                                        <input name="'. $k .'"
+                                        <input name="'. $k .'" id="'. $k .'"
                                                value="'. $k_value .'"
                                                type="text" class="datepicker">
                                     </div>
                                     <div class="calendar--value" '. ($k_value ? 'style="display: block"' : '') . '>
-                                        <span>'. $k_value .'</span>
+                                        <span class="'. ($cls && ! empty($k_value) ? $cls : '') .'"><i>'. $k_value .'</i></span>
                                         <i class="close">
                                             <svg class="icon icon-close">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-close"></use>
@@ -526,7 +816,7 @@ if ( ! isset($_SESSION['as_priority']))
                             {
                                 <?php if ($hesk_settings['staff_ticket_formatting'] == 2): ?>
                                 tinymce.get("message").setContent('');
-                                tinymce.get("message").execCommand('mceInsertRawHTML', false, myMsg);
+                                tinymce.get("message").setContent(myMsg);
                                 <?php else: ?>
                                 document.getElementById('HeskMsg').innerHTML='<textarea style="height: inherit" class="form-control" name="message" id="message" rows="12" cols="60">'+myMsg+'</textarea>';
                                 <?php endif; ?>
@@ -537,7 +827,7 @@ if ( ! isset($_SESSION['as_priority']))
                                 <?php if ($hesk_settings['staff_ticket_formatting'] == 2): ?>
                                 var oldMsg = tinymce.get("message").getContent();
                                 tinymce.get("message").setContent('');
-                                tinymce.get("message").execCommand('mceInsertRawHTML', false, oldMsg + myMsg);
+                                tinymce.get("message").setContent(oldMsg + myMsg);
                                 <?php else: ?>
                                 var oldMsg = escapeHtml(document.getElementById('message').value);
                                 document.getElementById('HeskMsg').innerHTML='<textarea style="height: inherit" class="form-control" name="message" id="message" rows="12" cols="60">'+oldMsg+myMsg+'</textarea>';
@@ -594,7 +884,7 @@ if ( ! isset($_SESSION['as_priority']))
                 </div>
                 <div class="form-group">
                     <label><?php echo $hesklang['select_ticket_tpl']; ?>:</label>
-                    <div class="dropdown-select center out-close">
+                    <div class="dropdown-select out-close">
                         <select name="saved_replies" onchange="setMessage(this.value)">
                             <option value="0"> - <?php echo $hesklang['select_empty']; ?> - </option>
                             <?php echo $can_options; ?>
@@ -698,12 +988,28 @@ if ( ! isset($_SESSION['as_priority']))
                         /* Select drop-down box */
                         case 'select':
 
-                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError" ' : '';
+                            $extra_classes = '';
+                            $selectize_config = '';
+                            $extra_attributes = '';
+                            if (!empty($v['value']['is_searchable'])) {
+                                $extra_classes .= "read-write";
+                                $extra_attributes = ' placeholder="'.hesk_addslashes($hesklang['search_by_pattern']).'"';
+                                $selectize_config = '{
+                                    valueField: "id",
+                                    labelField: "displayName",
+                                    searchField: ["displayName"],
+                                    create: false,
+                                    copyClassesToDropdown: true,
+                                    plugins: ["no_results"],
+                                }';
+                            }
+
+                            $cls = in_array($k,$_SESSION['iserror']) ? ' class="isError ' . $extra_classes . '" ' : ' class="' . $extra_classes .'" ';
 
                             echo '
                                 <div class="form-group">
                                     <label for="edit_">'.$v['name:'].' '.$v['req'].'</label>
-                                        <select name="'.$k.'" id="'.$k.'" '.$cls.'>';
+                                        <select name="'.$k.'" id="'.$k.'" '.$cls.$extra_attributes.'">';
                             // Show "Click to select"?
                             if ( ! empty($v['value']['show_select']))
                             {
@@ -712,7 +1018,7 @@ if ( ! isset($_SESSION['as_priority']))
 
                             foreach ($v['value']['select_options'] as $option)
                             {
-                                if ($k_value == $option)
+                                if ($k_value == trim($option))
                                 {
                                     $k_value = $option;
                                     $selected = 'selected';
@@ -727,7 +1033,7 @@ if ( ! isset($_SESSION['as_priority']))
                             echo '</select>
                                 </div>
                                 <script>
-                                    $(\'#'.$k.'\').selectize();
+                                    $(\'#'.$k.'\').selectize(' . $selectize_config . ');
                                 </script>
                                 ';
                             break;
@@ -777,6 +1083,10 @@ if ( ! isset($_SESSION['as_priority']))
 
                         // Date
                         case 'date':
+                            $cls = in_array($k,$_SESSION['iserror']) ? 'isErrorStr' : '';
+                            if (is_string($k_value) && ($dd = hesk_datepicker_get_date($k_value))) {
+                                $hesk_settings['datepicker']['#'.$k]['timestamp'] = $dd->getTimestamp();
+                            }
                             echo '
                                 <section class="param calendar">
                                     <label>'.$v['name:'].' '.$v['req'].'</label>
@@ -786,12 +1096,12 @@ if ( ! isset($_SESSION['as_priority']))
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-calendar"></use>
                                             </svg>
                                         </button>
-                                        <input name="'. $k .'"
+                                        <input name="'. $k .'" id="'. $k .'"
                                                value="'. $k_value .'"
                                                type="text" class="datepicker">
                                     </div>
                                     <div class="calendar--value" '. ($k_value ? 'style="display: block"' : '') . '>
-                                        <span>'. $k_value .'</span>
+                                        <span class="'. $cls .'"><i>'. $k_value .'</i></span>
                                         <i class="close">
                                             <svg class="icon icon-close">
                                                 <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-close"></use>
@@ -841,24 +1151,23 @@ if ( ! isset($_SESSION['as_priority']))
             <?php
             /* attachments */
             if ($hesk_settings['attachments']['use']) {
-
+                require(HESK_PATH . 'inc/attachments.inc.php');
                 ?>
-                <div class="block--attach">
-                    <svg class="icon icon-attach">
-                        <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
-                    </svg>
-                    <div>
-                        <?php echo $hesklang['attachments']; ?>:
+                <div class="attachments">
+                    <div class="block--attach">
+                        <svg class="icon icon-attach">
+                            <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-attach"></use>
+                        </svg>
+                        <div>
+                            <?php echo $hesklang['attachments']; ?>:
+                        </div>
                     </div>
+                    <?php
+                    build_dropzone_markup(true);
+                    display_dropzone_field(HESK_PATH . 'upload_attachment.php', true);
+                    dropzone_display_existing_files(hesk_SESSION_array('as_attachments'));
+                    ?>
                 </div>
-                <?php
-                for ($i=1;$i<=$hesk_settings['attachments']['max_number'];$i++)
-                {
-                    $cls = ($i == 1 && in_array('attachments',$_SESSION['iserror'])) ? ' class="isError" ' : '';
-                    echo '<input type="file" name="attachment['.$i.']" size="50" '.$cls.' /><br />';
-                }
-                ?>
-                <a class="link" href="javascript:" onclick="hesk_window('../file_limits.php',250,500);return false;"><?php echo $hesklang['ful']; ?></a>
                 <?php
             }
 
@@ -883,7 +1192,22 @@ if ( ! isset($_SESSION['as_priority']))
                     <?php endif; ?>
                 </div>
             </div>
+            <?php if ($can_due_date): ?>
             <section class="param calendar">
+                <?php
+                // Default due date
+                $default_due_date_info = hesk_getCategoryDueDateInfo($category);
+
+                $due_date = isset($_SESSION['as_due_date']) ? $_SESSION['as_due_date'] : null;
+                if ($due_date && ($dd = hesk_datepicker_get_date($due_date))) {
+                    $hesk_settings['datepicker']['#due_date']['timestamp'] = $dd->getTimestamp();
+                } elseif ($default_due_date_info !== null && $due_date === null) {
+                    $current_date = new DateTime('today midnight');
+                    $current_date->add(DateInterval::createFromDateString("+{$default_due_date_info['amount']} {$default_due_date_info['unit']}s"));
+                    $hesk_settings['datepicker']['#due_date']['timestamp'] = $current_date->getTimestamp();
+                    $due_date = hesk_datepicker_format_date($current_date->getTimestamp());
+                }
+                ?>
                 <label><?php echo $hesklang['due_date']; ?>:</label>
                 <div class="calendar--button">
                     <button type="button">
@@ -891,12 +1215,12 @@ if ( ! isset($_SESSION['as_priority']))
                             <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-calendar"></use>
                         </svg>
                     </button>
-                    <input name="due_date"
-                           value="<?php if (isset($_SESSION['as_due_date'])) {echo stripslashes(hesk_input($_SESSION['as_due_date']));} ?>"
+                    <input name="due_date" id="due_date"
+                           value="<?php if (isset($due_date)) {echo stripslashes(hesk_input($due_date));} ?>"
                            type="text" class="datepicker">
                 </div>
-                <div class="calendar--value" style="<?php echo empty($_SESSION['as_due_date']) ? '' : 'display: block'; ?>">
-                <span><?php echo isset($_SESSION['as_due_date']) ? stripslashes($_SESSION['as_due_date']) : ''; ?></span>
+                <div class="calendar--value" style="<?php echo empty($due_date) ? '' : 'display: block'; ?>">
+                <span><?php echo isset($due_date) ? stripslashes($due_date) : ''; ?></span>
                 <i class="close">
                     <svg class="icon icon-close">
                         <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
@@ -905,6 +1229,7 @@ if ( ! isset($_SESSION['as_priority']))
                 </div>
             </section>
             <br>
+            <?php endif; ?>
             <?php if ($hesk_settings['can_sel_lang']): ?>
             <div class="form-group">
                 <label for="as_language"><?php echo $hesklang['tlan']; ?>:</label>
@@ -937,7 +1262,8 @@ if ( ! isset($_SESSION['as_priority']))
 
                             if ($hesk_settings['autoassign'])
                             {
-                                echo '<option value="-2"> &gt; ' . $hesklang['aass'] . ' &lt; </option>';
+                                $select = ( ! isset($_SESSION['as_owner']) && ! empty($hesk_settings['categories'][$category]['autoassign']) ) ? 'selected="selected"' : '';
+                                echo '<option value="-2" '.$select.'> &gt; ' . $hesklang['aass'] . ' &lt; </option>';
                             }
 
                             $owner = isset($_SESSION['as_owner']) ? intval($_SESSION['as_owner']) : 0;
@@ -976,9 +1302,15 @@ if ( ! isset($_SESSION['as_priority']))
                 <?php
             }
             ?>
+
+            <?php if ( defined('HESK_DEMO') ): ?>
+                 <?php hesk_show_notice(sprintf($hesklang['antdemo'], 'https://www.hesk.com/demo/index.php?a=add')); ?>
+                <button class="btn btn-full" id="recaptcha-submit"><?php echo $hesklang['sub_ticket']; ?></button>
+            <?php else: ?>
+                <button type="submit" class="btn btn-full" id="recaptcha-submit"><?php echo $hesklang['sub_ticket']; ?></button>
+            <?php endif; ?>
             <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
             <input type="hidden" name="category" value="<?php echo $category; ?>">
-            <button type="submit" class="btn btn-full"><?php echo $hesklang['sub_ticket']; ?></button>
         </form>
         <p>&nbsp;</p>
         <p>&nbsp;</p>
@@ -987,10 +1319,238 @@ if ( ! isset($_SESSION['as_priority']))
         <p>&nbsp;</p>
     </div>
 </div>
+<div class="modal" data-modal-id="create-customer">
+    <div class="modal__body" style="white-space: normal; <?php if ($hesk_settings['limit_width']) echo 'max-width:'.$hesk_settings['limit_width'].'px'; ?>">
+        <i class="modal__close" data-action="cancel">
+            <svg class="icon icon-close">
+                <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+            </svg>
+        </i>
+        <h3 id="create-customer-title"><?php echo $hesklang['new_customer']; ?></h3>
+        <div class="modal__description">
+            <div id="new-customer-prompt" style="display: <?php echo $show_create_modal ? 'block' : 'none'; ?>">
+                <?php echo $hesklang['new_customer_prompt']; ?>
+            </div>
+            <div class="form">
+                <div class="form-group">
+                    <label for="create_name">
+                        <?php echo $hesklang['name']; ?>: <span class="important">*</span>
+                    </label>
+                    <input type="text" id="create_name" name="name" class="form-control" maxlength="50">
+                    <div class="form-control__error"></div>
+                </div>
+                <div class="form-group">
+                    <label for="email">
+                        <?php echo $hesklang['email'] . ':' . ($hesk_settings['require_email'] ? ' <span class="important">*</span>' : '') ; ?>
+                    </label>
+                    <input type="email"
+                           class="form-control"
+                           name="email" id="email" maxlength="1000">
+                    <div class="form-control__error"></div>
+                </div>
+                <div id="email_suggestions"></div>
+            </div>
+        </div>
+        <div class="modal__buttons">
+            <input type="hidden" name="customer_type" value="CUSTOMER">
+            <button class="btn btn-border" ripple="ripple" data-action="cancel"><?php echo $hesklang['cancel']; ?></button>
+            <a data-confirm-button href="#" class="btn btn-full text-white disabled" ripple="ripple" style="width: 152px; height: 40px;"><?php echo $hesklang['save']; ?></a>
+        </div>
+        <script>
+            var $name = $('#create_name');
+            var $email = $('#email');
+            var $saveButton = $("[data-modal-id='create-customer']").find('a[data-confirm-button]');
+            var nameValid = false;
+            var emailValid = false;
+            var emailFailureReason = '';
+
+            $name.keyup(function() {
+                let nameIsEmpty = ($name.val().trim() === '');
+                nameValid = !nameIsEmpty;
+                if (nameIsEmpty) {
+                    nameValid = false;
+                } else {
+                    nameValid = true;
+                }
+                let emailIsEmpty = ($email.val().trim() === '');
+                <?php if (!$hesk_settings['require_email']): ?>
+                emailValid = true;
+                <?php endif; ?>
+
+                /* If other/email field is empty, ignore always showing its error,
+                UNLESS it was already shown (user interacted with that field since opening the modal)
+                */
+                let clearEmailError = (!$email.parent().hasClass('error') && emailIsEmpty)
+                updateValidation(false, clearEmailError);
+            });
+            var debouncedEmailCheck = hesk_debounce(function() {
+                /* If other/name field is empty, ignore always showing its error,
+                UNLESS it was already shown (user interacted with that field since opening the modal)
+                */
+                let nameIsEmpty = ($name.val().trim() === '');
+                let emailIsEmpty = ($email.val().trim() === '');
+                let clearNameError = (!$name.parent().hasClass('error') && nameIsEmpty);
+
+                // If email is not required, and the email field is empty, we can just skip ajax validation for email.
+                // Otherwise, we always want to run ajax validation to maintain consistent UX.
+                <?php if (!$hesk_settings['require_email']): ?>
+                if (emailIsEmpty) {
+                    emailValid = true;
+                    updateValidation(clearNameError, false);
+                    return true;
+                }
+                <?php endif; ?>
+
+                //-- Disable save button initially until email check is complete
+                emailValid = false;
+                updateValidation(clearNameError, false);
+                if (emailIsEmpty) {
+                    emailFailureReason = '<?php echo hesk_makeJsString($hesklang['this_field_is_required']); ?>';
+                    updateValidation(clearNameError, false);
+                    return;
+                }
+
+                $.ajax({
+                    url: 'ajax/check_email.php',
+                    type: 'GET',
+                    data: {
+                        email: $email.val()
+                    },
+                    dataType: 'json',
+                    success: function(data) {
+                        if (!data.emailValid) {
+                            emailValid = false;
+                            emailFailureReason = '<?php echo hesk_makeJsString($hesklang['enter_valid_email']); ?>';
+                        } else if (!data.emailAvailable) {
+                            emailValid = false;
+                            emailFailureReason = '<?php echo hesk_makeJsString($hesklang['customer_email_exists']); ?>';
+                        } else {
+                            emailValid = true;
+                            emailFailureReason = '';
+
+                            <?php if ($hesk_settings['detect_typos']): ?>
+                            hesk_suggestEmail('email', 'email_suggestions', 1, 1);
+                            <?php endif; ?>
+                        }
+                        updateValidation(clearNameError, false);
+                    },
+                    error: function(err) {
+                        console.error(err);
+                        emailValid = false;
+                        emailFailureReason = '<?php echo hesk_makeJsString($hesklang['an_error_occurred_validating_email']); ?>';
+                        updateValidation(clearNameError, false);
+                    }
+                });
+            }, 300);
+            $email.keyup(debouncedEmailCheck);
+            $saveButton.click(function() {
+                // Make sure our fields are valid
+                $name.keyup();
+                $email.keyup();
+
+                if (!nameValid || !emailValid) {
+                    //-- Fix validation state messages
+                    updateValidation();
+                    return;
+                }
+
+                $.ajax({
+                    url: 'ajax/create_customer.php',
+                    type: 'POST',
+                    data: {
+                        name: $name.val(),
+                        email: $email.val()
+                    },
+                    dataType: 'json',
+                    success: function(data) {
+                        <?php if ($hesk_settings['multi_eml']): ?>
+                            var selectize = $('input[name="customer_type"]').val() === 'CUSTOMER' ?
+                                createCustomerSelectize :
+                                createFollowerSelectize;
+
+                            createCustomerSelectize[0].selectize.addOption(data);
+                            createFollowerSelectize[0].selectize.addOption(data);
+                        <?php else: ?>
+                            var selectize = createCustomerSelectize;
+                            createCustomerSelectize[0].selectize.addOption(data);
+                        <?php endif; ?>
+
+                        if (typeof selectize[0].selectize.getValue() === 'string') {
+                            selectize[0].selectize.setValue(data.id);
+                        } else {
+                            var currentCustomers = selectize[0].selectize.getValue();
+                            currentCustomers.push(data.id);
+                            selectize[0].selectize.setValue(currentCustomers);
+                        }
+                        $name.val('');
+                        $email.val('');
+                        $('[data-modal-id="create-customer"]').find('[data-action="cancel"]').click();
+                    },
+                    error: function(err) {
+                        emailValid = false;
+                        emailFailureReason = JSON.parse(err.responseText).message;
+                        updateValidation();
+                    }
+                });
+            });
+
+            function updateValidation(forceClearNameError = false, forceClearEmailError = false) {
+                var anyFailure = false;
+                /*
+                There are situations where we might delibarately clear errors for clearer user experience, even if inputs are empty on modal open,
+                BUT at same time keeping other validation/disabled buttons as they are.
+                 */
+                let clearNameError = forceClearNameError || nameValid;
+                if (!nameValid) {
+                    anyFailure = true;
+                    if (!forceClearNameError) {
+                        $name.parent().addClass('error');
+                        $name.parent().find('.form-control__error').text('<?php echo hesk_makeJsString($hesklang['this_field_is_required']); ?>');
+                    }
+                }
+                if (clearNameError) {
+                    $name.parent().removeClass('error');
+                    $name.parent().find('.form-control__error').text('');
+                }
+
+                let clearEmailError = forceClearEmailError || emailValid;
+                if (!emailValid) {
+                    anyFailure = true;
+                    
+                    if (!forceClearEmailError && emailFailureReason !== '') {
+                        $email.parent().addClass('error');
+                        $email.parent().find('.form-control__error').text(emailFailureReason);
+                    }
+                }
+                if (clearEmailError) {
+                    $email.parent().removeClass('error');
+                    $email.parent().find('.form-control__error').text('');
+                }
+
+                if (anyFailure) {
+                    $saveButton.addClass('disabled');
+                } else {
+                    $saveButton.removeClass('disabled');
+                }
+            }
+        </script>
+    </div>
+</div>
+<div id="loading-overlay" class="loading-overlay">
+    <div id="loading-message" class="loading-message">
+        <div class="spinner"></div>
+        <p><?php echo $hesklang['sending_wait']; ?></p>
+    </div>
+</div>
 <?php
 
 hesk_cleanSessionVars('iserror');
 hesk_cleanSessionVars('isnotice');
+
+// Clearing it out, otherwise users could delete an attachment, refresh, and it'll "supposedly" be back
+hesk_cleanSessionVars('as_attachments');
+
+$hesk_settings['print_status_select_box_jquery'] = true;
 
 require_once(HESK_PATH . 'inc/footer.inc.php');
 exit();
@@ -1009,17 +1569,16 @@ function print_select_category($number_of_categories)
 		hesk_process_messages($hesklang['sel_app_cat'],'NOREDIRECT','NOTICE');
 	}
 
-/* This will handle error, success and notice messages */
-hesk_handle_messages();
-?>
-<div class="main__content categories">
-    <div class="table-wrap">
-        <h3><?php echo $hesklang['select_category_staff']; ?></h3>
-        <div class="select_category">
-            <?php
-            // Print a select box if number of categories is large
-            if ($number_of_categories > $hesk_settings['cat_show_select']) {
-                ?>
+    /* This will handle error, success and notice messages */
+    hesk_handle_messages();
+    ?>
+    <div class="main__content categories">
+        <?php
+        // Print a select box if number of categories is large
+        if ($number_of_categories > $hesk_settings['cat_show_select']) {
+            ?>
+            <div class="table-wrap">
+                <h2 class="select__title-alt"><?php echo $hesklang['select_category_staff']; ?></h2>
                 <form action="new_ticket.php" method="get" class="form">
                     <select class="form-control" name="category" id="select_category">
                         <?php
@@ -1040,59 +1599,33 @@ hesk_handle_messages();
                         $('#select_category').selectize();
                     });
                 </script>
-                <?php
-            }
-            // Otherwise print quick links
-            else
-            {
-                ?>
-                <ul id="ul_category">
-                    <?php
-                    foreach ($hesk_settings['categories'] as $k=>$v)
-                    {
-                        echo '<li><a ripple="ripple" href="new_ticket.php?a=add&amp;category='.$k.'">'.$v['name'].'</a></li>';
-                    }
-                    ?>
-                </ul>
-                <?php
-            }
+            </div>
+            <?php
+        }
+        // Otherwise print quick links
+        else
+        {
             ?>
-        </div>
+            <h2 class="select__title"><?php echo $hesklang['select_category_staff']; ?></h2>
+            <div class="nav">
+                <?php foreach ($hesk_settings['categories'] as $k => $v): ?>
+                <a href="new_ticket.php?a=add&amp;category=<?php echo $k; ?>" class="navlink <?php if ($number_of_categories > 8) echo "navlink-condensed"; ?>">
+                    <div class="icon-in-circle">
+                        <svg class="icon icon-chevron-right">
+                            <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-chevron-right"></use>
+                        </svg>
+                    </div>
+                    <div>
+                        <h5 class="navlink__title"><!--[if IE]> &raquo; <![endif]--><?php echo $v['name']; ?></h5>
+                    </div>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php
+        }
+        ?>
     </div>
-</div>
-<style>
-    #ul_category {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-        margin-top: 10px;
-    }
-
-    #ul_category li:first-child {
-        border-top: 1px solid #d1d5d7;
-    }
-
-    #ul_category li {
-        border: 1px solid #d1d5d7;
-        border-top: none;
-        border-radius: 2px;
-    }
-
-    #ul_category li:hover {
-        background: rgba(0,0,0,.05);
-    }
-
-    #ul_category li a {
-        display: block;
-        font-size: 14px;
-        padding: 0.75em 0.75em;
-        text-decoration: none;
-        transition: all 0.12s ease;
-        word-wrap: break-word;
-    }
-</style>
-
-<?php
+    <?php
 
 	hesk_cleanSessionVars('iserror');
 	hesk_cleanSessionVars('isnotice');
@@ -1112,10 +1645,13 @@ function hesk_new_ticket_reset_data()
         return true;
     }
 
+    hesk_cleanSessionVars('as_customer_id');
+    hesk_cleanSessionVars('as_follower_ids');
     hesk_cleanSessionVars('as_name');
     hesk_cleanSessionVars('as_email');
     hesk_cleanSessionVars('as_category');
     hesk_cleanSessionVars('as_priority');
+    hesk_cleanSessionVars('as_status');
     hesk_cleanSessionVars('as_subject');
     hesk_cleanSessionVars('as_message');
     hesk_cleanSessionVars('as_owner');

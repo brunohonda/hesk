@@ -678,6 +678,12 @@
 					var match = node.data.match(regex);
 					var spannode = document.createElement('span');
 					spannode.className = 'highlight';
+
+                    // Add extra-space class if there is a space before the match - Added by Andraz Vene on 20th July 2024
+                    if (pos > 0 && node.data[pos - 1] === ' ') {
+                        spannode.classList.add('extra-space-infront');
+                    }
+
 					var middlebit = node.splitText(pos);
 					var endbit = middlebit.splitText(match[0].length);
 					var middleclone = middlebit.cloneNode(true);

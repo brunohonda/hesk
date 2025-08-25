@@ -1,0 +1,6 @@
+<p>Dear %%NAME%%,</p>
+<p>We have just replied to your ticket "%%SUBJECT%%".</p>
+<p>To read the message, submit a reply and view details, please visit:<br /><a href="%%TRACK_URL%%">%%TRACK_URL%%</a> <br /><br /></p>
+<p>If the above link is not clickable, try copying and pasting it into the address bar of your web browser.</p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

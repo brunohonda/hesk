@@ -1,0 +1,5 @@
+<p>Prezado(a) %%NAME%%,</p>
+<p>Infelizmente, o registro da sua conta foi rejeitado.</p>
+<p>Se você acredita que isso foi feito por engano, tente registrar-se novamente.</p>
+<p>Atenciosamente,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

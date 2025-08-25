@@ -1,0 +1,11 @@
+Dear %%NAME%%,
+
+We couldn't process your email "%%SUBJECT%%" because you don't have an account with us.
+
+To submit support tickets via email, please register first at:
+%%CUSTOMER_REGISTER_URL%%
+
+Sincerely,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

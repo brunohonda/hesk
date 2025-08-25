@@ -16,6 +16,9 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 #error_reporting(E_ALL);
 
+// Load Composer dependencies
+require_once(HESK_PATH . 'vendor/autoload.php');
+
 /*
  * If code is executed from CLI, don't force SSL
  * else set correct Content-Type header
@@ -56,9 +59,12 @@ if ( ! defined('ENT_XHTML'))
 }
 
 // Is this is a SSL connection?
-if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on')
+if ((isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https'))
 {
     define('HESK_SSL', true);
+
+    // Set for Nginx special cases
+    $_SERVER['HTTPS'] = 'on';
 
     // Use https-only cookies
     @ini_set('session.cookie_secure', 1);
@@ -109,8 +115,9 @@ function hesk_getClientIP()
     // the first valid one found will be returned as client IP
     // Uncomment those used on your server
     $server_client_IP_variables = array(
-        // 'HTTP_CF_CONNECTING_IP', // CloudFlare
+        // 'HTTP_CF_CONNECTING_IP',
         // 'HTTP_CLIENT_IP',
+        // 'HTTP_X_REAL_IP',
         // 'HTTP_X_FORWARDED_FOR',
         // 'HTTP_X_FORWARDED',
         // 'HTTP_FORWARDED_FOR',
@@ -175,6 +182,10 @@ function hesk_setcookie($name, $value, $expire=0, $path="")
 {
     global $hesk_settings;
 
+    if ($value === null) {
+        return true;
+    }
+
     // PHP < 7.3 doesn't support the SameSite attribute, let's use a trick
     if (PHP_VERSION_ID < 70300)
     {
@@ -193,29 +204,56 @@ function hesk_setcookie($name, $value, $expire=0, $path="")
 } // END hesk_setcookie()
 
 
+function hesk_get_service_messages($page=null, $strict_page_check=false)
+{
+    global $hesk_settings, $hesklang, $hesk_db_link;
+
+    if (empty($page)) {
+        $page = 'home';
+    }
+
+    $res = hesk_dbQuery('SELECT `title`, `message`, `style` FROM `'.hesk_dbEscape($hesk_settings['db_pfix'])."service_messages`
+        WHERE `type`='0'
+        AND ".($strict_page_check ? "`location` LIKE '%".hesk_dbEscape($page)."%'" : "(" . ($page == 'home' ? '`location` IS NULL OR ' : '')."`location`='ALL' OR `location` LIKE '%".hesk_dbEscape($page)."%')")."
+        AND (`language` IS NULL OR `language` LIKE '".hesk_dbEscape($hesk_settings['language'])."')
+        ORDER BY `order` ASC"
+    );
+    $service_messages = array();
+    while ($sm=hesk_dbFetchAssoc($res)) {
+        $service_messages[] = $sm;
+    }
+    return $service_messages;
+} // END hesk_get_service_messages()
+
+
 function hesk_service_message($sm)
 {
 	switch ($sm['style'])
 	{
 		case 1:
 			$style = "green";
+			$adaRole = "status";
 			break;
 		case 2:
 			$style = "blue";
+            $adaRole = "status";
 			break;
 		case 3:
 			$style = "orange";
+            $adaRole = "alert";
 			break;
 		case 4:
 			$style = "red";
+            $adaRole = "alert";
 			break;
 		default:
 			$style = "white";
+            $adaRole = "log";
 	}
 
 	?>
     <div class="main__content notice-flash">
-        <div class="notification <?php echo $style; ?> browser-default">
+        <div role="<?php echo $adaRole; ?>" class="notification <?php echo $style; ?> browser-default">
             <p><b><?php echo $sm['title']; ?></b></p>
             <?php echo $sm['message']; ?>
         </div>
@@ -304,6 +342,16 @@ function hesk_unlink($file, $older_than=0)
 } // END hesk_unlink()
 
 
+function hesk_copy($old_path, $new_path) {
+    return is_file($old_path) && @copy($old_path, $new_path);
+} // END hesk_copy()
+
+
+function hesk_rename($old_path, $new_path) {
+    return is_file($old_path) && @rename($old_path, $new_path);
+} // END hesk_rename()
+
+
 function hesk_unlink_callable($file, $key, $older_than=0)
 {
 	return hesk_unlink($file, $older_than);
@@ -329,6 +377,10 @@ function hesk_SESSION($in, $default = '')
 	}
 } // END hesk_SESSION();
 
+function hesk_SESSION_array($in, $default = []) {
+    return isset($_SESSION[$in]) && is_array($_SESSION[$in]) ? $_SESSION[$in] : $default;
+}
+
 
 function hesk_COOKIE($in, $default = '')
 {
@@ -340,6 +392,18 @@ function hesk_GET($in, $default = '')
 {
 	return isset($_GET[$in]) && ! is_array($_GET[$in]) ? $_GET[$in] : $default;
 } // END hesk_GET()
+
+
+function hesk_restricted_GET($in, $allowed_values, $default = '')
+{
+    if (!isset($_GET[$in]) || is_array($_GET[$in])) {
+        return $default;
+    }
+
+    $value = $_GET[$in];
+    return in_array($value, $allowed_values) ? $value : $default;
+
+} // END hesk_restricted_GET()
 
 
 function hesk_POST($in, $default = '')
@@ -428,7 +492,7 @@ function hesk_slashJS($in)
 } // END hesk_slashJS()
 
 
-function hesk_verifyEmailMatch($trackingID, $my_email = 0, $ticket_email = 0, $error = 1)
+function hesk_verifyEmailMatch($trackingID, $my_email = 0, $ticket_emails = [], $error = 1)
 {
 	global $hesk_settings, $hesklang, $hesk_db_link;
 
@@ -444,6 +508,22 @@ function hesk_verifyEmailMatch($trackingID, $my_email = 0, $ticket_email = 0, $e
 	/* Limit brute force attempts */
 	hesk_limitBfAttempts();
 
+    // handle edge case: email is required to view tickets, but is not required to submit a ticket
+    // if the ticket was submitted without an email, match an empty mail
+    // if the ticket was submitted with an email, it must match
+    if ($hesk_settings['require_email'] == 0) {
+        if (in_array('', $ticket_emails)) {
+            $hesk_settings['e_param'] = '';
+            $hesk_settings['e_query'] = '';
+            $hesk_settings['e_email'] = '';
+            return true;
+        } elseif (empty($my_email)) {
+            return 'EMAIL_REQUIRED';
+        } else {
+            $hesk_settings['tmp_skip_redirect'] = true;
+        }
+    }
+
 	/* Get email address */
 	if ($my_email)
 	{
@@ -456,43 +536,44 @@ function hesk_verifyEmailMatch($trackingID, $my_email = 0, $ticket_email = 0, $e
 		$my_email = hesk_getCustomerEmail();
 	}
 
-	/* Get email from ticket */
-	if ( ! $ticket_email)
+	/* Get emails from ticket */
+	if (empty($ticket_emails))
 	{
-		$res = hesk_dbQuery("SELECT `email` FROM `".$hesk_settings['db_pfix']."tickets` WHERE `trackid`='".hesk_dbEscape($trackingID)."' LIMIT 1");
-		if (hesk_dbNumRows($res) == 1)
-		{
-			$ticket_email = hesk_dbResult($res);
-		}
-        else
+		$res = hesk_dbQuery("SELECT `customers`.`email` AS `email`
+            FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` `tickets`
+            INNER JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` `ticket_customer`
+                ON `tickets`.`id` = `ticket_customer`.`ticket_id`
+            INNER JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` `customers`
+                ON `ticket_customer`.`customer_id` = `customers`.`id` 
+            WHERE `trackid`='".hesk_dbEscape($trackingID)."'");
+        while ($row = hesk_dbFetchAssoc($res)) {
+            $ticket_emails[] = $row['email'];
+        }
+
+        if (empty($ticket_emails))
         {
 			hesk_process_messages($hesklang['ticket_not_found'],'ticket.php');
         }
 	}
 
-	/* Validate email */
-	if ($hesk_settings['multi_eml'])
-	{
-		$valid_emails = explode(',', strtolower($ticket_email) );
-		if ( in_array(strtolower($my_email), $valid_emails) )
-		{
-			/* Match, clean brute force attempts and return true */
-			hesk_cleanBfAttempts();
-			return true;
-		}
-	}
-	elseif ( strtolower($ticket_email) == strtolower($my_email) )
-	{
-		/* Match, clean brute force attempts and return true */
-		hesk_cleanBfAttempts();
-		return true;
-	}
+    /* Validate email */
+    foreach ($ticket_emails as $email) {
+        if (strtolower($my_email) === strtolower($email)) {
+            /* Match, clean brute force attempts and return true */
+            hesk_cleanBfAttempts();
+            return true;
+        }
+    }
+
 
 	/* Email doesn't match, clean cookies and error out */
     if ($error)
     {
 	    hesk_setcookie('hesk_myemail', '');
-	    hesk_process_messages($hesklang['enmdb'],'ticket.php?track='.$trackingID.'&Refresh='.rand(10000,99999));
+        if ( ! empty($hesk_settings['tmp_skip_redirect'])) {
+            return 'EMAIL_FALSE';
+        }
+        hesk_process_messages($hesklang['enmdb'],'ticket.php?track='.$trackingID.'&Refresh='.rand(10000,99999));
     }
     else
     {
@@ -606,6 +687,84 @@ function hesk_formatBytes($size, $translate_unit = 1, $precision = 2)
     return false;
 } // End hesk_formatBytes()
 
+function hesk_getAutoAssignConfigDisplay($autoassign_config) {
+    global $hesklang;
+
+    if ($autoassign_config === '' || $autoassign_config === null) {
+        return '';
+    }
+
+    $parsed_config = hesk_parseAutoAssignConfig($autoassign_config);
+
+    $language_key = $parsed_config['operator'] === 'IN' ? 'included' : 'excluded';
+    $user_count = hesk_getCountOfActiveUsersByIds($parsed_config['ids']);
+    $count_key = $user_count === 1 ? 'one_user' : 'x_users';
+
+    return sprintf($hesklang["{$count_key}_{$language_key}"], $user_count);
+}
+
+function hesk_parseAutoAssignConfig($autoassign_config) {
+    $result = array(
+        'operator' => '', // '' used by autoassign check
+        'ids' => array()
+    );
+
+    if ($autoassign_config === '' || $autoassign_config === null) {
+        return $result;
+    }
+
+    // regex = !(1,2,3) or =(1,2,3)  | ! - NOT IN, = - IN
+    $regex = '/([!=])?\((.+)\)/';
+    preg_match($regex, $autoassign_config, $matches);
+
+    $result['operator'] = $matches[1] === '!' ? 'NOT IN' : 'IN';
+    $result['ids'] = array_map('intval', explode(',', $matches[2]));
+
+    return $result;
+}
+
+function hesk_getCountOfActiveUsersByIds($ids) {
+    return count(hesk_getActiveAutoassignUsersForIds($ids));
+}
+
+function hesk_getActiveAutoassignUsersForIds($ids) {
+    global $hesk_settings;
+
+    $res = hesk_dbQuery("SELECT `id` FROM `" . hesk_dbEscape($hesk_settings['db_pfix']) . "users` WHERE `id` IN (" . implode(',', $ids) . ")");
+    $ids = array();
+
+    while ($row = hesk_dbFetchAssoc($res)) {
+        $ids[] = $row['id'];
+    }
+
+    return $ids;
+}
+
+function hesk_updateAutoassignConfigs() {
+    global $hesk_settings;
+
+    $res = hesk_dbQuery("SELECT `id`, `autoassign_config` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE `autoassign_config` <> ''");
+    while ($row = hesk_dbFetchAssoc($res)) {
+        $parsed_config = hesk_parseAutoAssignConfig($row['autoassign_config']);
+        $active_users = hesk_getActiveAutoassignUsersForIds($parsed_config['ids']);
+
+        // 1. No active users. Switch to either On - All, or Off
+        if (count($active_users) === 0) {
+            // Including no one is the same as off, and vice-versa
+            $autoassign = $parsed_config['operator'] === 'IN' ? 0 : 1;
+
+            hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` SET `autoassign` = '{$autoassign}', `autoassign_config` = '' WHERE `id` = {$row['id']}");
+        } else {
+            // Build a new autoassign config
+            $operator = $parsed_config['operator'] === 'IN' ? '=' : '!';
+            $stringed_users = implode(',', $active_users);
+            $autoassign_config = "{$operator}({$stringed_users})";
+
+            hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` SET `autoassign_config` = '{$autoassign_config}' WHERE `id` = {$row['id']}");
+        }
+    }
+}
+
 
 function hesk_autoAssignTicket($ticket_category)
 {
@@ -620,14 +779,27 @@ function hesk_autoAssignTicket($ticket_category)
 	$autoassign_owner = array();
 
 	/* Get all possible auto-assign staff, order by number of open tickets */
-	$res = hesk_dbQuery("SELECT `t1`.`id`,`t1`.`user`,`t1`.`name`, `t1`.`email`, `t1`.`language`, `t1`.`isadmin`, `t1`.`categories`, `t1`.`notify_assigned`, `t1`.`heskprivileges`,
-					    (SELECT COUNT(*) FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` FORCE KEY (`statuses`) WHERE `owner`=`t1`.`id` AND `status` IN ('0','1','2','4','5') ) as `open_tickets`
+	$res = hesk_dbQuery("SELECT `t1`.`id`,`t1`.`user`,`t1`.`name`, `t1`.`autoassign`, `t1`.`email`, `t1`.`language`, `t1`.`isadmin`, `t1`.`categories`, `t1`.`notify_assigned`, `t1`.`heskprivileges`,
+					    (SELECT COUNT(*) FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` FORCE KEY (`statuses`) WHERE `owner`=`t1`.`id` AND `status` <> '3' ) as `open_tickets`
 						FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users` AS `t1`
-						WHERE `t1`.`autoassign`='1' ORDER BY `open_tickets` ASC, RAND()");
+						ORDER BY `open_tickets` ASC, RAND()");
+	$autoassign_config_res = hesk_dbQuery("SELECT `autoassign_config` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE `id` = ".intval($ticket_category));
+	$autoassign_config = hesk_dbFetchAssoc($autoassign_config_res);
+	$parsed_autoassign_config = hesk_parseAutoAssignConfig($autoassign_config['autoassign_config']);
 
 	/* Loop through the rows and return the first appropriate one */
 	while ($myuser = hesk_dbFetchAssoc($res))
 	{
+	    /*
+	    If "On - Select Users": Is the user allowed to be selected for this category?
+	    If "On - All Users": Does the user have autoassign enabled on their user record?
+	    */
+        if (($parsed_autoassign_config['operator'] === 'IN' && !in_array($myuser['id'], $parsed_autoassign_config['ids'])) ||
+            ($parsed_autoassign_config['operator'] === 'NOT IN' && in_array($myuser['id'], $parsed_autoassign_config['ids'])) ||
+            ($parsed_autoassign_config['operator'] === '' && $myuser['autoassign'] === '0')) {
+            continue;
+        }
+
 		/* Is this an administrator? */
 		if ($myuser['isadmin'])
 		{
@@ -847,13 +1019,90 @@ function hesk_cleanBfAttempts()
 } // END hesk_cleanAttempts()
 
 
-function hesk_limitBfAttempts($showError=1)
+function hesk_forceLogout($error_message = '', $redirect = 'index.php', $do_die = true, $message_type = 'ERROR')
+{
+    global $hesk_settings, $hesklang;
+
+    if (($id = hesk_SESSION('id', false)) === false) {
+        return true;
+    }
+
+    // Set Offline
+    if ($hesk_settings['online']) {
+        if ( ! function_exists('hesk_setOffline')) {
+            require(HESK_PATH . 'inc/users_online.inc.php');
+        }
+        hesk_setOffline($id);
+    }
+
+    // Clear users' authentication and MFA tokens
+    hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."auth_tokens` WHERE `user_id` = {$id}");
+    hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."mfa_verification_tokens` WHERE `user_id` = {$id} AND `user_type` = 'STAFF'");
+
+    // Stop the session and clear cookies
+    hesk_session_stop();
+    hesk_setcookie('hesk_username', '');
+    hesk_setcookie('hesk_remember', '');
+
+    // Send the user to the login page?
+    if ($redirect !== false) {
+        hesk_session_start();
+        hesk_process_messages($error_message, 'index.php', $message_type);
+    }
+
+    if ($do_die) {
+        exit();
+    }
+
+} // END hesk_forceLogout()
+
+
+function hesk_forceLogoutCustomer($error_message = '', $redirect = 'index.php', $do_die = true, $message_type = 'ERROR')
+{
+    global $hesk_settings, $hesklang;
+
+    if (($id = hesk_SESSION(array('customer', 'id'), false)) === false) {
+        return true;
+    }
+
+    // Clear users' MFA tokens
+    hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."mfa_verification_tokens` WHERE `user_id` = {$id} AND `user_type` = 'CUSTOMER'");
+
+    // Stop the session and clear cookies
+    hesk_session_stop();
+    hesk_setcookie('hesk_customer_remember', '');
+
+    // Send the user to the login page?
+    if ($redirect !== false) {
+        hesk_session_start('CUSTOMER');
+        hesk_process_messages($error_message, $redirect, $message_type);
+    }
+
+    if ($do_die) {
+        exit();
+    }
+
+} // END hesk_forceLogoutCustomer()
+
+
+function hesk_limitInternalBfAttempts()
+{
+    return hesk_limitBfAttempts(false);
+} // END hesk_limitInternalBfAttempts()
+
+
+function hesk_limitBfAttempts($die_with_error = true)
 {
 	global $hesk_settings, $hesklang;
 
 	// Check if this IP is banned permanently
 	if ( hesk_isBannedIP(hesk_getClientIP()) )
 	{
+        if (isset($_SESSION['customer'])) {
+            hesk_forceLogoutCustomer($hesklang['baned_ip']);
+        } else {
+            hesk_forceLogout($hesklang['baned_ip']);
+        }
     	hesk_error($hesklang['baned_ip'], 0);
 	}
 
@@ -887,18 +1136,30 @@ function hesk_limitBfAttempts($showError=1)
     {
     	if ($row['banned'])
         {
-        	$tmp = sprintf($hesklang['yhbb'],$hesk_settings['attempt_banmin']);
-
-            unset($_SESSION); 
-
-        	if ($showError)
+            // Sometimes we just want to log the user out and reset the number of attempts, not ban immediately
+            if ( ! $die_with_error)
             {
-            	hesk_error($tmp,0);
+                hesk_dbQuery("DELETE FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."logins` WHERE `ip`='".hesk_dbEscape($ip)."'");
+                if (isset($_SESSION['customer'])) {
+                    hesk_forceLogoutCustomer($hesklang['baned_ip']);
+                } else {
+                    hesk_forceLogout($hesklang['baned_ip']);
+                }
             }
-            else
-            {
-        		return $tmp;
+
+            $error = sprintf($hesklang['yhbb'], $hesk_settings['attempt_banmin']);
+
+            // If this is a logged-in user, log out
+            if (isset($_SESSION['customer'])) {
+                hesk_forceLogoutCustomer($hesklang['baned_ip']);
+            } else {
+                hesk_forceLogout($hesklang['baned_ip']);
             }
+
+            // Not a logged-in user, throw an error
+            unset($_SESSION);
+        	hesk_error($error, 0);
+
         }
         else
         {
@@ -940,6 +1201,32 @@ function hesk_getCategoryName($id)
 	return $hesk_settings['category_data'][$id]['name'];
 } // END hesk_getCategoryName()
 
+function hesk_getCategoryDueDateInfo($id) {
+    global $hesk_settings;
+
+    // If we already have the name no need to query DB another time
+    if ( isset($hesk_settings['category_data'][$id]['due_date_info']) )
+    {
+        return $hesk_settings['category_data'][$id]['due_date_info'];
+    }
+
+    $res = hesk_dbQuery("SELECT `default_due_date_amount`, `default_due_date_unit` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."categories` WHERE `id`='".intval($id)."' AND `default_due_date_amount` IS NOT NULL LIMIT 1");
+
+    if (hesk_dbNumRows($res) != 1)
+    {
+        return null;
+    }
+
+    $category = hesk_dbFetchAssoc($res);
+
+    $hesk_settings['category_data'][$id]['due_date_info'] = array(
+        'amount' => $category['default_due_date_amount'],
+        'unit' => $category['default_due_date_unit']
+    );
+
+    return $hesk_settings['category_data'][$id]['due_date_info'];
+}
+
 
 function hesk_getReplierName($ticket)
 {
@@ -973,10 +1260,34 @@ function hesk_getReplierName($ticket)
     }
 
     // Last reply by customer
-    return $ticket['name'];
+    if ($ticket['replies'] > 0) {
+        // Get latest customer reply
+        $replier_rs = hesk_dbQuery("SELECT `customer`.`name` AS `name`
+                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` AS `reply`
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+                    ON `reply`.`customer_id` = `customer`.`id`
+                WHERE `replyto` = ".intval($ticket['id'])."
+                    AND `staffid` = 0
+                ORDER BY `reply`.`id` DESC
+                LIMIT 1");
 
+        if ($row = hesk_dbFetchAssoc($replier_rs)) {
+            return $row['name'] !== null ? $row['name'] : $hesklang['anon_name'];
+        }
+    }
+
+    // No replies, grab the requester from the main ticket
+    $requester_name_rs = hesk_dbQuery("SELECT `customer`.`name`
+        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+        LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+            ON `ticket_to_customer`.`customer_id` = `customer`.`id`
+        WHERE `ticket_to_customer`.`ticket_id` = ".intval($ticket['id'])."
+            AND `customer_type` = 'REQUESTER'");
+
+    if ($row = hesk_dbFetchAssoc($requester_name_rs)) {
+        return $row['name'] !== null ? $row['name'] : $hesklang['anon_name'];
+    }
 } // END hesk_getReplierName()
-
 
 function hesk_getOwnerName($id)
 {
@@ -1177,7 +1488,7 @@ function hesk_show_error($message,$title='',$append_colon=true,$extra_class='')
 	$title = $append_colon ? $title . ':' : $title;
 	?>
     <div class="main__content notice-flash <?php echo $extra_class; ?>">
-        <div class="notification red">
+        <div role="alert" class="notification red">
             <b><?php echo $title; ?></b> <?php echo $message; ?>
         </div>
     </div>
@@ -1192,7 +1503,7 @@ function hesk_show_success($message,$title='',$append_colon=true,$extra_class=''
 	$title = $append_colon ? $title . ':' : $title;
 	?>
     <div class="main__content notice-flash <?php echo $extra_class; ?>">
-        <div class="notification green">
+        <div role="status" class="notification green">
             <b><?php echo $title; ?></b> <?php echo $message; ?>
         </div>
     </div>
@@ -1207,7 +1518,7 @@ function hesk_show_notice($message,$title='',$append_colon=true,$extra_class='')
 	$title = $append_colon ? $title . ':' : $title;
 	?>
     <div class="main__content notice-flash <?php echo $extra_class; ?>">
-        <div class="notification orange">
+        <div role="alert" class="notification orange">
             <b><?php echo $title; ?></b> <?php echo $message; ?>
         </div>
     </div>
@@ -1222,7 +1533,7 @@ function hesk_show_info($message,$title='',$append_colon=true,$extra_class='')
 	$title = $append_colon ? $title . ':' : $title;
 	?>
     <div class="main__content notice-flash <?php echo $extra_class; ?>">
-        <div class="notification blue">
+        <div role="status" class="notification blue">
             <b><?php echo $title; ?></b> <?php echo $message; ?>
         </div>
     </div>
@@ -1303,6 +1614,10 @@ function hesk_ticketToPlain($ticket, $specialchars=0, $strip=1)
 	{
 		foreach ($ticket as $key => $value)
 		{
+            if ($key == 'message_html') {
+                continue;
+            }
+
 			$ticket[$key] = is_array($ticket[$key]) ? hesk_ticketToPlain($value, $specialchars, $strip) : hesk_msgToPlain($value, $specialchars, $strip);
 		}
 
@@ -1317,13 +1632,17 @@ function hesk_ticketToPlain($ticket, $specialchars=0, $strip=1)
 
 function hesk_msgToPlain($msg, $specialchars=0, $strip=1)
 {
+    if ($msg === null || $msg === '') {
+        return '';
+    }
+
 	$msg = preg_replace('/\<a href="(mailto:)?([^"]*)"[^\<]*\<\/a\>/i', "$2", $msg);
 	$msg = preg_replace('/<br \/>\s*/',"\n",$msg);
     $msg = trim($msg);
 
     if ($strip)
     {
-    	$msg = stripslashes($msg);
+        $msg = hesk_stripslashes($msg);
     }
 
     if ($specialchars)
@@ -1634,7 +1953,127 @@ function hesk_timeToHHMM($time, $time_format="seconds", $signed=true)
 } // END hesk_timeToHHMM()
 
 
-function hesk_date($dt='', $from_database=false, $is_str=true, $return_str=true)
+function hesk_translate_date_string($dt, $reverse = false)
+{
+    global $hesk_settings, $hesklang;
+
+    // This is a simple translate for simple use cases; more complex will need the Intl extension
+
+    // No point in translating English dates
+    if ($hesk_settings['language'] == 'English') {
+        return $dt;
+    }
+
+    // First, let' replace the long day names
+    $dt_string_map = array(
+        'Monday'    => $hesklang['d1'],
+        'Tuesday'   => $hesklang['d2'],
+        'Wednesday' => $hesklang['d3'],
+        'Thursday'  => $hesklang['d4'],
+        'Friday'    => $hesklang['d5'],
+        'Saturday'  => $hesklang['d6'],
+        'Sunday'    => $hesklang['d0'],
+    );
+    if ($reverse) {
+        $dt_translated = str_replace(array_values($dt_string_map), array_keys($dt_string_map), $dt);
+    } else {
+        $dt_translated = str_replace(array_keys($dt_string_map), array_values($dt_string_map), $dt);
+    }
+
+    // If nothing found, try short day names
+    if ($dt_translated == $dt) {
+        $dt_string_map = array(
+            'Mon' => $hesklang['mon'],
+            'Tue' => $hesklang['tue'],
+            'Wed' => $hesklang['wed'],
+            'Thu' => $hesklang['thu'],
+            'Fri' => $hesklang['fri'],
+            'Sat' => $hesklang['sat'],
+            'Sun' => $hesklang['sun'],
+        );
+        if ($reverse) {
+            $dt_translated = str_replace(array_values($dt_string_map), array_keys($dt_string_map), $dt);
+        } else {
+            $dt_translated = str_replace(array_keys($dt_string_map), array_values($dt_string_map), $dt);
+        }
+    }
+
+    // Day names done, update $dt so we can compare after processing months now
+    $dt = $dt_translated;
+
+    // Try full month names
+    $dt_string_map = array(
+        'January'   => $hesklang['m1'],
+        'February'  => $hesklang['m2'],
+        'March'     => $hesklang['m3'],
+        'April'     => $hesklang['m4'],
+        'May'       => $hesklang['m5'],
+        'June'      => $hesklang['m6'],
+        'July'      => $hesklang['m7'],
+        'August'    => $hesklang['m8'],
+        'September' => $hesklang['m9'],
+        'October'   => $hesklang['m10'],
+        'November'  => $hesklang['m11'],
+        'December'  => $hesklang['m12'],
+    );
+    if ($reverse) {
+        $dt_translated = str_replace(array_values($dt_string_map), array_keys($dt_string_map), $dt);
+    } else {
+        $dt_translated = str_replace(array_keys($dt_string_map), array_values($dt_string_map), $dt);
+    }
+
+    // If nothing found, try short month names
+    if ($dt_translated == $dt) {
+        $dt_string_map = array(
+            'Jan' => $hesklang['ms01'],
+            'Feb' => $hesklang['ms02'],
+            'Mar' => $hesklang['ms03'],
+            'Apr' => $hesklang['ms04'],
+            'May' => $hesklang['ms05'],
+            'Jun' => $hesklang['ms06'],
+            'Jul' => $hesklang['ms07'],
+            'Aug' => $hesklang['ms08'],
+            'Sep' => $hesklang['ms09'],
+            'Oct' => $hesklang['ms10'],
+            'Nov' => $hesklang['ms11'],
+            'Dec' => $hesklang['ms12'],
+        );
+        if ($reverse) {
+            $dt_translated = str_replace(array_values($dt_string_map), array_keys($dt_string_map), $dt);
+        } else {
+            $dt_translated = str_replace(array_keys($dt_string_map), array_values($dt_string_map), $dt);
+        }
+    }
+
+    // If still nothing found, try lowercase short month names
+    if ($dt_translated == $dt) {
+        $dt_string_map = array(
+            'jan' => $hesklang['ms01'],
+            'feb' => $hesklang['ms02'],
+            'mar' => $hesklang['ms03'],
+            'apr' => $hesklang['ms04'],
+            'may' => $hesklang['ms05'],
+            'jun' => $hesklang['ms06'],
+            'jul' => $hesklang['ms07'],
+            'aug' => $hesklang['ms08'],
+            'sep' => $hesklang['ms09'],
+            'oct' => $hesklang['ms10'],
+            'nov' => $hesklang['ms11'],
+            'dec' => $hesklang['ms12'],
+        );
+        if ($reverse) {
+            $dt_translated = str_replace(array_values($dt_string_map), array_keys($dt_string_map), $dt);
+        } else {
+            $dt_translated = str_replace(array_keys($dt_string_map), array_values($dt_string_map), $dt);
+        }
+    }
+
+    return $dt_translated;
+
+} // END hesk_translate_date_string()
+
+
+function hesk_date($dt='', $from_database=false, $is_str=true, $return_str=true, $format = false)
 {
 	global $hesk_settings;
 
@@ -1647,8 +2086,17 @@ function hesk_date($dt='', $from_database=false, $is_str=true, $return_str=true)
     	$dt = strtotime($dt);
     }
 
-	// Return formatted date
-	return $return_str ? date($hesk_settings['timeformat'], $dt) : $dt;
+    if ( ! $return_str)
+    {
+        return $dt;
+    }
+
+    if ($format)
+    {
+        return hesk_translate_date_string(date($format, $dt));
+    }
+
+    return hesk_translate_date_string(date($hesk_settings['format_timestamp'], $dt));
 
 } // End hesk_date()
 
@@ -1666,18 +2114,59 @@ function hesk_format_due_date($dt, $is_str=true)
         $dt = strtotime($dt);
     }
 
-    if (substr_count($hesk_settings['timeformat'], ' ') === 1)
-    {
-        list($date_format, $time_format) = explode(' ', $hesk_settings['timeformat']);
-    }
-    else
-    {
-        $date_format = 'Y-m-d';
-    }
-
-    return date($date_format, $dt);
+    return hesk_translate_date_string(date($hesk_settings['format_date'], $dt));
 
 } // End hesk_format_due_date()
+
+
+function hesk_datepicker_get_date($dt, $default_to = false, $timezone = false)
+{
+    global $hesk_settings;
+
+    if ($hesk_settings['language'] != 'English') {
+        $dt = hesk_translate_date_string($dt, true);
+    }
+
+    if ($timezone) {
+        $date = DateTime::createFromFormat($hesk_settings['format_datepicker_php'], $dt, new DateTimeZone($timezone));
+    } else {
+        $date = DateTime::createFromFormat($hesk_settings['format_datepicker_php'], $dt);
+    }
+
+    if ($date === false && $default_to) {
+        if ($timezone) {
+            $date = new DateTime($default_to, new DateTimeZone($timezone));
+        } else {
+            $date = new DateTime($default_to);
+        }
+    }
+
+    return $date;
+
+} // End hesk_datepicker_get_date()
+
+
+function hesk_datepicker_format_date($dt, $timezone = false)
+{
+    global $hesk_settings;
+
+    // TODO: translate strings
+
+    if ($dt == '') {
+        return $dt;
+    }
+
+    if ($timezone) {
+        date_default_timezone_set($timezone);
+        $dt = date($hesk_settings['format_datepicker_php'], $dt);
+        hesk_setTimezone();
+    } else {
+        $dt = date($hesk_settings['format_datepicker_php'], $dt);
+    }
+
+    return hesk_translate_date_string($dt);
+
+} // End hesk_datepicker_format_date()
 
 
 function hesk_array_fill_keys($keys, $value)
@@ -1898,6 +2387,13 @@ function hesk_isNumber($in, $error = 0)
 
 } // END hesk_isNumber()
 
+function hesk_bytesToUnits($size) {
+    $bytes_in_megabyte = 1048576;
+    $quotient = $size / $bytes_in_megabyte;
+
+    return intval($quotient);
+}
+
 
 function hesk_validateURL($url, $error=false)
 {
@@ -1970,7 +2466,7 @@ function hesk_input($in, $error=0, $redirect_to='', $force_slashes=0, $max_lengt
 	// Add slashes
     if (HESK_SLASH || $force_slashes)
     {
-		$in = addslashes($in);
+        $in = hesk_addslashes($in);
     }
 
 	// Check length
@@ -1989,43 +2485,16 @@ function hesk_validateEmail($address,$error,$required=1)
 {
 	global $hesklang, $hesk_settings;
 
-	/* Allow multiple emails to be used? */
-	if ($hesk_settings['multi_eml'])
-	{
-		/* Make sure the format is correct */
-		$address = preg_replace('/\s/','',$address);
-		$address = str_replace(';',',',$address);
+    /* Make sure people don't try to enter multiple addresses */
+    $address = str_replace(strstr($address,','),'',$address);
+    $address = str_replace(strstr($address,';'),'',$address);
+    $address = trim($address);
 
-		/* Check if addresses are valid */
-		$all = array_unique(explode(',',$address));
-		foreach ($all as $k => $v)
-		{
-			if ( ! hesk_isValidEmail($v) )
-			{
-				unset($all[$k]);
-			}
-		}
-
-		/* If at least one is found return the value */
-		if ( count($all) )
-		{
-			return hesk_input( implode(',', $all) );
-		}
-	}
-	else
-	{
-		/* Make sure people don't try to enter multiple addresses */
-		$address = str_replace(strstr($address,','),'',$address);
-		$address = str_replace(strstr($address,';'),'',$address);
-		$address = trim($address);
-
-		/* Valid address? */
-		if ( hesk_isValidEmail($address) )
-		{
-			return hesk_input($address);
-		}
-	}
-
+    /* Valid address? */
+    if ( hesk_isValidEmail($address) )
+    {
+        return hesk_input($address);
+    }
 
 	if ($required)
 	{
@@ -2037,6 +2506,26 @@ function hesk_validateEmail($address,$error,$required=1)
 	}
 
 } // END hesk_validateEmail()
+
+function hesk_validateFollowers($followers) {
+    /* Make sure the format is correct */
+    $followers = preg_replace('/\s/','',$followers);
+    $followers = str_replace(';',',',$followers);
+
+    /* Check if addresses are valid */
+    $all = explode(',',$followers);
+    $all = array_map('strtolower', $all);
+    $all = array_unique($all);
+    foreach ($all as $k => $v)
+    {
+        if ( ! hesk_isValidEmail($v) )
+        {
+            unset($all[$k]);
+        }
+    }
+
+    return $all;
+}
 
 
 function hesk_isValidEmail($email)
@@ -2118,11 +2607,12 @@ function hesk_session_regenerate_id()
 } // END hesk_session_regenerate_id()
 
 
-function hesk_session_start()
+function hesk_session_start($user_type = 'STAFF')
 {
     global $hesk_settings;
 
-    session_name('HESK' . sha1(dirname(__FILE__) . '$r^k*Zkq|w1(G@!-D?3%') );
+    $prefix = $user_type === 'STAFF' ? 'HESK' : 'HESKC';
+    session_name($prefix . sha1(dirname(__FILE__) . '$r^k*Zkq|w1(G@!-D?3%') );
 
     // PHP < 7.3 doesn't support the SameSite attribute, let's use a trick
     if (PHP_VERSION_ID < 70300)
@@ -2180,13 +2670,33 @@ function hesk_stripArray($a)
         }
         else
         {
-        	$a[$k] = stripslashes($v);
+            $a[$k] = hesk_stripslashes($v);
         }
     }
 
     reset ($a);
     return ($a);
 } // END hesk_stripArray()
+
+
+function hesk_stripslashes($in)
+{
+    if ($in === null) {
+        return '';
+    }
+
+    return stripslashes($in);
+} // END hesk_stripslashes()
+
+
+function hesk_addslashes($in)
+{
+    if ($in === null) {
+        return '';
+    }
+
+    return addslashes($in);
+} // END hesk_addslashes()
 
 
 function hesk_slashArray($a)
@@ -2199,7 +2709,7 @@ function hesk_slashArray($a)
         }
         else
         {
-        	$a[$k] = addslashes($v);
+            $a[$k] = hesk_addslashes($v);
         }
     }
 
@@ -2247,7 +2757,7 @@ function hesk_check_maintenance($dodie = true)
 	$hesk_installed = $hesk_settings['maintenance_mode'] == 0 &&
                       $hesk_settings['question_ans'] == 'PB6YM' &&
                       $hesk_settings['site_title'] == 'Website' &&
-                      $hesk_settings['site_url'] == 'http://www.example.com' &&
+                      $hesk_settings['site_url'] == 'https://www.example.com' &&
                       $hesk_settings['webmaster_mail'] == 'support@example.com' &&
                       $hesk_settings['noreply_mail'] == 'support@example.com' &&
                       $hesk_settings['noreply_name'] == 'Help Desk' &&
@@ -2256,9 +2766,8 @@ function hesk_check_maintenance($dodie = true)
                       $hesk_settings['db_user'] == 'test' &&
                       $hesk_settings['db_pass'] == 'test' &&
                       $hesk_settings['db_pfix'] == 'hesk_' &&
-                      $hesk_settings['db_vrsn'] == 0 &&
                       $hesk_settings['hesk_title'] == 'Help Desk' &&
-                      $hesk_settings['hesk_url'] == 'http://www.example.com/helpdesk';
+                      $hesk_settings['hesk_url'] == 'https://www.example.com/helpdesk';
 
     // Just exist if TEMPLATE_PATH is not defined
     if ( ! defined('TEMPLATE_PATH')) {
@@ -2295,12 +2804,12 @@ function hesk_error($error,$showback=1) {
     require_once(HESK_PATH . 'inc/header.inc.php');
     ?>
     <div class="main__content notice-flash">
-        <div class="notification red">
+        <div role="alert" class="notification red">
             <b><?php echo $hesklang['error']; ?></b>
             <p><?php echo $error; ?></p><br>
             <?php if ($hesk_settings['debug_mode']): ?>
                 <p>
-                    <span style="color:red;font-weight:bold"><?php echo $hesklang['warn']; ?></span><br>
+                    <span class="text-danger text-bold"><?php echo $hesklang['warn']; ?></span><br>
                     <?php echo $hesklang['dmod']; ?>
                 </p>
             <?php
@@ -2401,8 +2910,8 @@ function hesk_full_name_to_first_name($full_name)
         }
     }
 
-    // If the first name doesn't have at least 3 chars, return the original
-    if(hesk_mb_strlen($first_name) < 3)
+    // If the first name doesn't have at least 2 chars, return the original
+    if(hesk_mb_strlen($first_name) < 2)
     {
         return $full_name;
     }
@@ -2412,13 +2921,7 @@ function hesk_full_name_to_first_name($full_name)
 
 } // END hesk_full_name_to_first_name()
 
-function hesk_generate_delete_modal($title, $body, $confirm_link, $delete_text = '') {
-    global $hesklang, $hesk_settings;
-
-    if ($delete_text == '') {
-        $delete_text = $hesklang['delete'];
-    }
-
+function hesk_generate_random_id() {
     /* Ticket ID can be of these chars */
     $useChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-';
 
@@ -2440,9 +2943,21 @@ function hesk_generate_delete_modal($title, $body, $confirm_link, $delete_text =
     $random_id .= $useChars[mt_rand(0, 62)];
     $random_id .= $useChars[mt_rand(0, 62)];
     $random_id .= $useChars[mt_rand(0, 62)];
+
+    return $random_id;
+}
+
+function hesk_generate_old_delete_modal($title, $body, $confirm_link, $delete_text = '') {
+    global $hesklang, $hesk_settings;
+
+    if ($delete_text == '') {
+        $delete_text = $hesklang['delete'];
+    }
+
+    $random_id = hesk_generate_random_id();
     ?>
     <div class="modal delete-modal" data-modal-id="<?php echo $random_id; ?>">
-        <div class="modal__body" style="white-space: normal">
+        <div class="modal__body" style="white-space: normal; <?php if ($hesk_settings['limit_width']) echo 'max-width:'.$hesk_settings['limit_width'].'px'; ?>">
             <i class="modal__close" data-action="cancel">
                 <svg class="icon icon-close">
                     <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
@@ -2450,19 +2965,64 @@ function hesk_generate_delete_modal($title, $body, $confirm_link, $delete_text =
             </i>
             <h3><?php echo $title; ?></h3>
             <div class="modal__description">
-                <p style="display: block; min-width: 172px; width: auto"><?php echo $body; ?></p>
+                <?php echo $body; ?>
             </div>
             <div class="modal__buttons">
                 <button class="btn btn-border" ripple="ripple" data-action="cancel"><?php echo $hesklang['cancel']; ?></button>
-                <a href="<?php echo $confirm_link; ?>" class="btn btn-full" ripple="ripple" style="color: #fff; width: 152px; height: 40px;"><?php echo $delete_text; ?></a>
+                <a data-confirm-button href="<?php echo $confirm_link; ?>" class="btn btn-full text-white" ripple="ripple" style="width: 152px; height: 40px;"><?php echo $delete_text; ?></a>
             </div>
         </div>
     </div>
     <?php
 
     return $random_id;
-} // end hesk_generate_delete_modal()
+} // end hesk_generate_old_delete_modal()
 
+function hesk_generate_delete_modal($modal_config) {
+    global $hesklang, $hesk_settings;
+
+    $defaults = [
+        'title' => 'MISSING TITLE',
+        'body' => 'MISSING BODY',
+        'confirm_action' => 'MISSING CONFIRM ACTION',
+        'use_form' => false,
+        'delete_text' => $hesklang['delete']
+    ];
+    $options = array_merge($defaults, $modal_config);
+    $random_id = hesk_generate_random_id();
+    ?>
+    <div class="modal delete-modal" data-modal-id="<?php echo $random_id; ?>">
+        <div class="modal__body" style="white-space: normal; <?php if ($hesk_settings['limit_width']) echo 'max-width:'.$hesk_settings['limit_width'].'px'; ?>">
+            <i class="modal__close" data-action="cancel">
+                <svg class="icon icon-close">
+                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-close"></use>
+                </svg>
+            </i>
+            <h3><?php echo $options['title']; ?></h3>
+            <?php if ($options['use_form']): ?>
+            <form action="<?php echo $options['confirm_action']; ?>" method="<?php echo $options['form_method']; ?>">
+                <?php endif; ?>
+                <div class="modal__description">
+                    <p style="display: block; min-width: 172px; width: auto"><?php echo $options['body']; ?></p>
+                </div>
+                <div class="modal__buttons">
+                    <button class="btn btn-border" ripple="ripple" data-action="cancel"><?php echo $hesklang['cancel']; ?></button>
+                    <?php if ($options['use_form']): ?>
+                    <button type="submit" class="btn btn-full text-white" ripple="ripple" style="width: 152px; height: 40px;">
+                        <?php echo $options['delete_text']; ?>
+                    </button>
+                    <?php else: ?>
+                    <a data-confirm-button href="<?php echo $options['confirm_action']; ?>" class="btn btn-full text-white" ripple="ripple" style="width: 152px; height: 40px;"><?php echo $options['delete_text']; ?></a>
+                    <?php endif; ?>
+                </div>
+                <?php if ($options['use_form']): ?>
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+    return $random_id;
+}
 
 function hesk_authorizeNonCLI()
 {
@@ -2490,3 +3050,486 @@ function hesk_authorizeNonCLI()
 
     return true;
 } // END hesk_authorizeNonCLI()
+
+function hesk_maskEmailAddress($email_address) {
+    $mail_parts = explode('@', $email_address);
+    $name = $mail_parts[0];
+    $domain = $mail_parts[1];
+    $domain_with_dot_check = preg_match('/(.+)\.(.*)/', $domain, $domain_matches);
+
+    // 1st of user's mailbox name are exposed
+    $masked = substr($name, 0, 1);
+    $masked .= str_repeat('*', strlen($name) - 1);
+
+    $masked .= '@';
+
+    // Last 2 of mailbox domain prior to .whatever are exposed
+    if ($domain_with_dot_check) {
+        // 1st match is everything before the last dot. Only mask if the domain is at least 2 characters long
+        if (strlen($domain_matches[1]) > 1) {
+            $masked .= str_repeat('*', strlen($domain_matches[1]) - 2);
+            $masked .= substr($domain_matches[1], strlen($domain_matches[1]) - 2, 2);
+            $masked .= '.' . $domain_matches[2];
+        } else {
+            $masked .= $domain;
+        }
+    } else {
+        // Technically a domain with just "localhost" or similar is valid in email land. Just show the last 2 of their domain
+        $masked .= str_repeat('*', strlen($domain) - 2);
+        $masked .= substr($domain, strlen($domain) - 3, 2);
+    }
+
+    return $masked;
+}
+
+function hesk_isThereAnotherAdmin($current_admin_id) {
+    global $hesk_settings;
+
+    $res = hesk_dbQuery("SELECT 1 FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."users` WHERE `isadmin` = '1' AND `id` <> ".intval($current_admin_id));
+
+    return hesk_dbNumRows($res) > 0;
+}
+
+// Alternative to utf8_encode function for PHP 8.2 and 9+ compatibility
+function hesk_iso8859_1_to_utf8($s)
+{
+    // Before PHP 8.2 let's just use utf8_encode
+    if (version_compare(PHP_VERSION, '8.2', '<')) {
+        return utf8_encode($s);
+    }
+
+    $len = strlen($s);
+
+    for ($i = $len >> 1, $j = 0; $i < $len; ++$i, ++$j) {
+        switch (true) {
+            case $s[$i] < "\x80": $s[$j] = $s[$i]; break;
+            case $s[$i] < "\xC0": $s[$j] = "\xC2"; $s[++$j] = $s[$i]; break;
+            default: $s[$j] = "\xC3"; $s[++$j] = chr(ord($s[$i]) - 64); break;
+        }
+    }
+
+    return substr($s, 0, $j);
+}
+
+function hesk_password_hash($password)
+{
+    if ( ! function_exists('password_hash')) {
+        global $hesklang;
+        die($hesklang['old_php_version']);
+    }
+
+    return password_hash($password, PASSWORD_DEFAULT);
+} // END hesk_password_hash()
+
+
+function hesk_password_verify($password, $hash)
+{
+    if ( ! function_exists('password_verify')) {
+        global $hesklang;
+        die($hesklang['old_php_version']);
+    }
+
+    return password_verify($password, $hash);
+} // END hesk_password_verify()
+
+
+function hesk_password_needs_rehash($hash)
+{
+    return password_needs_rehash($hash, PASSWORD_DEFAULT);
+} // END hesk_password_needs_rehash()
+
+function hesk_activeSessionCreateTag($username, $password_hash)
+{
+    $salt = uniqid(mt_rand(), true);
+    return $salt . '|' . sha1($salt . hesk_mb_strtolower($username) . $password_hash);
+} // END hesk_activeSessionCreateTag()
+
+function hesk_verifyGoto($login_type = 'STAFF')
+{
+    // Default redirect URL
+    $url_default = $login_type === 'STAFF' ? 'admin_main.php' : 'index.php';
+
+    // If no "goto" parameter is set, redirect to the default page
+    if ( ! hesk_isREQUEST('goto') )
+    {
+        return $url_default;
+    }
+
+    // Get the "goto" parameter
+    $url = hesk_REQUEST('goto');
+
+    // Fix encoded "&"
+    $url = str_replace('&amp;', '&', $url);
+
+    // Parse the URL for verification
+    $url_parts = parse_url($url);
+
+    // The "path" part is required
+    if ( ! isset($url_parts['path']) )
+    {
+        return $url_default;
+    }
+
+    // Extract the file name from path
+    $url = basename($url_parts['path']);
+
+    // Allowed files for redirect
+    $OK_urls = [
+        'index.php' => '',
+        'my_tickets.php' => '',
+        'manage_mfa.php' => '',
+        'knowledgebase.php' => ''
+    ];
+
+    if ($login_type === 'STAFF') {
+        $OK_urls = array(
+            'admin_main.php' => '',
+            'admin_settings_email.php' => '',
+            'admin_settings_general.php' => '',
+            'admin_settings_help_desk.php' => '',
+            'admin_settings_knowledgebase.php' => '',
+            'admin_settings_misc.php' => '',
+            'admin_settings_save.php' => 'admin_settings_general.php',
+            'admin_settings_ticket_list.php' => '',
+            'admin_ticket.php' => '',
+            'archive.php' => '',
+            'assign_owner.php' => '',
+            'banned_emails.php' => '',
+            'banned_ips.php' => '',
+            'change_status.php' => '',
+            'custom_fields.php' => '',
+            'custom_statuses.php' => '',
+            'edit_post.php' => '',
+            'email_templates.php' => '',
+            'export.php' => '',
+            'find_tickets.php' => '',
+            'generate_spam_question.php' => '',
+            'knowledgebase_private.php' => '',
+            'lock.php' => '',
+            'mail.php' => '',
+            'mail.php?a=read&id=1' => '',
+            'manage_canned.php' => '',
+            'manage_categories.php' => '',
+            'manage_knowledgebase.php' => '',
+            'manage_ticket_templates.php' => '',
+            'manage_users.php' => '',
+            'manage_customers.php' => '',
+            'module_statistics.php' => '',
+            'module_escalate.php' => '',
+            'module_recurring_tickets.php' => '',
+            'module_satisfaction.php' => '',
+            'module_satisfaction_optout.php' => '',
+            'new_ticket.php' => '',
+            'oauth_providers.php' => '',
+            'profile.php' => '',
+            'reports.php' => '',
+            'service_messages.php' => '',
+            'show_tickets.php' => '',
+        );
+    }
+
+    // URL must match one of the allowed ones
+    if ( ! isset($OK_urls[$url]) )
+    {
+        return $url_default;
+    }
+
+    // Modify redirect?
+    if ( strlen($OK_urls[$url]) )
+    {
+        $url = $OK_urls[$url];
+    }
+
+    // All OK, return the URL with query if set
+    return isset($url_parts['query']) ? $url.'?'.$url_parts['query'] : $url;
+
+} // END hesk_verifyGoto()
+
+function hesk_activeSessionValidate($username, $password_hash, $tag)
+{
+    // Salt and hash need to be separated by a |
+    if ( ! strpos($tag, '|') )
+    {
+        return false;
+    }
+
+    // Get two parts of the tag
+    list($salt, $hash) = explode('|', $tag, 2);
+
+    // Make sure the hash matches existing username and password
+    if ($hash == sha1($salt . hesk_mb_strtolower($username) . $password_hash) )
+    {
+        return true;
+    }
+
+    return false;
+} // END hesk_activeSessionValidate()
+
+function hesk_time_since($original)
+{
+    global $hesk_settings, $hesklang, $mysql_time;
+
+    /* array of time period chunks */
+    $chunks = array(
+        array(60 * 60 * 24 * 365 , $hesklang['abbr']['year']),
+        array(60 * 60 * 24 * 30 , $hesklang['abbr']['month']),
+        array(60 * 60 * 24 * 7, $hesklang['abbr']['week']),
+        array(60 * 60 * 24 , $hesklang['abbr']['day']),
+        array(60 * 60 , $hesklang['abbr']['hour']),
+        array(60 , $hesklang['abbr']['minute']),
+        array(1 , $hesklang['abbr']['second']),
+    );
+
+    /* Invalid time */
+    if ($mysql_time < $original)
+    {
+        // DEBUG return "T: $mysql_time (".date('Y-m-d H:i:s',$mysql_time).")<br>O: $original (".date('Y-m-d H:i:s',$original).")";
+        return "0".$hesklang['abbr']['second'];
+    }
+
+    $since = $mysql_time - $original;
+
+    // $j saves performing the count function each time around the loop
+    for ($i = 0, $j = count($chunks); $i < $j; $i++) {
+
+        $seconds = $chunks[$i][0];
+        $name = $chunks[$i][1];
+
+        // finding the biggest chunk (if the chunk fits, break)
+        if (($count = floor($since / $seconds)) != 0) {
+            // DEBUG print "<!-- It's $name -->\n";
+            break;
+        }
+    }
+
+    $print = "$count{$name}";
+
+    if ($i + 1 < $j) {
+        // now getting the second item
+        $seconds2 = $chunks[$i + 1][0];
+        $name2 = $chunks[$i + 1][1];
+
+        // add second item if it's greater than 0
+        if (($count2 = floor(($since - ($seconds * $count)) / $seconds2)) != 0) {
+            $print .= "$count2{$name2}";
+        }
+    }
+    return $print;
+} // END hesk_time_since()
+
+
+function hesk_time_lastchange($original)
+{
+    global $hesk_settings, $hesklang;
+
+    // Save time format setting so we can restore it later
+    $copy = $hesk_settings['format_timestamp'];
+
+    // We need this time format for this function
+    $hesk_settings['format_timestamp'] = 'Y-m-d H:i:s';
+
+    // Get HESK time-adjusted start of today if not already
+    if ( ! defined('HESK_TIME_TODAY') )
+    {
+        // Adjust for HESK time and define constants for alter use
+        define('HESK_TIME_TODAY',		date('Y-m-d 00:00:00', hesk_date(NULL, false, false, false) ) );
+        define('HESK_TIME_YESTERDAY',	date('Y-m-d 00:00:00', strtotime(HESK_TIME_TODAY)-86400) ) ;
+    }
+
+    // Adjust HESK time difference and get day name
+    $ticket_time = hesk_date($original, true);
+
+    if ($ticket_time >= HESK_TIME_TODAY)
+    {
+        // For today show HH:MM
+        $day = substr($ticket_time, 11, 5);
+    }
+    elseif ($ticket_time >= HESK_TIME_YESTERDAY)
+    {
+        // For yesterday show word "Yesterday"
+        $day = $hesklang['r2'];
+    }
+    else
+    {
+        // For other days show DD MMM YY
+        list($y, $m, $d) = explode('-', substr($ticket_time, 0, 10) );
+        $day = '<span style="white-space: nowrap;">' . $d . ' ' . $hesklang['ms'.$m] . ' ' . substr($y, 2) . '</span>';
+    }
+
+    // Restore original time format setting
+    $hesk_settings['format_timestamp'] = $copy;
+
+    // Return value to display
+    return $day;
+
+} // END hesk_time_lastchange()
+
+// Checks the user if they're elevated and not expired. If not, redirect to the elevator
+function hesk_check_user_elevation($post_elevation_redirect, $customer_side = false) {
+
+    if ($customer_side && (!isset($_SESSION['customer']['elevated']) || $_SESSION['customer']['elevated'] < new DateTime())) {
+        $_SESSION['customer']['elevated'] = null;
+        $_SESSION['customer']['elevator_target'] = $post_elevation_redirect;
+        header('Location: elevator.php');
+        exit();
+    } elseif (!$customer_side && (!hesk_SESSION('elevated') || hesk_SESSION('elevated') < new DateTime())) {
+        $_SESSION['elevated'] = null;
+        $_SESSION['elevator_target'] = $post_elevation_redirect;
+        header('Location: elevator.php');
+        exit();
+    }
+
+    return true;
+}
+
+function hesk_get_primary_customer_for_ticket($ticket_id, $fail_on_missing_customer = true) {
+    global $hesk_settings, $hesklang;
+
+    $customer_res = hesk_dbQuery("SELECT * FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."customers`
+	WHERE `id` = (
+		SELECT `customer_id`
+		FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer`
+		WHERE `ticket_id` = ".intval($ticket_id)."
+		    AND `customer_type` = 'REQUESTER'
+	)");
+    if (hesk_dbNumRows($customer_res) !== 1) {
+        if ($fail_on_missing_customer) {
+            hesk_error($hesklang['customer_not_found']);
+        } else {
+            return null;
+        }
+    }
+    return hesk_dbFetchAssoc($customer_res);
+}
+
+function hesk_output_customer_name_and_email($customer, $html_encoded_brackets = true) {
+    global $hesklang;
+
+    if ($customer === null || empty($customer)) {
+        return $hesklang['anon_name'];
+    }
+
+    $name = $customer['name'];
+    $email = $customer['email'];
+    if ($name ===  null || $name === '') {
+        return $email;
+    }
+    if ($email === null || $email === '') {
+        return $name;
+    }
+
+    // TODO I really don't like having HTML-encoded stuff in here :/
+    $less_than = $html_encoded_brackets ? '&lt;' : '<';
+    $greater_than = $html_encoded_brackets ? '&gt;' : '>';
+
+    return "{$name} {$less_than}{$email}{$greater_than}";
+}
+
+function hesk_output_pager($total_count, $total_pages, $current_page, $query_url, $query_param_name = 'page-number') {
+    global $hesklang;
+
+    $prev_page = ($current_page - 1 <= 0) ? 0 : $current_page - 1;
+    $next_page = ($current_page + 1 > $total_pages) ? 0 : $current_page + 1;
+    $query_param = $query_url === '' ? '?' : '&';
+
+    if ($total_pages <= 1) {
+        return;
+    }
+
+    /* List pages */
+    echo '<div class="pagination-wrap"><div class="pagination">';
+    if ($total_pages >= 7) {
+        if ($current_page > 2) {
+            echo '
+                        <a href="'.$query_url.$query_param.$query_param_name.'=1" class="btn pagination__nav-btn">
+                            <svg class="icon icon-chevron-left" style="margin-right:-6px">
+                              <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-chevron-left"></use>
+                            </svg>
+                            <svg class="icon icon-chevron-left">
+                              <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-chevron-left"></use>
+                            </svg>
+                            '.$hesklang['pager_first'].'
+                        </a>';
+        }
+
+        if ($prev_page) {
+            echo '
+                        <a href="'.$query_url.$query_param.$query_param_name.'='.$prev_page.'" class="btn pagination__nav-btn">
+                            <svg class="icon icon-chevron-left">
+                              <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-chevron-left"></use>
+                            </svg>
+                            '.$hesklang['pager_previous'].'
+                        </a>';
+        }
+    }
+
+    echo '<ul class="pagination__list">';
+    for ($i=1; $i<=$total_pages; $i++) {
+        if ($i <= ($current_page+5) && $i >= ($current_page-5)) {
+            if ($i == $current_page) {
+                echo '
+                            <li class="pagination__item is-current">
+                              <a href="javascript:" class="pagination__link">'.$i.'</a>
+                            </li>';
+            } else {
+                echo '
+                            <li class="pagination__item ">
+                              <a href="'.$query_url.$query_param.$query_param_name.'='.$i.'" class="pagination__link">'.$i.'</a>
+                            </li>';
+            }
+        }
+    }
+    echo '</ul>';
+
+    if ($total_pages >= 7) {
+        if ($next_page) {
+            echo '
+                        <a href="'.$query_url.$query_param.$query_param_name.'='.$next_page.'" class="btn pagination__nav-btn">
+                            '.$hesklang['pager_next'].'
+                            <svg class="icon icon-chevron-right">
+                              <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-chevron-right"></use>
+                            </svg>
+                        </a>';
+        }
+
+        if ($current_page < ($total_pages - 1)) {
+            echo '
+                        <a href="'.$query_url.$query_param.$query_param_name.'='.$total_pages.'" class="btn pagination__nav-btn">
+                            '.$hesklang['pager_last'].'
+                            <svg class="icon icon-chevron-right">
+                              <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-chevron-right"></use>
+                            </svg>
+                            <svg class="icon icon-chevron-right" style="margin-left:-6px">
+                              <use xlink:href="'. HESK_PATH .'img/sprite.svg#icon-chevron-right"></use>
+                            </svg>
+                        </a>';
+        }
+    }
+    echo '</div>';
+    echo '<p class="pagination__amount">'.sprintf($hesklang['customers_on_pages'], $total_count, $total_pages).'</p>';
+    echo '</div>';
+}
+
+
+function hesk_isTicketCollaborator($ticket_id, $user_id)
+{
+    global $hesk_settings, $hesklang, $hesk_db_link;
+
+    $result = hesk_dbQuery('SELECT `id` FROM `'.hesk_dbEscape($hesk_settings['db_pfix']).'ticket_to_collaborator` WHERE `ticket_id`='.intval($ticket_id).' AND `user_id`='.intval($user_id).' LIMIT 1');
+
+    return hesk_dbNumRows($result);
+} // END hesk_isTicketCollaborator()
+
+
+function hesk_getTicketsCollaboratorIDs($ticket_id)
+{
+    global $hesk_settings, $hesklang, $hesk_db_link;
+
+    $collaborators = array();
+    $res_w = hesk_dbQuery("SELECT `user_id` FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` WHERE `ticket_id`=".intval($ticket_id));
+    while ($collaborator = hesk_dbFetchAssoc($res_w)) {
+        $collaborators[] = $collaborator['user_id'];
+    }
+
+    return $collaborators;
+} // END hesk_getTicketsCollaboratorIDs()   */

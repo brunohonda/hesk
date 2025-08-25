@@ -1,0 +1,5 @@
+<p>Dear %%NAME%%,</p>
+<p>We couldn't process your email "%%SUBJECT%%" because you don't have an account with us.</p>
+<p>This help desk is available only to registered users.</p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

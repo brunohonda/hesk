@@ -1,0 +1,5 @@
+<p>Dear %%NAME%%,</p>
+<p>Thank you for creating an account. Click the link below to activate your account:</p>
+<p><a href="%%VERIFICATION_URL%%">%%VERIFICATION_URL%%</a></p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

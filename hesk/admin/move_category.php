@@ -20,6 +20,7 @@ require(HESK_PATH . 'inc/common.inc.php');
 require(HESK_PATH . 'inc/admin_functions.inc.php');
 hesk_load_database_functions();
 require(HESK_PATH . 'inc/email_functions.inc.php');
+require_once(HESK_PATH . 'inc/customer_accounts.inc.php');
 
 hesk_session_start();
 hesk_dbConnect();
@@ -123,20 +124,24 @@ if ($need_to_reassign || ! $ticket['owner'])
 hesk_dbQuery("UPDATE `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` SET `category`='".intval($category)."', `owner`='".intval($ticket['owner'])."' , `history`=CONCAT(`history`,'".hesk_dbEscape($history)."') WHERE `trackid`='".hesk_dbEscape($trackingID)."'");
 
 $ticket['category'] = $category;
+$customers = hesk_get_customers_for_ticket($ticket['id']);
+$customer_emails = array_map(function($customer) { return $customer['email']; }, $customers);
+$customer_names = array_map(function($customer) { return $customer['name']; }, $customers);
 
 /* --> Prepare message */
 
 // 1. Generate the array with ticket info that can be used in emails
 $info = array(
-'email'			=> $ticket['email'],
+'email'			=> implode(';', $customer_emails),
 'category'		=> $ticket['category'],
 'priority'		=> $ticket['priority'],
 'owner'			=> $ticket['owner'],
 'trackid'		=> $ticket['trackid'],
 'status'		=> $ticket['status'],
-'name'			=> $ticket['name'],
+'name'			=> implode(',', $customer_names),
 'subject'		=> $ticket['subject'],
 'message'		=> $ticket['message'],
+'message_html'  => $ticket['message_html'],
 'attachments'	=> $ticket['attachments'],
 'dt'			=> hesk_date($ticket['dt'], true),
 'lastchange'	=> hesk_date($ticket['lastchange'], true),
@@ -159,7 +164,7 @@ $ticket = hesk_ticketToPlain($info, 1, 0);
 /* --> From autoassign? */
 if ($need_to_reassign && ! empty($autoassign_owner['email']) )
 {
-	hesk_notifyAssignedStaff($autoassign_owner, 'ticket_assigned_to_you');
+	hesk_notifyAssignedStaff($autoassign_owner, 'ticket_assigned_to_you', 'notify_assigned', false);
 }
 /* --> No autoassign, find and notify appropriate staff */
 elseif ( ! $ticket['owner'] )

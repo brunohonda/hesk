@@ -25,7 +25,6 @@ require(HESK_PATH . 'hesk_settings.inc.php');
 // Save the default language for the settings page before choosing user's preferred one
 $hesk_settings['language_default'] = $hesk_settings['language'];
 require(HESK_PATH . 'inc/common.inc.php');
-$hesk_settings['language'] = $hesk_settings['language_default'];
 require(HESK_PATH . 'inc/admin_functions.inc.php');
 require(HESK_PATH . 'inc/setup_functions.inc.php');
 hesk_load_database_functions();
@@ -123,11 +122,20 @@ hesk_handle_messages();
                     </div>
                     <div class="radio-custom">
                         <input type="radio" id="s_submittedformat1" name="s_submittedformat" value="1" <?php echo $hesk_settings['submittedformat'] == 1 ? 'checked' : ''; ?>>
-                        <label for="s_submittedformat1"><?php echo $hesklang['lcf1']; ?></label>
+                        <label for="s_submittedformat1"><?php echo $hesklang['lcf1']; ?> (<?php echo hesk_date(false, false, true, true, $hesk_settings['format_timestamp']); ?>)</label>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" id="s_submittedformat3" name="s_submittedformat" value="3" <?php echo $hesk_settings['submittedformat'] == 3 ? 'checked' : ''; ?>>
+                        <label for="s_submittedformat3"><?php echo $hesklang['lcf3']; ?> (<?php echo hesk_date(false, false, true, true, $hesk_settings['format_date']); ?>)</label>
                     </div>
                     <div class="radio-custom">
                         <input type="radio" id="s_submittedformat0" name="s_submittedformat" value="0" <?php echo $hesk_settings['submittedformat'] == 0 ? 'checked' : ''; ?>>
                         <label for="s_submittedformat0"><?php echo $hesklang['lcf0']; ?></label>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" id="s_submittedformat4" name="s_submittedformat" value="4" <?php echo $hesk_settings['submittedformat'] == 4 ? 'checked' : ''; ?>>
+                        <label for="s_submittedformat4"><?php echo $hesklang['custom']; ?>:</label>
+                        <input type="text" class="form-control" style="max-width: 200px; margin-left: 5px;" id="s_format_submitted" name="s_format_submitted" maxlength="255" value="<?php echo $hesk_settings['format_submitted']; ?>">
                     </div>
                 </div>
             </div>
@@ -149,11 +157,20 @@ hesk_handle_messages();
                     </div>
                     <div class="radio-custom">
                         <input type="radio" id="s_updatedformat1" name="s_updatedformat" value="1" <?php echo $hesk_settings['updatedformat'] == 1 ? 'checked' : ''; ?>>
-                        <label for="s_updatedformat1"><?php echo $hesklang['lcf1']; ?></label>
+                        <label for="s_updatedformat1"><?php echo $hesklang['lcf1']; ?> (<?php echo hesk_date(false, false, true, true, $hesk_settings['format_timestamp']); ?>)</label>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" id="s_updatedformat3" name="s_updatedformat" value="3" <?php echo $hesk_settings['updatedformat'] == 3 ? 'checked' : ''; ?>>
+                        <label for="s_updatedformat3"><?php echo $hesklang['lcf3']; ?> (<?php echo hesk_date(false, false, true, true, $hesk_settings['format_date']); ?>)</label>
                     </div>
                     <div class="radio-custom">
                         <input type="radio" id="s_updatedformat0" name="s_updatedformat" value="0" <?php echo $hesk_settings['updatedformat'] == 0 ? 'checked' : ''; ?>>
                         <label for="s_updatedformat0"><?php echo $hesklang['lcf0']; ?></label>
+                    </div>
+                    <div class="radio-custom">
+                        <input type="radio" id="s_updatedformat4" name="s_updatedformat" value="4" <?php echo $hesk_settings['updatedformat'] == 4 ? 'checked' : ''; ?>>
+                        <label for="s_updatedformat4"><?php echo $hesklang['custom']; ?>:</label>
+                        <input type="text" class="form-control" style="max-width: 200px; margin-left: 5px;" id="s_format_updated" name="s_format_updated" maxlength="255" value="<?php echo $hesk_settings['format_updated']; ?>">
                     </div>
                 </div>
             </div>

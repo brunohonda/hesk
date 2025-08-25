@@ -34,114 +34,20 @@ $sort_possible['lastchange'] = 0;
 $sort_collation = array(
 'name',
 'subject',
-'custom1',
-'custom2',
-'custom3',
-'custom4',
-'custom5',
-'custom6',
-'custom7',
-'custom8',
-'custom9',
-'custom10',
-'custom11',
-'custom12',
-'custom13',
-'custom14',
-'custom15',
-'custom16',
-'custom17',
-'custom18',
-'custom19',
-'custom20',
-'custom21',
-'custom22',
-'custom23',
-'custom24',
-'custom25',
-'custom26',
-'custom27',
-'custom28',
-'custom29',
-'custom30',
-'custom31',
-'custom32',
-'custom33',
-'custom34',
-'custom35',
-'custom36',
-'custom37',
-'custom38',
-'custom39',
-'custom40',
-'custom41',
-'custom42',
-'custom43',
-'custom44',
-'custom45',
-'custom46',
-'custom47',
-'custom48',
-'custom49',
-'custom50',
 );
+for ($i=1;$i<=100;$i++) {
+    $sort_collation[] = 'custom'.$i;
+}
 
 /* Acceptable $group values and default asc(1)/desc(0) setting */
 $group_possible = array(
 'owner' 		=> 1,
 'priority' 		=> 1,
 'category' 		=> 1,
-'custom1'		=> 1,
-'custom2'		=> 1,
-'custom3'		=> 1,
-'custom4'		=> 1,
-'custom5'		=> 1,
-'custom6'		=> 1,
-'custom7'		=> 1,
-'custom8'		=> 1,
-'custom9'		=> 1,
-'custom10'		=> 1,
-'custom11'		=> 1,
-'custom12'		=> 1,
-'custom13'		=> 1,
-'custom14'		=> 1,
-'custom15'		=> 1,
-'custom16'		=> 1,
-'custom17'		=> 1,
-'custom18'		=> 1,
-'custom19'		=> 1,
-'custom20'		=> 1,
-'custom21'		=> 1,
-'custom22'		=> 1,
-'custom23'		=> 1,
-'custom24'		=> 1,
-'custom25'		=> 1,
-'custom26'		=> 1,
-'custom27'		=> 1,
-'custom28'		=> 1,
-'custom29'		=> 1,
-'custom30'		=> 1,
-'custom31'		=> 1,
-'custom32'		=> 1,
-'custom33'		=> 1,
-'custom34'		=> 1,
-'custom35'		=> 1,
-'custom36'		=> 1,
-'custom37'		=> 1,
-'custom38'		=> 1,
-'custom39'		=> 1,
-'custom40'		=> 1,
-'custom41'		=> 1,
-'custom42'		=> 1,
-'custom43'		=> 1,
-'custom44'		=> 1,
-'custom45'		=> 1,
-'custom46'		=> 1,
-'custom47'		=> 1,
-'custom48'		=> 1,
-'custom49'		=> 1,
-'custom50'		=> 1,
 );
+for ($i=1;$i<=100;$i++) {
+    $group_possible['custom'.$i] = 1;
+}
 
 /* Start the order by part of the SQL query */
 $sql .= " ORDER BY ";
@@ -219,7 +125,16 @@ if ($sort == 'category')
 }
 else
 {
-    $sql .= $sort == 'lastreplier' ? " CASE WHEN `lastreplier` = '0' THEN 0 ELSE 1 END DESC, COALESCE(`replierid`, NULLIF(`lastreplier`, '0'), `name`) " : ' `'.hesk_dbEscape($sort).'` ';
+    if ($sort === 'lastreplier') {
+        $sql .= " CASE WHEN `lastreplier` = '0' THEN COALESCE(`lastreplier_customer`.`name`, `customer`.`name`) ELSE `lastreplier_staff`.`name` END ";
+    } elseif ($sort === 'name') {
+        $sql .= " COALESCE(`customer`.`name`, '".hesk_dbEscape($hesklang['anon_name'])."') ";
+    } elseif ($sort === 'priority') {
+        $sql .= ' `priority_order` ';
+    } else {
+        $sql .= ' `'.hesk_dbEscape($sort).'` ';
+    }
+
 
     // Need to set MySQL collation?
     if ( in_array($sort, $sort_collation) )
@@ -253,7 +168,12 @@ else
 /* In the end same results should always be sorted by priority */
 if ($sort != 'priority')
 {
-	$sql .= ' , `priority` ASC ';
+	$sql .= ' , `priority_order` DESC ';
+}
+
+// Always sort by ID to make sure chached results don't cause different results between pages
+if ($sort != 'id') {
+    $sql .= ' , `id` ASC ';
 }
 
 # Uncomment for debugging purposes

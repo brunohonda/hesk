@@ -1,0 +1,5 @@
+<p>Dear %%NAME%%,</p>
+<p>We have received a request to change your email address.</p>
+<p>To confirm this change, please click the link below (expires in 1 hour):<br /><a href="%%VERIFICATION_URL%%">%%VERIFICATION_URL%%</a></p>
+<p>Sincerely,</p>
+<p>%%SITE_TITLE%%<br /><a href="%%SITE_URL%%">%%SITE_URL%%</a></p>

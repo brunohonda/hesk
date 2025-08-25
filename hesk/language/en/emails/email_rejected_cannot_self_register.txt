@@ -1,0 +1,10 @@
+Dear %%NAME%%,
+
+We couldn't process your email "%%SUBJECT%%" because you don't have an account with us.
+
+This help desk is available only to registered users.
+
+Sincerely,
+
+%%SITE_TITLE%%
+%%SITE_URL%%

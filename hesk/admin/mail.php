@@ -357,15 +357,16 @@ function mail_send()
 				'name'		=> hesk_msgToPlain( addslashes($_SESSION['name']) ,1,1),
 				'subject'	=> hesk_msgToPlain($_SESSION['mail']['subject'],1,1),
 				'message'	=> hesk_msgToPlain($_SESSION['mail']['message'],1,1),
+                'message_html' => $_SESSION['mail']['message'],
 				'id'		=> $pm_id,
             );
 
 			/* Format email subject and message for recipient */
 			$subject = hesk_getEmailSubject('new_pm',$pm,0);
-			$message = hesk_getEmailMessage('new_pm',$pm,1,0);
+			list($message, $html_message) = hesk_getEmailMessage('new_pm',$pm,1,0);
 
 			/* Send e-mail */
-			hesk_mail($pm_recipient['email'], $subject, $message);
+			hesk_mail($pm_recipient['email'], [], $subject, $message, $html_message);
         }
 
 		unset($_SESSION['mail']);
@@ -437,17 +438,16 @@ function show_message($actually_show = true)
 	        }
 
 	        $pm['name'] = isset($admins[$pm[$hesk_settings['mailtmp']['other']]]) ? '<a href="mail.php?a=new&amp;id='.$pm[$hesk_settings['mailtmp']['other']].'">'.$admins[$pm[$hesk_settings['mailtmp']['other']]].'</a>' : (($pm['from'] == 9999) ? '<a href="https://www.hesk.com" target="_blank">HESK.com</a>' : $hesklang['e_udel']);
-	        $pm['dt'] = hesk_dateToString($pm['dt'],0,1,0,true);
+            $pm['dt'] = hesk_date($pm['dt'], true, true, true, $hesk_settings['format_timestamp']);
 
 	        if ($actually_show) {
                 ?>
-                <div class="email__list_article"
-                     style="background: #fff; margin-top: 24px; border-radius: 2px; box-shadow: 0 2px 8px 0 rgba(38,40,42,.1)">
+                <div class="email__list_article">
                     <div class="email__list_descr">
                         <div class="head">
                             <button type="button" class="btn btn-empty btn-hide-article">
                                 <svg class="icon icon-back">
-                                    <use xlink:href="./img/sprite.svg#icon-back"></use>
+                                    <use xlink:href="<?php echo HESK_PATH; ?>img/sprite.svg#icon-back"></use>
                                 </svg>
                             </button>
                             <div>
@@ -540,7 +540,7 @@ function mail_list_messages()
                             $pm['subject'] = '<b>'.$pm['subject'].'</b>';
                         }
                         $pm['name'] = isset($admins[$pm[$hesk_settings['mailtmp']['other']]]) ? '<a href="mail.php?a=new&amp;id='.$pm[$hesk_settings['mailtmp']['other']].'">'.$admins[$pm[$hesk_settings['mailtmp']['other']]].'</a>' : (($pm['from'] == 9999) ? '<a href="https://www.hesk.com" target="_blank">HESK.com</a>' : $hesklang['e_udel']);
-                        $pm['dt'] = hesk_dateToString($pm['dt'],0,0,0,true);
+                        $pm['dt'] = hesk_date($pm['dt'], true, true, true, $hesk_settings['format_date']);
                         $css_class = !$pm['read'] && $pm['to'] == $_SESSION['id'] ? 'class="new"' : '';
 
                         echo <<<EOC
@@ -681,7 +681,7 @@ function show_new_form()
 	global $hesk_settings, $hesklang, $admins;
 	?>
     <h2 style="margin-top: 20px"><?php echo $hesklang['new_mail']; ?></h2>
-    <div class="new-message" style="background: #fff; margin-top: 24px; border-radius: 2px; box-shadow: 0 2px 8px 0 rgba(38,40,42,.1)">
+    <div class="new-message">
         <form action="mail.php" method="post" name="form2" class="form">
             <div class="form-group">
                 <label for="email-create-destination"><?php echo $hesklang['m_to']; ?></label>

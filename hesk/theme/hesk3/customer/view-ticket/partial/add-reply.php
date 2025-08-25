@@ -9,34 +9,25 @@ function showReplyForm($trackingId, $email, $reopen) {
     ?>
     <article class="ticket__body_block">
         <div class="text-bold"><?php echo $hesklang['add_reply']; ?></div>
-        <form method="post" action="reply_ticket.php" class="form form--reply" enctype="multipart/form-data">
+        <form method="post" action="reply_ticket.php" aria-label="<?php echo $hesklang['add_a_ticket_reply']; ?>" class="form form--reply" enctype="multipart/form-data" onsubmit="<?php if ($hesk_settings['submitting_wait']): ?>hesk_showLoadingMessage('recaptcha-submit');<?php endif; ?>" novalidate>
             <div class="form-group required">
-                <label class="label"><?php echo $hesklang['message']; ?></label>
-                <textarea name="message" class="form-control"><?php if (isset($_SESSION['ticket_message'])) {
+                <label class="label" for="message"><?php echo $hesklang['message']; ?></label>
+                <textarea id="message" name="message" class="form-control" required><?php if (isset($_SESSION['ticket_message'])) {
                         echo stripslashes(hesk_input($_SESSION['ticket_message']));
                     } ?></textarea>
             </div>
             <?php
             /* attachments */
             if ($hesk_settings['attachments']['use']) {
+                require_once(TEMPLATE_PATH . 'customer/util/attachments.php');
                 ?>
                 <section class="param param--attach">
                     <span class="label"><?php echo $hesklang['attachments']; ?></span>
                     <div class="attach">
-                        <?php
-                        for ($i = 1; $i <= $hesk_settings['attachments']['max_number']; $i++) {
-                            echo '<input type="file" name="attachment[' . $i . ']" size="50"><br>';
-                        }
-                        ?>
+                        <?php hesk3_output_drag_and_drop_attachment_holder(); ?>
                         <div class="attach-tooltype">
-                            <span><?php echo sprintf($hesklang['maximum_x_attachments'], $hesk_settings['attachments']['max_number']); ?></span>
-                            <a onclick="HESK_FUNCTIONS.openWindow('file_limits.php',250,500)">
-                                <div class="tooltype right">
-                                    <svg class="icon icon-info">
-                                        <use
-                                            xlink:href="<?php echo TEMPLATE_PATH; ?>customer/img/sprite.svg#icon-info"></use>
-                                    </svg>
-                                </div>
+                            <a class="link" href="file_limits.php" onclick="HESK_FUNCTIONS.openWindow('file_limits.php',250,500);return false;">
+                                <?php echo $hesklang['ful']; ?>
                             </a>
                         </div>
                     </div>
@@ -47,7 +38,7 @@ function showReplyForm($trackingId, $email, $reopen) {
             <section class="form__submit">
                 <input type="hidden" name="token" value="<?php hesk_token_echo(); ?>">
                 <input type="hidden" name="orig_track" value="<?php echo $trackingId; ?>">
-                <button type="submit" class="btn btn-full"
+                <button type="submit" class="btn btn-full" id="recaptcha-submit"
                         ripple="ripple"><?php echo $hesklang['submit_reply']; ?></button>
                 <?php
                 if ($hesk_settings['email_view_ticket']) {
@@ -59,6 +50,12 @@ function showReplyForm($trackingId, $email, $reopen) {
                 ?>
             </section>
         </form>
+        <div id="loading-overlay" class="loading-overlay">
+            <div id="loading-message" class="loading-message">
+                <div class="spinner"></div>
+                <p><?php echo $hesklang['sending_wait']; ?></p>
+            </div>
+        </div>
     </article>
     <?php
 }

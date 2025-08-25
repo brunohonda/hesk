@@ -25,15 +25,20 @@ hesk_dbConnect();
 hesk_isLoggedIn();
 
 define('CALENDAR',1);
+define('AUTO_RELOAD',1);
 $_SESSION['hide']['ticket_list'] = true;
 
 /* Check permissions for this feature */
 hesk_checkPermission('can_view_tickets');
 
 $_SERVER['PHP_SELF'] = './admin_main.php';
+$href = 'find_tickets.php';
 
 // Load custom fields
 require_once(HESK_PATH . 'inc/custom_fields.inc.php');
+
+// Load priorities
+require_once(HESK_PATH . 'inc/priorities.inc.php');
 
 // Load statuses
 require_once(HESK_PATH . 'inc/statuses.inc.php');
@@ -53,14 +58,30 @@ require_once(HESK_PATH . 'inc/show_admin_nav.inc.php');
         ?>
     </div>
 <?php
+// Is this a quick link?
+$is_quick_link = hesk_GET('ql', false);
+
+$sql_customer_count = "SELECT COUNT(1) FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer_names`
+    INNER JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` `customer_names`
+        ON `ticket_to_customer_names`.`customer_id` = `customer_names`.`id` 
+    WHERE `ticket_id` = `ticket`.`id`";
+$sql_email_count = "SELECT COUNT(1) FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer_emails`
+    INNER JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` `customer_emails`
+        ON `ticket_to_customer_emails`.`customer_id` = `customer_emails`.`id` 
+    WHERE `ticket_id` = `ticket`.`id`
+        AND COALESCE(`customer_emails`.`email`, '') <> ''";
+
 // This SQL code will be used to retrieve results
 $sql_final = "SELECT
-`id`,
+`ticket`.`id` AS `id`,
 `trackid`,
-`name`,
-`email`,
+COALESCE(`customer`.`name`, '".hesk_dbEscape($hesklang['anon_name'])."') AS `name`,
+COALESCE(`customer`.`email`, '".hesk_dbEscape($hesklang['anon_email'])."') AS `email`,
+({$sql_customer_count}) AS `customer_count`,
+({$sql_email_count}) AS `email_count`,
 `category`,
 `priority`,
+`priority_order` AS `vv`,
 `subject`,
 LEFT(`message`, 400) AS `message`,
 `dt`,
@@ -71,15 +92,17 @@ LEFT(`message`, 400) AS `message`,
 `openedby`,
 `firstreplyby`,
 `closedby`,
-`replies`,
+`ticket`.`replies`,
 `staffreplies`,
 `owner`,
 `time_worked`,
 `due_date`,
 `lastreplier`,
+`lastreplier_customer`.`name` AS `lastreplier_customername`,
 `replierid`,
 `archive`,
-`locked`
+`locked`,
+CASE WHEN `bookmarks`.`id` IS NOT NULL THEN 1 ELSE 0 END AS `is_bookmark`
 ";
 
 foreach ($hesk_settings['custom_fields'] as $k=>$v)
@@ -90,14 +113,86 @@ foreach ($hesk_settings['custom_fields'] as $k=>$v)
 	}
 }
 
-$sql_final.= " FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` WHERE ".hesk_myCategories()." AND ".hesk_myOwnership();
+if ($is_quick_link == 'cbm') {
+    $sql_final.= " FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `ticket` LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` AS `w` ON (`ticket`.`id` = `w`.`ticket_id` AND `w`.`user_id` = ".intval($_SESSION['id']).") ";
+} else {
+    $sql_final.= " FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `ticket` LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` AS `w` ON (`ticket`.`id` = `w`.`ticket_id` AND `w`.`user_id` = ".intval($_SESSION['id']).") ";
+}
+
+$sql_final.= "
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+    ON `customer`.`id` = (
+        SELECT `customer_id`
+        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+        WHERE `ticket_id` = `ticket`.`id`
+            AND `customer_type` = 'REQUESTER'
+        LIMIT 1
+    )
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `lastreplier_customer`
+    ON `ticket`.`lastreplier` = '0'
+    AND `lastreplier_customer`.`id` = (
+        SELECT `customer_id` 
+        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies` 
+        WHERE `replyto` = `ticket`.`id`
+            AND `customer_id` IS NOT NULL 
+        ORDER BY `id` DESC 
+        LIMIT 1)
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."users` AS `lastreplier_staff`
+    ON `ticket`.`lastreplier` <> '0'
+    AND `ticket`.`replierid` = `lastreplier_staff`.`id`
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."bookmarks` AS `bookmarks` ON (`ticket`.`id` = `bookmarks`.`ticket_id` AND `bookmarks`.`user_id` = ".intval($_SESSION['id']).")
+LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."custom_priorities` AS `custom_priorities` ON `ticket`.`priority` = `custom_priorities`.`id`
+WHERE ";
+
+if ($is_quick_link == 'cbm') {
+    $sql_final.= " `w`.`user_id`=".intval($_SESSION['id'])." AND ".hesk_myCategories()." ";
+} else {
+    $sql_final .= " ".hesk_myCategories()." AND ".hesk_myOwnership(1);
+}
 
 // This code will be used to count number of results for this specific search
 $sql_count = " SELECT COUNT(*) AS `cnt`, `status`,
                       IF (`owner` = " . intval($_SESSION['id']) . ", 1, IF (`owner` = 0, 0, IF (`assignedby` = " . intval($_SESSION['id']) . ", 3, 2) ) ) AS `assigned_to`,
-                      IF (`due_date` < NOW(), 2, IF (`due_date` BETWEEN NOW() AND (NOW() + INTERVAL ".intval($hesk_settings['due_soon'])." DAY), 1, 0) ) AS `due`
-                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets`
-                WHERE ".hesk_myCategories()." AND ".hesk_myOwnership();
+                      IF (`due_date` < NOW(), 2, IF (`due_date` BETWEEN NOW() AND (NOW() + INTERVAL ".intval($hesk_settings['due_soon'])." DAY), 1, 0) ) AS `due`,
+                      CASE WHEN `bookmarks`.`id` IS NOT NULL THEN 1 ELSE 0 END AS `is_bookmark`
+                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `ticket`
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` AS `w` ON (`ticket`.`id` = `w`.`ticket_id` AND `w`.`user_id` = ".intval($_SESSION['id']).")
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+                    ON `customer`.`id` = (
+                        SELECT `customer_id`
+                        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+                        WHERE `ticket_id` = `ticket`.`id`
+                            AND `customer_type` = 'REQUESTER'
+                        LIMIT 1
+                    )
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `lastreplier_customer`
+                    ON `ticket`.`lastreplier` = '0'
+                    AND `lastreplier_customer`.`id` = (
+                        SELECT `customer_id`
+                        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."replies`
+                        WHERE `replyto` = `ticket`.`id`
+                            AND `customer_id` IS NOT NULL
+                        ORDER BY `id` DESC
+                        LIMIT 1)
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."users` AS `lastreplier_staff`
+                    ON `ticket`.`lastreplier` <> '0'
+                    AND `ticket`.`lastreplier` = `lastreplier_staff`.`id`
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."bookmarks` AS `bookmarks` ON (`ticket`.`id` = `bookmarks`.`ticket_id` AND `bookmarks`.`user_id` = ".intval($_SESSION['id']).")
+                WHERE ".hesk_myCategories()." AND ".hesk_myOwnership(1);
+
+// This code will be used to count collaborated tickets for this specific search
+$sql_collaborator = " SELECT COUNT(*) AS `cnt`
+                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."tickets` AS `ticket`
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_collaborator` AS `w` ON (`ticket`.`id` = `w`.`ticket_id` AND `w`.`user_id` = ".intval($_SESSION['id']).")
+                LEFT JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+                    ON `customer`.`id` = (
+                        SELECT `customer_id`
+                        FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+                        WHERE `ticket_id` = `ticket`.`id`
+                            AND `customer_type` = 'REQUESTER'
+                        LIMIT 1
+                    )                
+                WHERE `w`.`user_id`=".intval($_SESSION['id'])." AND ".hesk_myCategories();
 
 // This is common SQL for both queries
 $sql = "";
@@ -107,9 +202,6 @@ $archive = array(1=>0,2=>0);
 $s_my = array(1=>1,2=>1);
 $s_ot = array(1=>1,2=>1);
 $s_un = array(1=>1,2=>1);
-
-// Is this a quick link?
-$is_quick_link = hesk_GET('ql', false);
 
 // --> TICKET CATEGORY
 $category = intval( hesk_GET('category', 0) );
@@ -142,7 +234,6 @@ $q = hesk_input( hesk_GET('q', '') );
 // No query entered?
 if ( ! strlen($q) )
 {
-	$hesk_error_buffer .= $hesklang['fsq'];
 	$no_query = 1;
 }
 
@@ -153,6 +244,14 @@ $what = hesk_GET('what', '') or $hesk_error_buffer .= '<br />' . $hesklang['wsel
 if ($what == 'seqid' && ! $hesk_settings['sequential'])
 {
 	$what = 'trackid';
+}
+
+// Sequential ID must be numeric
+if ($what == 'seqid' && strlen($q) && !is_numeric($q)) {
+    $q = '';
+    $no_query = 1;
+    $hesk_error_buffer .= $hesklang['seq_id_numeric'];
+    $hesklang['fsq'] = '';
 }
 
 // Setup SQL based on searching preferences
@@ -167,10 +266,23 @@ if ( ! $no_query)
 		    $sql  .= " ( `trackid` = '".hesk_dbEscape($q)."' OR `merged` LIKE '%#".hesk_dbEscape($q)."#%' ) ";
 		    break;
 		case 'name':
-		    $sql  .= "`name` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "' ";
+            $sql .= "`ticket`.`id` IN (
+                SELECT `ticket_id`
+                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+                INNER JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+                    ON `ticket_to_customer`.`customer_id` = `customer`.`id`
+                    AND `customer`.`name` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "'
+            ) ";
+		    //$sql  .= "`name` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "' ";
 		    break;
 		case 'email':
-	         $sql  .= "`email` LIKE '%".hesk_dbEscape($q)."%' ";
+            $sql .= "`ticket`.`id` IN (
+                SELECT `ticket_id`
+                FROM `".hesk_dbEscape($hesk_settings['db_pfix'])."ticket_to_customer` AS `ticket_to_customer`
+                INNER JOIN `".hesk_dbEscape($hesk_settings['db_pfix'])."customers` AS `customer`
+                    ON `ticket_to_customer`.`customer_id` = `customer`.`id`
+                    AND `customer`.`email`  LIKE '%".hesk_dbEscape($q)."%'
+            ) ";
 			 break;
 		case 'subject':
 		    $sql  .= "`subject` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "' ";
@@ -178,7 +290,7 @@ if ( ! $no_query)
 		case 'message':
 		    $sql  .= " ( `message` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "'
             		OR
-                    `id` IN (
+                    `ticket`.`id` IN (
             		SELECT DISTINCT `replyto`
                 	FROM   `".hesk_dbEscape($hesk_settings['db_pfix'])."replies`
                 	WHERE  `message` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "' )
@@ -186,10 +298,13 @@ if ( ! $no_query)
                     ";
 		    break;
 		case 'seqid':
-	         $sql  .= "`id` = '".intval($q)."' ";
-			 break;
+	        $sql  .= "`ticket`.`id` = '".intval($q)."' ";
+			break;
+        case 'customer':
+            $sql  .= "`customer`.`id` = '".intval($q)."' ";
+            break;
 		case 'notes':
-		    $sql  .= "`id` IN (
+		    $sql  .= "`ticket`.`id` IN (
             		SELECT DISTINCT `ticket`
                 	FROM   `".hesk_dbEscape($hesk_settings['db_pfix'])."notes`
                 	WHERE  `message` LIKE '%".hesk_dbEscape( hesk_dbLike($q) )."%' COLLATE '" . hesk_dbCollate() . "' )
@@ -210,6 +325,44 @@ if ( ! $no_query)
 	}
 
     $sql_count .= $sql;
+    $sql_collaborator .= $sql_previous . $sql;
+    $sql = $sql_previous . $sql;
+}
+// Some fields can be searched for empty (or NULL) values
+else
+{
+    $sql_previous = $sql;
+    $sql = " AND ";
+
+    switch ($what)
+    {
+        case 'email':
+             $sql  .= "`email` = '' ";
+             $no_query = 0;
+             break;
+        case 'message':
+            $sql  .= " `message` = '' ";
+            $no_query = 0;
+            break;
+        case 'ip':
+             $sql  .= "`ip` = '' ";
+             $no_query = 0;
+             break;
+        default:
+            if (isset($hesk_settings['custom_fields'][$what]) && $hesk_settings['custom_fields'][$what]['use'])
+            {
+                $sql .= "`".hesk_dbEscape($what)."` IS NULL OR `".hesk_dbEscape($what)."` = '' ";
+                $no_query = 0;
+            }
+    }
+
+    if ($no_query) {
+        $hesk_error_buffer .= $hesklang['fsq'];
+        $sql = "";
+    }
+
+    $sql_count .= $sql;
+    $sql_collaborator .= $sql;
     $sql = $sql_previous . $sql;
 }
 
@@ -218,6 +371,7 @@ if ( $tmp = intval( hesk_GET('owner', 0) ) )
 {
 	$sql .= " AND `owner`={$tmp} ";
     $sql_count .= " AND `owner`={$tmp} ";
+    $sql_collaborator .= " AND `owner`={$tmp} ";
 	$owner_input = $tmp;
 	$hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
 }
@@ -227,31 +381,26 @@ else
 }
 
 /* Date */
-/* -> Check for compatibility with old date format */
-if (preg_match("/(\d{4})-(\d{2})-(\d{2})/", hesk_GET('dt'), $m))
-{
-	$_GET['dt']=$m[2].$m[3].$m[1];
-}
+$date_input = hesk_GET('dt');
+$formatted_search_date = hesk_datepicker_get_date($date_input);
 
-/* -> Now process the date value */
-$dt = preg_replace('/[^0-9]/','', hesk_GET('dt') );
-if (strlen($dt) == 8)
-{
-	$date = substr($dt,4,4) . '-' . substr($dt,0,2) . '-' . substr($dt,2,2);
-	$date_input= substr($dt,0,2) . '/' . substr($dt,2,2) . '/' . substr($dt,4,4);
+if ($formatted_search_date !== false) {
+    $hesk_settings['datepicker'] = array();
+    $hesk_settings['datepicker']['#find-date']['timestamp'] = $formatted_search_date->getTimestamp();;
 
-	/* This search is valid even if no query is entered */
-	if ($no_query)
-	{
-		$hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
-	}
+    $formatted_search_date = $formatted_search_date->format('Y-m-d');
 
-	$sql .= " AND `dt` BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59' ";
-    $sql_count .= " AND `dt` BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59' ";
-}
-else
-{
-	$date = '';
+    // This search is valid even if no query is entered
+    if ($no_query) {
+        $hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
+    }
+
+	$sql .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+    $sql_count .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+    $sql_collaborator .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+
+} else {
+    $formatted_search_date = '';
     $date_input = '';
 }
 
@@ -273,10 +422,14 @@ elseif ($is_quick_link == 'ovr')
 {
     $sql .= " AND `status` != 3 AND `due_date` < NOW() ";
 }
+elseif ($is_quick_link == 'bm')
+{
+    $sql .= " AND `bookmarks`.`id` IS NOT NULL";
+}
 
 // Complete the required SQL queries
 $sql = $sql_final . $sql;
-$sql_count .= " GROUP BY `assigned_to`, `due`, `status` ";
+$sql_count .= " GROUP BY `assigned_to`, `due`, `status`, `is_bookmark` ";
 
 // Strip extra slashes
 $q = stripslashes($q);
@@ -298,9 +451,11 @@ if ($handle !== FALSE)
             'assigned_to_others' => 0,
             'assigned_to_others_by_me' => 0,
             'unassigned' => 0,
+            'bookmarks' => 0,
             'due_soon' => 0,
             'overdue' => 0,
-            'by_status' => array()
+            'by_status' => array(),
+            'collaborator' => 0,
         ),
     );
 
@@ -308,7 +463,6 @@ if ($handle !== FALSE)
     $can_view_ass_others = hesk_checkPermission('can_view_ass_others',0);
     $can_view_ass_by = hesk_checkPermission('can_view_ass_by',0);
 
-	$href = 'find_tickets.php';
 	require_once(HESK_PATH . 'inc/ticket_list.inc.php');
 }
 
